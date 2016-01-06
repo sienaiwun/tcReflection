@@ -1,0 +1,84 @@
+
+float4x4 pWorldViewProj : WorldViewProj;
+float4x4 pWorldViewInv : WorldViewInv;
+float4x4 pWorldView : WorldView;
+float4x4 ModelView:ModelView;
+
+
+struct Pixel
+{
+  float4 color0 : COLOR0;
+  float4 color1   : COLOR1;
+  float4 color2 : COLOR2;
+};
+
+struct Vertex
+{
+  float3 position : POSITION;
+  float3 normal   : NORMAL;
+  float3 color    :COLOR;
+  float3 texcoord : TEXCOORD;
+ 
+};
+
+struct Fragment
+{
+  float4 position    : POSITION;
+  float3 color       : COLOR;
+  float3 normal      : TEXCOORD0;
+  float3 worldPos    : TEXCOORD1;
+  float4 hPosition   : TEXCOORD2;
+  float2 texcoord    : TEXCOORD3;
+  float3 eyePos      : TEXCOORD4;
+  float2 c1Place    : TEXCOORD5;
+  float3 worldNormal : TEXCOORD6;
+  float3 lightpos    : POSITION;
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+Fragment display_vp( Vertex v )
+{
+  Fragment f;
+
+  f.position   = mul(pWorldViewProj, float4( v.position, 1 ));
+  f.normal     = mul(pWorldViewInv, float4(v.normal,0));
+  f.color      = v.color;
+  f.worldPos   = v.position; // * invViewMatrix
+  f.hPosition  = f.position;
+  f.texcoord   = v.texcoord.xy;
+  
+  f.eyePos     = mul(pWorldView, float4(v.position, 1)).xyz;
+  //float4 temp  = mul(pCamera1Proj, float4(f.eyePos,1));
+ // f.c1Place    = temp.xy/temp.w*0.5+0.5;
+  //float4 temp1 = mul(pCamera1View, float4(worldPos, 1));
+ // float4 temp2 = mul(pCamera1Proj,temp1);
+  // f.position   = temp2;
+  f.worldNormal = v.normal;
+
+  return f;
+}
+Pixel glossy_reflections_fp(Fragment f,
+							float2 opos:WPOS) 
+{
+	
+	 Pixel p;
+
+	float3 color;
+	color = float3(1,0,0);
+	//float3 N = normalize(f.worldNormal);
+	//float3 testPlace = float3(1.292636,45.233727,-57.250614);
+	//float testz = mul(pCamera1View, float4(testPlace, 1)).z;
+	//float a = pCamera1View._m00;
+	p.color0 = float4(color,1.0);
+	p.color1 = float4(f.worldPos,1.0);
+	return  p;
+}
+technique blendPass
+{
+	pass p0
+	{
+		 VertexProgram = compile CG_VERTEX_PROFILE display_vp();
+		 FragmentProgram = compile CG_FRAGMENT_PROFILE glossy_reflections_fp();
+	}
+}
