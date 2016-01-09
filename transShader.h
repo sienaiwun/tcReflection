@@ -26,8 +26,15 @@ public :
 	{
 		m_bindingClearColor = color;
 	}
+	inline void setRes(nv::vec2f r)
+	{
+		m_res = r;
+	}
 	
 private:
+
+	nv::vec2f m_res;
+	GLuint m_resUniform;
 	GLuint m_refelctTexUniform;
 	GLuint m_transVecTexUniform;
 

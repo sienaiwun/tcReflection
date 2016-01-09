@@ -86,6 +86,7 @@ public:
 	GLuint getTexture(int id);
 	//¾²Ì¬º¯Êý ´æ´¢bmp
 	static void SaveBMP(const char *fileName, BYTE *buf, UINT width, UINT height);
+	void debugPixel(int id, int x,int y,int scale = 1);
 	void SaveBMP(const char *fileName, int id);
 
 	void SaveBuffToBMP(const char *fileName, int id);

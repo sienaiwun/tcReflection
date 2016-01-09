@@ -134,7 +134,7 @@ MyMeterial mat[] =
 #define  CHINAREFLECT 0.185f
 
 ReprojectShader g_reprojectShader;
-TranShader transShader;
+TranShader g_transShader;
 MergeShader g_mergeShader;
 TexShader g_texShader;
 BlendShader g_blendShader;
@@ -353,7 +353,7 @@ GLuint LastVecPBO;
 GLuint testPBO;
 
 GLuint VecorTexture;
-GLuint RePosTexture;
+
 
 nv::matrix4f TMVPMat;
 
@@ -612,8 +612,7 @@ void init_cuda(int argc,char**argv)
 
 }
 
-
-
+#define EDGEDELTA 0.0
 
 
 void IniteMyVBO(){
@@ -622,21 +621,24 @@ void IniteMyVBO(){
 	float2 *Vertices;
 	Vertices = new float2[rasterWidth *rasterHeight * 6];
 	int PointId = 0;
-	for(int x = 0;x<rasterWidth;x++)
-		for(int y = 0;y<rasterHeight;y++)
+	for(int x = 0;x<rasterWidth-1;x++)
+		for(int y = 0;y<rasterHeight-1;y++)
 		{
-
-			Vertices[PointId++] = make_float2((float)(x+0.5)/rasterWidth,(float)(y+0.5)/rasterHeight);
+			/*if(x==1022||y==1022)
+				;
+			else
+				continue;*/
+			Vertices[PointId++] = make_float2((float)(x+0.5-EDGEDELTA)/rasterWidth,(float)(y+0.5-EDGEDELTA)/rasterHeight);
 #if DrawPoint
 			;//continue;
 #endif
 
-			Vertices[PointId++] =  make_float2((float)(x+1.5)/rasterWidth,(float)(y+0.5)/rasterHeight);
-			Vertices[PointId++] =  make_float2((float)(x+1.5)/rasterWidth,(float)(y+1.5)/rasterHeight);
+			Vertices[PointId++] =  make_float2((float)(x+1.5+EDGEDELTA)/rasterWidth,(float)(y+0.5-EDGEDELTA)/rasterHeight);
+			Vertices[PointId++] =  make_float2((float)(x+1.5+EDGEDELTA)/rasterWidth,(float)(y+1.5+EDGEDELTA)/rasterHeight);
 
-			Vertices[PointId++] = make_float2((float)(x+0.5)/rasterWidth,(float)(y+0.5)/rasterHeight);
-			Vertices[PointId++] =  make_float2((float)(x+1.5)/rasterWidth,(float)(y+1.5)/rasterHeight);
-			Vertices[PointId++] =  make_float2((float)(x+0.5)/rasterWidth,(float)(y+1.5)/rasterHeight);
+			Vertices[PointId++] = make_float2((float)(x+0.5-EDGEDELTA)/rasterWidth,(float)(y+0.5-EDGEDELTA)/rasterHeight);
+			Vertices[PointId++] =  make_float2((float)(x+1.5+EDGEDELTA)/rasterWidth,(float)(y+1.5+EDGEDELTA)/rasterHeight);
+			Vertices[PointId++] =  make_float2((float)(x+0.5-EDGEDELTA)/rasterWidth,(float)(y+1.5+EDGEDELTA)/rasterHeight);
 
 		}
 
@@ -823,15 +825,6 @@ void init_gl()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, rasterWidth, rasterHeight, 0, GL_RGBA, GL_FLOAT, NULL);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-	glGenTextures(1, &RePosTexture);
-
-	glBindTexture(GL_TEXTURE_2D, RePosTexture);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, rasterWidth, rasterHeight, 0, GL_RGBA, GL_FLOAT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
 
 
 	glGenTextures(1, &reflectionMapTex_Now);
@@ -875,7 +868,7 @@ void init_gl()
 
 
 	//ÔØÈëglslshader
-	transShader.init();
+	g_transShader.init();
 	g_reprojectShader.init();
 	g_mergeShader.init();
 	g_reprojectShader.setClearColor(viewIndepentdentMissColor);
@@ -2335,8 +2328,9 @@ void drawTransMap(int  optixId)
 	*/
 	RefFrame & frame = RefFrame::getFrameByIndex(OptixFrame);
 
-	transShader.setParemeter(frame.getOptixTex(),VecorTexture,frame.getGbuffer().getTexture(0),RePosTexture);
-	transShader.begin();
+	g_transShader.setParemeter(frame.getOptixTex(),VecorTexture,frame.getGbuffer().getTexture(0),0);
+	g_transShader.setRes(nv::vec2f(rasterWidth,rasterHeight));
+	g_transShader.begin();
 	// 
 /*
 	glEnable(GL_TEXTURE_2D);
@@ -2434,7 +2428,7 @@ void drawTransMap(int  optixId)
 	glDisable(GL_TEXTURE_2D);
 	glBindTexture(GL_TEXTURE_2D,0);
 
-	transShader.end();
+	g_transShader.end();
 	//myTransShader.DisUse();
 	//delete [] pFloat2;
 
@@ -3378,39 +3372,31 @@ void tcRendering()
 	vectorCudaArray.generateTex();
 	VecorTexture = vectorCudaArray.getTexture();
 
-/*
 
+	/*
 	glEnable(GL_TEXTURE_2D);
-	BYTE *pTexture = NULL;
-	pTexture = new BYTE[rasterWidth*rasterHeight * 3];
-	memset(pTexture, 0, rasterWidth*rasterHeight * 3 * sizeof(BYTE));
-
-	glBindTexture(GL_TEXTURE_2D, (reflectionMaps[OptixFrame+1]));//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
-
-	int w = rasterWidth;
-	int h = rasterHeight;
-	SaveBMP("ref.bmp", pTexture, w, h);
-	if (pTexture)
-	   delete[] pTexture;
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-
-	glEnable(GL_TEXTURE_2D);
-	 pTexture = NULL;
-	pTexture = new BYTE[rasterWidth*rasterHeight * 3];
-	memset(pTexture, 0, rasterWidth*rasterHeight * 3 * sizeof(BYTE));
+	float *pTexture = NULL;
+	pTexture = new float[rasterWidth*rasterHeight * 4];
+	memset(pTexture, 0, rasterWidth*rasterHeight * 4 * sizeof(float));
 
 	glBindTexture(GL_TEXTURE_2D, VecorTexture);//TexPosId   PboTex
 
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pTexture);
+	int w = rasterWidth,h= rasterHeight;
 
-	SaveBMP("123.bmp", pTexture, w, h);
+	int x = 1023;
+	int y = 586;
+	int index = y*w+x;
+	float r = pTexture[4*index]*1024;
+	float g = pTexture[4*index+1]*1024;
+	float b = pTexture[4*index+2];
+	float a = pTexture[4*index+3];
 	if (pTexture)
 	   delete[] pTexture;
 	glBindTexture(GL_TEXTURE_2D, 0);
 	*/
+
+	
 	//Draw TransMap
 #if SpeedUp
 
@@ -3428,7 +3414,7 @@ void tcRendering()
 	TransMapFbo.end();
 	char str[100];
 	sprintf(str,"test/tttransMap%d.bmp",currentTime2);
-
+	TransMapFbo.debugPixel(0,0,1023,1024);
 	TransMapFbo.SaveBMP(str,0);
 	if(stat_breakdown)
 	{
@@ -3474,7 +3460,7 @@ void tcRendering()
 	vectorCudaArray.generateTex();
 	VecorTexture = vectorCudaArray.getTexture();
 
-	glEnable(GL_TEXTURE_2D);
+	/*glEnable(GL_TEXTURE_2D);
 	BYTE* pTexture = NULL;
 	pTexture = new BYTE[rasterWidth*rasterHeight * 3];
 	memset(pTexture, 0, rasterWidth*rasterHeight * 3 * sizeof(BYTE));
@@ -3484,7 +3470,7 @@ void tcRendering()
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
 
 	SaveBMP("123.bmp", pTexture, rasterWidth, rasterHeight);
-	
+	*/
 	double DrawTime1,DrawTime2;
 
 	glFinish();

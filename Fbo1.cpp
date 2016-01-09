@@ -226,7 +226,29 @@ void Fbo::end()
 GLuint Fbo::getTexture(int id){
 	return TexId[id];
 }
+void Fbo::debugPixel(int id, int x,int y,int scale)
+{
+	
+	glEnable(GL_TEXTURE_2D);
+	float *pTexture = NULL;
+	pTexture = new float[texDescript.getWidth()*texDescript.getHeight() * 4];
+	memset(pTexture, 0, texDescript.getWidth()*texDescript.getHeight() * 4 * sizeof(float));
 
+	glBindTexture(GL_TEXTURE_2D, TexId[id]);//TexPosId   PboTex
+
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pTexture);
+
+	int w = texDescript.getWidth();
+	int h = texDescript.getHeight();
+
+	int index = y*w+x;
+	float r = pTexture[4*index]*scale;
+	float g = pTexture[4*index+1]*scale;
+	float b = pTexture[4*index+2]*scale;
+	float a = pTexture[4*index+3]*scale;
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
 void Fbo::SaveBMP(const char *filename, int id)
 {
 

@@ -120,7 +120,7 @@ enum planeType
 	validSearchType,
 	invalidType,
 };
-
+#define PROJECTTHRES 0.002
 class Plane
 {
 public:
@@ -146,6 +146,32 @@ public:
 	__device__ int isInValid()
 	{
 		return (m_type== invalidType);
+	}
+	// 查询是否是投影点 返回1 可以
+	__device__ int isAbleFastProj(float2 reProjectTc)
+	{
+		 
+		/*float4 WorldTmp = tex2D(cuda_WorlNormal_Tex,reProjectTc.x,reProjectTc.y);
+		int reprjectId  = (int)WorldTmp.w;
+		float3 m_worldNormal = make_float3(WorldTmp.x,WorldTmp.y,WorldTmp.z);
+		WorldTmp = tex2D(cuda_WorldPos_Tex,reProjectTc.x,reProjectTc.y);
+		float3 worldPos = make_float3(WorldTmp.x,WorldTmp.y,WorldTmp.z);
+		*/
+		
+		Plane pixelPlane(reProjectTc);
+		if(pixelPlane.isInValid())
+		{
+			return 0;
+		}
+		pixelPlane.setReflectedPos(*this);
+		float DisPoint2Line;
+		DisPoint2Line = pixelPlane.getDisToPath();
+		if(PROJECTTHRES>DisPoint2Line)
+		{
+			return 1;
+		}
+		return 0;
+	
 	}
 	__device__ Plane(float2 tc)
 	{
@@ -273,170 +299,6 @@ public:
 
 	}
 };
-/*
-enum ConicoidType
-{
-	originType,
-	validSearchType,
-	invalidType,
-};
-class Conicoid
-{
-public:
-	ConicoidType m_type;
-	float3 m_worldPos;
-	float3 m_worldNormal;
-	float m_dis;
-	float3 m_reflectPos;
-	float3 m_mirrorPos;
-	float3 m_diffValue;
-	float2 m_tc;
-	int m_orginID;
-	__device__ Conicoid()
-	{
-	}
-	__device__ float2 getTc()
-	{
-		return m_tc;
-	}
-	__device__ int getID()
-	{
-		return m_orginID;
-	}
-	__device__ int isInValid()
-	{
-		return (m_type== invalidType);
-	}
-	__device__ Conicoid(int2 index)
-	{
-		float2 tc = make_float2(index.x,index.y);
-		m_tc = tc;
-		float4 WorldTmp;
-		WorldTmp = tex2D(cuda_WorldPos_Tex,tc.x,tc.y);
-		m_worldPos = make_float3(WorldTmp.x,WorldTmp.y,WorldTmp.z);
-		WorldTmp = tex2D(cuda_WorlNormal_Tex,tc.x,tc.y);
-		m_orginID = (int)WorldTmp.w;
-		m_worldNormal = make_float3(WorldTmp.x,WorldTmp.y,WorldTmp.z);
-		m_dis = tex2D(cuda_Reflect_Tex,tc.x,tc.y).w;
-		int index = index.y*rasterWidth+index.x;
-		float4 tempValue = d_cudaDiffNorlBuffer[index];
-		m_diffValue = make_float3(tempValue.x,tempValue.y,tempValue.z);
-	
-	}
-	
-	
-	__device__ void setPreviousPos( float d)
-	{
-		m_dis = d;
-	
-	}
-	__device__ float3 getReflectedPos()
-	{
-		return m_reflectPos;
-	}
-	__device__ void setReflectedPos(Plane p)
-	{
-		m_reflectPos = p.getReflectedPos();
-		if(m_orginID == p.getID())
-		{
-			m_type = validSearchType;
-		}		
-		else 
-		{
-			m_type = invalidType;
-		}
-	}
-	__device__ void setReflectedPos()
-	{
-		float3 inComeDirection = m_worldPos - d_refCameraPos;
-		float3 LookVec = normalize(inComeDirection);
-		//计算反射光线方向
-		float3 ReflectVec = normalize(reflect(LookVec,m_worldNormal));
-		m_type = originType;
-		m_reflectPos = m_worldPos + ReflectVec * m_dis;	
-	}
-	__device__ float3 getMirrorPos()
-	{
-		float3 reflectPos = m_reflectPos;
-		m_mirrorPos = abs(dot(m_worldPos - reflectPos,m_worldNormal)) * (-2) * m_worldNormal + reflectPos;
-		return m_mirrorPos;
-	}
-	__device__  float3 beneathPos(float3 sourcePos, float dis)
-	{
-		float3 inComeDirection = m_worldPos - sourcePos;
-		float3 LookVec = normalize(inComeDirection);
-		float3 ReflectVec = normalize(reflect(LookVec,m_worldNormal));
-
-		float CosReCorner = dot(ReflectVec,m_worldNormal);
-		float3 reflectedPos = m_worldPos + ReflectVec * dis;
-		//镜像点的坐标
-		float3 ReMirrorPos = dis * CosReCorner * 2 * (-1) * (m_worldNormal) + reflectedPos;
-
-		//相机到反射面的距离
-		return ReMirrorPos;
-	}
-	//得出以该点为平面的反射物体的镜像点
-	__device__ float3 intersectPos()
-	{
-		getMirrorPos();
-		float3 VecEye2Ref = normalize(m_mirrorPos - d_newCameraPos);
-		return dot( m_worldPos -d_newCameraPos ,m_worldNormal)/ dot(VecEye2Ref,m_worldNormal) * VecEye2Ref + d_newCameraPos;
-	}
-	
-	__device__ float3 intersetVirtualPos()
-	{
-		float3 ReMirrorPos =  abs(dot(m_worldPos - m_reflectPos,m_worldNormal)) * (-2) * m_worldNormal + m_reflectPos;
-
-
-		//outPut[index] = make_float4(ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z,1.0);
-		//return;
-
-		//求出该点与相机连线和平面的新交点
-		float DisEye2Plane = abs(dot(d_newCameraPos - m_worldPos,m_worldNormal));
-		float CoseTheta2 = abs(dot(normalize(d_newCameraPos - ReMirrorPos),m_worldNormal));
-		float3 VecEye2Ref = normalize(ReMirrorPos - d_newCameraPos);
-		float3 FinalPos2;
-		//	FinalPos2 = d_newCameraPos + VecEye2Ref * (DisEye2Plane/CoseTheta2 );
-		FinalPos2 = dot(m_worldPos -d_newCameraPos ,m_worldNormal)/ dot(VecEye2Ref,m_worldNormal) * VecEye2Ref + d_newCameraPos;
-		return FinalPos2;
-	}
-
-	__device__ float getDisToPath()
-	{
-		if(isInValid())
-		{
-			return 3000.0;
-		}
-		//求出新的镜像点
-
-		float3 ReMirrorPos =  getMirrorPos();
-		//printf("!ReMirrorPos: (%f,%f,%f)\n",ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z);
-		//求相机与镜像点组成的平面的法线
-		 
-		float3 Cam_Mirror_Normal = normalize(cross(d_cameraVec,normalize(d_refCameraPos - ReMirrorPos)));
-		//printf("!Cam_Mirror_Normal: (%f,%f,%f)\n",Cam_Mirror_Normal.x,Cam_Mirror_Normal.y,Cam_Mirror_Normal.z);
-
-		//求相机轨迹所在法线
-		float3 Camera_Vec_Normal = normalize(cross(Cam_Mirror_Normal,d_cameraVec));
-		//printf("!Camera_Vec_Normal: (%f,%f,%f)\n",Camera_Vec_Normal.x,Camera_Vec_Normal.y,Camera_Vec_Normal.z);
-
-		//分别求三个点与该平面的交点
-		float3 InsertPoint = abs(dot(Camera_Vec_Normal,d_refCameraPos - ReMirrorPos)/dot(Camera_Vec_Normal,normalize(m_worldPos-ReMirrorPos))) * normalize(m_worldPos-ReMirrorPos) + ReMirrorPos;
-		//printf("!InsertPoint: (%f,%f,%f)\n",InsertPoint.x,InsertPoint.y,InsertPoint.z);
-
-		//求点与直线的距离
-
-		float3 toNewPlace2 = d_newCameraPos-InsertPoint;
-		float DisPoint2Line = length(toNewPlace2);
-		//DisPoint2Line1  =  dot(normalize(InsertPoint1 - d_refCameraPos),d_cameraVec);
-
-		//printf("!return value: (%f)\n",DisPoint2Line1);
-
-		return DisPoint2Line;
-
-
-	}
-};*/
 /*
 __global__ void lineSearchKernel(int width,int height)
 {
@@ -861,6 +723,7 @@ __device__ int nextThreeStep(float2 moveVec,float2* candicate1,float2* candicate
 #define CONVERGE 1
 #define OUTRANGE 2
 #define OUTOBJECT 3
+#define FASTPROJT 4
 __device__ int Floor2Int(float f)
 {
 	return (int)f+0.5;
@@ -870,27 +733,19 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	int x =Floor2Int(currentPlace.x-0.5);
 	int y =Floor2Int(currentPlace.y-0.5);
 	int index = y * 1024 + x;
-	/*if(x>=264||x<258)
-	{
-		d_cudaPboBuffer[index] = make_float4(-10.0f,-10.0f,1,0.1);
-		return;
-	}
-	if(y>=100||y<90)
-	{
-		d_cudaPboBuffer[index] = make_float4(-10.0f,-10.0f,1,-0.1);
-		return;
-	};*/
 	float2 currentUv = make_float2(currentPlace.x,currentPlace.y);
 	Plane fittingPlane(currentUv);
 	
 	
-	//printf("1Class: (%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
-	//相机到反射面的距离
-	//= d_newCameraPos + DisEye2Plane/abs(dot(VecEye2Ref,WorldNormal))* VecEye2Ref;
 	fittingPlane.setReflectedPos();
 	float3 FinalPos  = fittingPlane.intersectPos();
 
 	float2 ProPosUv = transFormToNdc(FinalPos);
+	if(fittingPlane.isAbleFastProj(ProPosUv))
+	{
+		d_cudaPboBuffer[index] =   make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,FASTPROJT,-0.1);
+		return FASTPROJT;
+	}
 	float2 MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
 	float formerDis = fittingPlane.getDisToPath();
 	int IterTime = 0;
@@ -927,7 +782,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 			TmpUv3.y -= 1.0;
 		}
 		//取出每个采样点对应的世界坐标
-		//nextThreeStep(MoveVec,&TmpUv1,&TmpUv2,&TmpUv3);
+		nextThreeStep(MoveVec,&TmpUv1,&TmpUv2,&TmpUv3);
 		/*TmpUv1+=currentUv;
 		TmpUv2+=currentUv;
 		TmpUv3+=currentUv;*/
@@ -952,7 +807,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		{	
 			//printf("invalid\n");
 			
-			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,1,-0.1);
+			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,OUTOBJECT,-0.1);
 		    // printf("@x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
 			return OUTOBJECT;
@@ -991,7 +846,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		{
 			*moveToVec = currentUv;
 			//printf("converge(%f,%f)\n",currentUv.x,currentUv.y);
-			d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)1024,currentUv.y/(float)1024,1,-0.1);
+			d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,CONVERGE,-0.1);
 			//printf("#x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
 			return CONVERGE;
@@ -1011,32 +866,31 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		//printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);
 		IterTime++;
 	}
-	d_cudaPboBuffer[index] =  make_float4(x/(float)1024,y/(float)1024,1,-0.1);
+	d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,OUTRANGE,-0.1);
 	//printf("！x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
 	
-	return 1;
+	return OUTRANGE;
 	
 }
 __global__ void MyNewKernel(int width,int height)
 {
 	int x = __umul24(blockIdx.x,blockDim.x) + threadIdx.x;
 	int y = __umul24(blockIdx.y,blockDim.y) + threadIdx.y;
-	/*if(x>=464||x<462)
-		return;
-	if(x>=329||x<331)
-		return;
-		*/
 	if( x >width || y> height)
 			return;
+	//if(x==1023||y==1024)
+	//	printf("x:%d,y:%d\n",x,y);
+	/*if(x==1024)
+	{
+		printf("x:%d,y:%d\n",x,y);
+	}*/
 	int index = y * width + x;
 	float2 currentUv = make_float2(x+0.5,y+0.5);
-	float2 resultValue;
-	int state = threePointSearch(currentUv,&resultValue);
-	//printf("reslutValue(%f,%f)\n",resultValue.x,resultValue.y);
 	
-	/*else 
-		d_cudaPboBuffer[index] =  make_float4(-10,-10,state,-0.1);*/
+	float2 resultValue;
+	threePointSearch(currentUv,&resultValue);
+	
 
 }
 __global__ void MyKernel(int width,int height)
@@ -1055,20 +909,11 @@ __global__ void MyKernel(int width,int height)
 	//if(x!=321||y !=169)
 
 	//if(x!=571||y!=702)
-	//if(x!=231||y!=102)
+	//if(x!=950||y!=990)
 	//if( x >width || y> height)
 	//	return;
 	int index = y * width + x;
-	/*if(x>=464||x<462)
-	{
-		d_cudaPboBuffer[index] = make_float4(-10.0f,-10.0f,1,0.1);
-		return;
-	}
-	if(y>=331||y<329)
-	{
-		d_cudaPboBuffer[index] = make_float4(-10.0f,-10.0f,1,0.1);
-		return;
-	};
+	
 	/*if(x>=264||x<258)
 	{
 		d_cudaPboBuffer[index] = make_float4(-10.0f,-10.0f,1,0.1);
@@ -1265,7 +1110,7 @@ __global__ void MyKernel(int width,int height)
 			TheComputVU.y =1;
 		//TheComputVU = TheComputVU + cuurrentUv;
 		//printf("^^^^^^^^^^^^^^^^formerDis:%f^^^^^^^^^^\n",formerDis);
-		//printf("IterTime:%d ^^^^^^^^cuurrentUv^^^:%f,%f\n",IterTime,cuurrentUv.x,cuurrentUv.y);
+		printf("IterTime:%d ^^^^^^^^cuurrentUv^^^:%f,%f\n",IterTime,cuurrentUv.x,cuurrentUv.y);
 		
 		/*if(1==nextStep(MoveVec,&TheComputVU))
 		{
@@ -1732,7 +1577,7 @@ extern "C" void cudaPredict(int width,int height)
 {
 	dim3 blockSize(16,16,1);
 	dim3 gridSize(width/blockSize.x,height/blockSize.y,1);
-	MyKernel<<<gridSize,blockSize>>>(width,height);
+	MyNewKernel<<<gridSize,blockSize>>>(width,height);
 }
 
 void mapThustResourse()
