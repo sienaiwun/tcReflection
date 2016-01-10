@@ -782,7 +782,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 			TmpUv3.y -= 1.0;
 		}
 		//取出每个采样点对应的世界坐标
-		nextThreeStep(MoveVec,&TmpUv1,&TmpUv2,&TmpUv3);
+		//nextThreeStep(MoveVec,&TmpUv1,&TmpUv2,&TmpUv3);
 		/*TmpUv1+=currentUv;
 		TmpUv2+=currentUv;
 		TmpUv3+=currentUv;*/

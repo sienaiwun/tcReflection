@@ -10,7 +10,7 @@ CGparameter * MyGeometry::mspCgIsWall = 0;
 CGparameter * MyGeometry::mspCgDiffuseColor = 0;
 CGparameter * MyGeometry::msgCgDiffuseTexParam = 0;
 CGparameter * MyGeometry::msgCgreflectVale = 0;
-
+MyMeterial* MyGeometry::s_mat = 0;
 MyGeometry::MyGeometry(char *s):filename(s)
 {
 	//initGeometry(s);
@@ -125,35 +125,21 @@ void MyGeometry::drawQrad(CgShader& shader)
 }
 void MyGeometry::initGeometry(GeoPara gp)
 {
+	assert(s_mat);
 	shiness=gp.shiness;
 	reflectValue = gp.reflectValue;
 	initGeometry(gp.name);
-	setMaterial(&mat[gp.matNumber]);
+	setMaterial(&s_mat[gp.matNumber]);
 	actionNumber = gp.actionNum;
 }
-extern float delta;
+/*extern float delta;
 extern GLuint blendFactorTex;
 extern transform1 transformArray[];
-extern action ActArray[];
+extern action ActArray[];*/
 void MyGeometry::drawGeometry(glslShader& shader,int actionNumber)
 {
 	glBindBuffer(GL_ARRAY_BUFFER, m_ModelVb);
 	glEnableClientState(GL_VERTEX_ARRAY);
-	
-	if(actionNumber)
-	{
-		GLfloat* data,*normalData;  
-		data = (GLfloat*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);  
-		float* optixData = (float* )m_model->getCompiledOptixVertices();
-		/*for( int i = 0; i < m_model->getCompiledVertexCount(); ++i )  
-			data[9*i+1] = optixData[9*i+1]+delta; /* Modify Z values */
-		ActArray[actionNumber].draw(data,optixData,m_model->getCompiledVertexCount());
-		glUnmapBuffer(GL_ARRAY_BUFFER); 
-
-		/*normalData= (GLfloat*) glMapBuffer(GL_NORMAL_ARRAY, GL_READ_WRITE); 
-		ActArray[actionNumber].draw(normalData,optixData,m_model->getCompiledVertexCount(),1);
-		glUnmapBuffer(GL_NORMAL_ARRAY);*/ 
-	}
 	glVertexPointer(  m_model->getPositionSize(),
 		GL_FLOAT,
 		m_model->getCompiledVertexSize()*sizeof(float),
@@ -194,20 +180,6 @@ void MyGeometry::drawGeometry(CGtechnique& tech,int actionNumber)
 	glBindBuffer(GL_ARRAY_BUFFER, m_ModelVb);
 	glEnableClientState(GL_VERTEX_ARRAY);
 	
-	if(actionNumber)
-	{
-		GLfloat* data,*normalData;  
-		data = (GLfloat*) glMapBuffer(GL_ARRAY_BUFFER, GL_READ_WRITE);  
-		float* optixData = (float* )m_model->getCompiledOptixVertices();
-		/*for( int i = 0; i < m_model->getCompiledVertexCount(); ++i )  
-			data[9*i+1] = optixData[9*i+1]+delta; /* Modify Z values */
-		ActArray[actionNumber].draw(data,optixData,m_model->getCompiledVertexCount());
-		glUnmapBuffer(GL_ARRAY_BUFFER); 
-
-		/*normalData= (GLfloat*) glMapBuffer(GL_NORMAL_ARRAY, GL_READ_WRITE); 
-		ActArray[actionNumber].draw(normalData,optixData,m_model->getCompiledVertexCount(),1);
-		glUnmapBuffer(GL_NORMAL_ARRAY);*/ 
-	}
 	glVertexPointer(  m_model->getPositionSize(),
 		GL_FLOAT,
 		m_model->getCompiledVertexSize()*sizeof(float),

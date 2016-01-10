@@ -27,7 +27,7 @@ typedef struct GeoPara
 	float reflectValue;
 	int actionNum;
 } GeoPara;
-extern MyMeterial mat[];
+
 class MyGeometry
 {
 
@@ -51,8 +51,16 @@ public:
 	MyMeterial* getMaterial()const;
 	nv::Model*  m_model;
 	int actionNumber;
+
 	static void drawQuad(glslShader & shader);
 	static void drawQrad(CgShader& shader);
+	static float s_delta;
+	static GLuint s_blendFactorTex;
+	static MyMeterial *s_mat;
+	static void setMatArray(MyMeterial * pMatArray)
+	{
+		s_mat = pMatArray;
+	}
 private:
 
 	char * filename;

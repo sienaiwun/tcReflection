@@ -43,6 +43,7 @@
 #include "macro.h"
 #include "RefFrame.h"
 #include "cudaResource.h"
+#include "toiletScene.h"
 unsigned int *Host_PixelSum;
 unsigned int *Host_PixelState;
 
@@ -93,7 +94,7 @@ TestShader g_testShader;
 
 CudaTexResourse poxCudaTex,normalCudaTex,reflectCudaTex,finalEffectCudaTex;
 CudaPboResource vectorCudaArray,lastCudaArray,finalEffectCudaArray;
-MyMeterial mat[] = 
+/*MyMeterial mat[] = 
 {
 	//"./model/cheat.jpg",
 
@@ -127,7 +128,7 @@ MyMeterial mat[] =
 	make_float3(0.91,0.9,0.9),     //26
 	make_float3(0.91,219.0/255,207.0/255)  //27
 
-};
+};*/
 //#define  geoNumber  43
 #define  geoNumber  35
 //#define  geoNumber  2
@@ -138,7 +139,7 @@ TranShader g_transShader;
 MergeShader g_mergeShader;
 TexShader g_texShader;
 BlendShader g_blendShader;
-
+/*
 GeoPara p[geoNumber] = 
 {
 	//{"./bathroom/q1.obj",19,0,0.0f,1},
@@ -202,9 +203,9 @@ GeoPara p[geoNumber] =
 	{"model/bathroom/washbasinCircle.3DS",15,0,0.0f,0},
 
 
-};
+};*/
 
-
+toiletScene t_scene;
 
 void cameraControl(int,CCamera&);
 
@@ -1041,113 +1042,12 @@ void init_gl()
 void init_scene(const char* model_filename)
 {
 	printf("init scence\n");
-	/* model = new nv::Model();
-	char deskName[] = "table.obj";
-	if(!model->loadModelFromFile(deskName)) {
-	printf("Unable to load model\n");
-	exit(-1);
-	}
-
-	model->removeDegeneratePrims();
-
-	if(stripNormals) {
-	model->clearNormals();
-	}
-
-	model->computeNormals();
-
-	// model->clearTexCoords();
-	model->clearColors();
-	model->clearTangents();
-
-	if(zUp) 
-	{
-	nv::vec3f* vertices = (nv::vec3f*)model->getPositions();
-	nv::vec3f* normals  = (nv::vec3f*)model->getNormals();
-	for(int i = 0; i < model->getPositionCount(); ++i) {
-	std::swap(vertices[i].y, vertices[i].z);
-	vertices[i].z *= -1;
-
-	std::swap(normals[i].y, normals[i].z);
-	normals[i].z *= -1;
-	}
-	}
-
-	model->compileModel();
-
-
-	glGenBuffers(1, &modelVB);
-	glBindBuffer(GL_ARRAY_BUFFER, modelVB);
-	glBufferData(GL_ARRAY_BUFFER,
-	model->getCompiledVertexCount()*model->getCompiledVertexSize()*sizeof(float),
-	model->getCompiledVertices(), GL_STATIC_READ);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	glGenBuffers(1, &modelIB);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, modelIB);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 
-	model->getCompiledIndexCount()*sizeof(int),
-	model->getCompiledIndices(), GL_STATIC_READ);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
-
-	sofaModel = new nv::Model();
-	char sofaName[] = "table.obj";
-	if(!sofaModel->loadModelFromFile(sofaName)) {
-	printf("Unable to load sofaModel\n");
-	exit(-1);
-	}
-
-	sofaModel->removeDegeneratePrims();
-
-	if(stripNormals) {
-	sofaModel->clearNormals();
-	}
-
-	sofaModel->computeNormals();
-
-	// sofamodel->clearTexCoords();
-	sofaModel->clearColors();
-	sofaModel->clearTangents();
-
-	if(zUp) 
-	{
-	nv::vec3f* vertices = (nv::vec3f*)sofaModel->getPositions();
-	nv::vec3f* normals  = (nv::vec3f*)sofaModel->getNormals();
-	for(int i = 0; i < sofaModel->getPositionCount(); ++i) {
-	std::swap(vertices[i].y, vertices[i].z);
-	vertices[i].z *= -1;
-
-	std::swap(normals[i].y, normals[i].z);
-	normals[i].z *= -1;
-	}
-	}
-
-	sofaModel->compileModel();
-
-	glGenBuffers(1, &sofaVB);
-	glBindBuffer(GL_ARRAY_BUFFER, sofaVB);
-	glBufferData(GL_ARRAY_BUFFER,
-	sofaModel->getCompiledVertexCount()*sofaModel->getCompiledVertexSize()*sizeof(float),
-	sofaModel->getCompiledVertices(), GL_STATIC_READ);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	glGenBuffers(1, &sofaIB);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sofaIB);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 
-	sofaModel->getCompiledIndexCount()*sizeof(int),
-	sofaModel->getCompiledIndices(), GL_STATIC_READ);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	*/
-	//table.initGeometry("teapot2.obj");
-	// sofa.initGeometry("sofa.obj");
-	// teapot.initGeometry("teapot.obj");
-	// teapot3.initGeometry();
-	//geo.initGeometry(p[0]);
+	/*MyGeometry::setMatArray(mat);
 	for(int i =0;i<geoNumber;i++)
 	{
 		geo[i].initGeometry(p[i]);
-	}
+	}*/
+	t_scene.init();
 	float diag;
 	//model->computeBoundingBox(modelBBMin, modelBBMax);
 	modelBBMin = MyGeometry::modelBBMin,modelBBMax = MyGeometry::modelBBMax;
@@ -1155,12 +1055,11 @@ void init_scene(const char* model_filename)
 
 	diag = nv::length(modelBBMax - modelBBMin);
 	cgSetParameter1f(cgInvSceneScaleParam, 1.f/diag);
-	lightPos = nv::vec3f(0.0f, 65.0f, 30.0f);
 
 	cgSetParameter3f(   cgLightPosParam,
-		lightPos.x,
-		lightPos.y,
-		lightPos.z );
+		t_scene.getLightPos().x,
+		t_scene.getLightPos().y,
+		t_scene.getLightPos().z );
 
 	/* manipulator.setTrackballActivate(GLUT_LEFT_BUTTON, 0);
 	manipulator.setDollyActivate( GLUT_RIGHT_BUTTON, 0);
@@ -1342,180 +1241,14 @@ void init_optix()
 		MyGeometry::msgCgDiffuseTexParam = &cgDiffuseTexParam;
 		MyGeometry::msgCgreflectVale = &cgReflectVale;
 		//optix::Geometry sofaGemetry = sofa.getOptixGeometry(rtContext);
-
-		optix::Material glossy = rtContext->createMaterial();
-		glossy->setClosestHitProgram(0, rtContext->createProgramFromPTXFile( ptxpath("glossy_isg.cu"), "closest_hit_radiance") );
-		glossy->setAnyHitProgram(1, rtContext->createProgramFromPTXFile( ptxpath("glossy_isg.cu"), "any_hit_shadow") );
-		glossy["diffuse_Color"]->setFloat( 1.0f,0.0f,1.0f );
+		
+		t_scene.setOptix(&rtContext);
+		t_scene.optixInit();
 		/*
-		optix::Material glossy2 = rtContext->createMaterial();
-		glossy2->setClosestHitProgram(0, rtContext->createProgramFromPTXFile( ptxpath("glossy_isg.cu"), "closest_hit_radiance") );
-		glossy2->setAnyHitProgram(1, rtContext->createProgramFromPTXFile( ptxpath("glossy_isg.cu"), "any_hit_shadow") );
-		glossy2["diffuse_Color"]->setFloat( 1.0f,1.0f,1.0f );
-		rtContext->createGeometry();
-		sofaGemetry->setPrimitiveCount( sofaModel->getCompiledIndexCount()/3 );
-		sofaGemetry->setIntersectionProgram( rtContext->createProgramFromPTXFile( ptxpath("triangle_mesh_fat.cu"), "mesh_intersect" ) );
-		sofaGemetry->setBoundingBoxProgram( rtContext->createProgramFromPTXFile( ptxpath("triangle_mesh_fat.cu"), "mesh_bounds" ) );
-
-		int num_vertices = sofaModel->getCompiledVertexCount();
-		optix::Buffer vertex_buffer = rtContext->createBufferFromGLBO(RT_BUFFER_INPUT, modelVB);
-		vertex_buffer->setFormat(RT_FORMAT_USER);
-		vertex_buffer->setElementSize(3*2*sizeof(float));
-		vertex_buffer->setSize(num_vertices);
-		sofaGemetry["vertex_buffer"]->setBuffer(vertex_buffer);
-
-		optix::Buffer index_buffer = rtContext->createBufferFromGLBO(RT_BUFFER_INPUT, modelIB);
-		index_buffer->setFormat(RT_FORMAT_INT3);
-		index_buffer->setSize(sofaModel->getCompiledIndexCount()/3);
-		sofaGemetry["index_buffer"]->setBuffer(index_buffer);
-
-		optix::Buffer material_buffer = rtContext->createBuffer(RT_BUFFER_INPUT);
-		material_buffer->setFormat(RT_FORMAT_UNSIGNED_INT);
-		material_buffer->setSize(sofaModel->getCompiledIndexCount()/3);
-		void* material_data = material_buffer->map();
-		memset(material_data, 0, sofaModel->getCompiledIndexCount()/3*sizeof(unsigned int));
-		material_buffer->unmap();
-		sofaGemetry["material_buffer"]->setBuffer(material_buffer);*/
-		////////////////////////////////////////////////////////////////
-		/*optix::Geometry tableGeometry = rtContext->createGeometry();
-		sofaGemetry->setPrimitiveCount( model->getCompiledIndexCount()/3 );
-		sofaGemetry->setIntersectionProgram( rtContext->createProgramFromPTXFile( ptxpath("triangle_mesh_fat.cu"), "mesh_intersect" ) );
-		sofaGemetry->setBoundingBoxProgram( rtContext->createProgramFromPTXFile( ptxpath("triangle_mesh_fat.cu"), "mesh_bounds" ) );
-
-		int num_vertices = sofaModel->getCompiledVertexCount();
-		optix::Buffer vertex_buffer = rtContext->createBufferFromGLBO(RT_BUFFER_INPUT, modelVB);
-		vertex_buffer->setFormat(RT_FORMAT_USER);
-		vertex_buffer->setElementSize(3*2*sizeof(float));
-		vertex_buffer->setSize(num_vertices);
-		sofaGemetry["vertex_buffer"]->setBuffer(vertex_buffer);
-
-		optix::Buffer index_buffer = rtContext->createBufferFromGLBO(RT_BUFFER_INPUT, modelIB);
-		index_buffer->setFormat(RT_FORMAT_INT3);
-		index_buffer->setSize(sofaModel->getCompiledIndexCount()/3);
-		sofaGemetry["index_buffer"]->setBuffer(index_buffer);
-
-		optix::Buffer material_buffer = rtContext->createBuffer(RT_BUFFER_INPUT);
-		material_buffer->setFormat(RT_FORMAT_UNSIGNED_INT);
-		material_buffer->setSize(sofaModel->getCompiledIndexCount()/3);
-		void* material_data = material_buffer->map();
-		memset(material_data, 0, sofaModel->getCompiledIndexCount()/3*sizeof(unsigned int));
-		material_buffer->unmap();
-		sofaGemetry["material_buffer"]->setBuffer(material_buffer);*/
-
-		// optix::GeometryInstance sofaInstance = tea.getInstance(rtContext,glossy);
-		// optix::GeometryInstance tableInstance = table.getInstance(rtContext,glossy);
-		/*	
-		PPMLoader ground_ppm(GROUNDTEX_PATH);
-		if(ground_ppm.failed()) {
-		std::cerr << "Could not load PPM file " << GROUNDTEX_PATH << '\n';
-		exit(1);
-		}
-
-		optix::Buffer floor_data = rtContext->createBuffer(RT_BUFFER_INPUT);
-		floor_data->setFormat(RT_FORMAT_FLOAT4);
-		floor_data->setSize(ground_ppm.width(), ground_ppm.height());
-		float4* tex_data = (float4*)floor_data->map();
-		uchar3* pixel_data = (uchar3*)ground_ppm.raster();
-		for(unsigned int i = 0; i < ground_ppm.width() * ground_ppm.height(); ++i) {
-		tex_data[i] = make_float4(static_cast<float>(pixel_data[i].x)/255.99f,
-		static_cast<float>(pixel_data[i].y)/255.99f,
-		static_cast<float>(pixel_data[i].z)/255.99f,
-		1.f);
-		}
-		floor_data->unmap();
-
-
-		optix::TextureSampler floor_tex = rtContext->createTextureSampler();
-		floor_tex->setWrapMode( 0, RT_WRAP_REPEAT );
-		floor_tex->setWrapMode( 1, RT_WRAP_REPEAT );
-		floor_tex->setIndexingMode( RT_TEXTURE_INDEX_NORMALIZED_COORDINATES );
-		floor_tex->setReadMode( RT_TEXTURE_READ_NORMALIZED_FLOAT );
-		floor_tex->setMaxAnisotropy( 1.0f );
-		floor_tex->setMipLevelCount( 1u );
-		floor_tex->setArraySize( 1u );
-		floor_tex->setFilteringModes( RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE );
-		floor_tex->setBuffer(0,0, floor_data);
-
-		PPMLoader wall_ppm(WALLTEX_PATH);
-		if(wall_ppm.failed()) {
-		std::cerr << "Could not load PPM file " << GROUNDTEX_PATH << '\n';
-		exit(1);
-		}
-
-		optix::Buffer wall_data = rtContext->createBuffer(RT_BUFFER_INPUT);
-		wall_data->setFormat(RT_FORMAT_FLOAT4);
-		wall_data->setSize(wall_ppm.width(), wall_ppm.height());
-		tex_data = (float4*)wall_data->map();
-		pixel_data = (uchar3*)wall_ppm.raster();
-		for(unsigned int i = 0; i < wall_ppm.width() * wall_ppm.height(); ++i) {
-		tex_data[i] = make_float4(static_cast<float>(pixel_data[i].x)/255.99f,
-		static_cast<float>(pixel_data[i].y)/255.99f,
-		static_cast<float>(pixel_data[i].z)/255.99f,
-		1.f);
-		}
-		wall_data->unmap();
-
-
-		optix::TextureSampler wall_tex = rtContext->createTextureSampler();
-		wall_tex->setWrapMode( 0, RT_WRAP_REPEAT );
-		wall_tex->setWrapMode( 1, RT_WRAP_REPEAT );
-		wall_tex->setIndexingMode( RT_TEXTURE_INDEX_NORMALIZED_COORDINATES );
-		wall_tex->setReadMode( RT_TEXTURE_READ_NORMALIZED_FLOAT );
-		wall_tex->setMaxAnisotropy( 1.0f );
-		wall_tex->setMipLevelCount( 1u );
-		wall_tex->setArraySize( 1u );
-		wall_tex->setFilteringModes( RT_FILTER_LINEAR, RT_FILTER_LINEAR, RT_FILTER_NONE );
-		wall_tex->setBuffer(0,0, wall_data);
-
-		optix::Material flat_tex = rtContext->createMaterial();
-		flat_tex->setClosestHitProgram(0, rtContext->createProgramFromPTXFile( ptxpath("flat_tex_isg.cu"), "closest_hit_radiance"));
-
-		float diag = nv::length(modelBBMax - modelBBMin);
-		optix::Geometry floor = createParallelogram(rtContext, 
-		nv::vec3f(-diag*.5f, modelBBMin.y, -diag*.5f),
-		nv::vec3f(diag, 0, 0),
-		nv::vec3f(0, 0, diag));
-
-		optix::GeometryInstance floor_instance = rtContext->createGeometryInstance();
-		floor_instance->setMaterialCount(1);
-		floor_instance->setMaterial(0, flat_tex);
-		floor_instance->setGeometry(floor);
-		floor_instance["diffuse_texture"]->setTextureSampler(floor_tex);
-
-		optix::Geometry wall0 = createParallelogram(rtContext,
-		nv::vec3f(-diag*.5f, modelBBMax.y*2, diag*.5f),
-		nv::vec3f(0,0,  -diag),
-		nv::vec3f(0, -(modelBBMax.y*2-modelBBMin.y*1), 0));
-
-		optix::GeometryInstance wall0_instance = rtContext->createGeometryInstance();
-		wall0_instance->setMaterialCount(1);
-		wall0_instance->setMaterial(0, flat_tex);
-		wall0_instance->setGeometry(wall0);
-		wall0_instance["diffuse_texture"]->setTextureSampler(wall_tex);
-
-		optix::Geometry wall1 = createParallelogram(rtContext,
-		nv::vec3f( -diag*.5f, modelBBMax.y*2, -diag*.5f),
-		nv::vec3f(diag, 0, 0),
-		nv::vec3f(0, -(modelBBMax.y*2-modelBBMin.y),  0));
-
-		optix::GeometryInstance wall1_instance = rtContext->createGeometryInstance();
-		wall1_instance->setMaterialCount(1);
-		wall1_instance->setMaterial(0, flat_tex);
-		wall1_instance->setGeometry(wall1);
-		wall1_instance["diffuse_texture"]->setTextureSampler(teapot3.initMaterial());
-		*/
-		//	teapot.setMaterial(&a[1]);
-		//	teapot.initGeometry("teapot.obj");
-		//	table.setMaterial(&a[1]);
-		//geo[0].setMaterial(&mat[1]);
-		//teapot3.setMaterial(&mat[0]);
-		//	optix::GeometryInstance teapotInstance = teapot.getInstance();
-		//optix::GeometryInstance tableInstance = table.getInstance();
-		//optix::GeometryInstance teapot3Instance = teapot3.getInstance();
 		optix::GeometryInstance geoInstance[geoNumber];
 		for(int i =0;i<geoNumber;i++)
 		{
-			geoInstance[i] = geo[i].getInstance();
+			geoInstance[i] = t_scene.getObject(i).getInstance();
 		}
 
 		printf("333");
@@ -1535,14 +1268,14 @@ void init_optix()
 		sutilCurrentTime(&time1);
 		geometrygroup->setAcceleration( rtContext->createAcceleration("Bvh","Bvh") );
 		sutilCurrentTime(&time2);
-		double dt = time2-time1;
 		//printf("%f\n",dt);
+		
 		rtContext["reflectors"]->set(geometrygroup);
-
+		*/
 		rtContext["max_depth"]->setUint(2u);
-		rtContext["lightPos"]->set3fv((const float*)&make_float3(lightPos.x,
-			lightPos.y,
-			lightPos.z));
+		rtContext["lightPos"]->set3fv((const float*)&make_float3(t_scene.getLightPos().x,
+			t_scene.getLightPos().y,
+			t_scene.getLightPos().z));
 
 		rtContext->setStackSize(1850);
 		rtContext->validate();
@@ -1559,51 +1292,7 @@ void init_optix()
 	cout<<"ok"<<endl;
 }
 
-void draw_ground(CGtechnique& tech)
-{
-	float diag = nv::length(modelBBMax - modelBBMin);
-	float dim = diag*.5f;
 
-	CGpass pass = cgGetFirstPass(tech);
-	while(pass) {
-		cgSetPassState(pass);
-
-		glBegin(GL_TRIANGLES);
-		glNormal3f(0,1,0);
-		glTexCoord2f(0,0); glVertex3f(-dim, modelBBMin.y, -dim);
-		glTexCoord2f(0,1); glVertex3f(-dim, modelBBMin.y, dim);
-		glTexCoord2f(1,0); glVertex3f(dim, modelBBMin.y, -dim);
-
-		glTexCoord2f(0,1); glVertex3f(-dim, modelBBMin.y, dim);
-		glTexCoord2f(1,0); glVertex3f(dim, modelBBMin.y, -dim);
-		glTexCoord2f(1,1); glVertex3f(dim, modelBBMin.y, dim);
-
-		glEnd();
-
-		cgResetPassState(pass);
-		pass = cgGetNextPass(pass);
-	}
-}
-
-
-
-void draw_model(CGtechnique& tech)
-{
-
-	for(int i =0;i<geoNumber;i++){
-
-		cgSetParameter1f(cgModelIdParam, 1.0 * i);
-		//geo[i].drawGeometry(tech,geo[i].actionNumber);
-		geo[i].drawGeometry(tech,0);
-	}
-}
-void draw_model(glslShader& shader)
-{
-	for(int i =0;i<geoNumber;i++)
-	{
-		geo[i].drawGeometry(shader,0);
-	}
-}
 
 void drawFinalEffect()
 {
@@ -1747,7 +1436,7 @@ void draw_scene(glslShader& shader,CCamera * pCamera)
 		pCamera->Look();
 	}
 	shader.setCamera(pCamera);
-	draw_model(shader);
+	t_scene.draw_model(shader);
 
 
 	CHECK_ERRORS();
@@ -1776,9 +1465,7 @@ void draw_scene(CGtechnique& current_technique, CCamera * pCamera)
 	cgSetParameter3f(cgDiffuseColor,0.0f,0.0f,0.0f);
 	cgSetParameter3f(cgCameraPosition,pCamera->Position().x,pCamera->Position().y,pCamera->Position().z);
 	cgGLSetTextureParameter(cgDiffuseTexParam, woodTex);
-	draw_model(current_technique);
-
-
+	t_scene.draw_model(current_technique);
 	CHECK_ERRORS();
 }
 extern unsigned int  *g_PixelPos;
@@ -2489,91 +2176,7 @@ void cupRound(int beginTime,int endTime)
 }
 extern transform1 transformArray[];
 extern action ActArray[];
-void updateGeometry( )
-{
-	//We know that we have (only) one group in this example
-	for(int i =0;i<geoNumber;i++)
-	{
-		if(geo[i].actionNumber)
-		{
-			int actionNum = geo[i].actionNumber;
-			GeometryInstance geometryInstance = geometrygroup->getChild( i );
-			Geometry geometry = geometryInstance->getGeometry();
-			Buffer vertexBuffer = geometry["vertex_buffer"]->getBuffer();
-			float3* new_vertices = (float3*)vertexBuffer->map();
 
-			RTsize numVertices;
-			vertexBuffer->getSize( numVertices );
-
-			float* originData = (float* ) geo[i].m_model->getCompiledOptixVertices();
-			ActArray[actionNum].draw((float*)new_vertices,originData,numVertices);
-			vertexBuffer->unmap();
-
-
-			geometry->markDirty();
-		}
-	}
-	geometrygroup->getAcceleration()->markDirty();
-	//	 geo[i].drawGeometry(tech,geo[i].actionNumber);
-	return;
-	{
-		GeometryInstance geometryInstance = geometrygroup->getChild( 0 );
-		Geometry geometry = geometryInstance->getGeometry();
-
-
-
-		Buffer vertexBuffer = geometry["vertex_buffer"]->getBuffer();
-		float3* new_vertices = (float3*)vertexBuffer->map();
-
-		RTsize numVertices;
-		vertexBuffer->getSize( numVertices );
-
-		float* originData = (float* ) geo[0].m_model->getCompiledOptixVertices();
-
-		//We don't have to set x and z here in this example
-		/* for(unsigned int v = 0; v < numVertices; v++)
-		{
-		int posIndex = 3*v;
-		new_vertices[posIndex].y = originData[9*v+1]+ delta ;
-		// float4x4 matrix =
-		}*/
-
-		ActArray[1].draw((float*)new_vertices,originData,numVertices);
-		vertexBuffer->unmap();
-
-
-		geometry->markDirty();
-
-
-	}
-	{
-		GeometryInstance geometryInstance = geometrygroup->getChild( 1 );
-		Geometry geometry = geometryInstance->getGeometry();
-
-
-
-		Buffer vertexBuffer = geometry["vertex_buffer"]->getBuffer();
-		float3* new_vertices = (float3*)vertexBuffer->map();
-
-		RTsize numVertices;
-		vertexBuffer->getSize( numVertices );
-
-		float* originData = (float* ) geo[1].m_model->getCompiledOptixVertices();
-
-		//We don't have to set x and z here in this example
-		ActArray[1].draw((float*)new_vertices,originData,numVertices);
-
-
-
-		vertexBuffer->unmap();
-
-
-		geometry->markDirty();
-
-
-	}
-	geometrygroup->getAcceleration()->markDirty();
-}
 void cameraControl(int currentTime,CCamera& NowCamera)
 {
 	// cupRound(0,300);

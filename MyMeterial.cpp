@@ -1,6 +1,7 @@
 #include "MyMeterial .h"
  
 optix::Context MyMeterial::ms_rtContext = optix::Context::create();
+
 MyMeterial::MyMeterial(char* filename):m_fileName(filename)
 {
 	isTex = 1;
