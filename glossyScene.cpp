@@ -23,7 +23,7 @@ static MyMeterial glossyMat[] =
 	"./glossyModel/sphere.jpg",      //9
 	"./vase/test3-5.jpg",     //15
 	"./glossy/tv.jpg",     //16
-	"./glossy/IEEE.BMP",     //17
+	make_float3(0.9,0.9,0.9),     //17
 
 };
 

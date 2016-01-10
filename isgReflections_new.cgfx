@@ -373,10 +373,6 @@ float4 glossy_reflections_fp(Fragment f) : COLOR
 	else
 	{
 		sourceColor= diffuseColor.xyz;
-		if(diffuseColor.x==0.89)
-			kd = 0.5;
-		if(diffuseColor.x==1.1)
-			kd*=0.5;
 	}
 	//kd = 0.2;
 	sourceColor*=(kd);/**(1-0.2*tex2D(pReflectionMap, uv).w)*/;
@@ -395,7 +391,7 @@ float4 glossy_reflections_fp(Fragment f) : COLOR
 			 reflectValue = 0;
 		//return float4(1,0,0,1);
 	//	 reflectValue = 1;
-		return float4(sourceColor,1);
+		return float4(refl,1);
 	}
 	else
 		return float4(sourceColor,1);

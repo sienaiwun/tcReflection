@@ -98,7 +98,39 @@ __device__ __host__ void ConcentricSampleDisk(float u1, float u2, float *dx,floa
      *dy = r * sinf(theta);
 
 }
+static
+__host__ __device__ __inline__ optix::float3 sample_phong_lobe( const optix::float2 &sample, float exponent, 
+                                                                const optix::float3 &U, const optix::float3 &V, const optix::float3 &W, 
+                                                                float &pdf, float &bdf_val )
+{
+  const float cos_theta = powf(sample.y, 1.0f/(exponent+1.0f) );
 
+  const float phi = sample.x * 2.0f * M_PIf;
+  const float sin_theta = sqrtf(1.0f - cos_theta*cos_theta);
+  
+  const float x = cosf(phi)*sin_theta;
+  const float y = sinf(phi)*sin_theta;
+  const float z = cos_theta;
+
+  const float powered_cos = powf( cos_theta, exponent );
+  pdf = (exponent+1.0f) / (2.0f*M_PIf) * powered_cos;
+  bdf_val = (exponent+2.0f) / (2.0f*M_PIf) * powered_cos;  
+
+  return x*U + y*V + z*W;
+}
+static
+__device__ __inline__ void createONB( const optix::float3& n,
+                                      optix::float3& U,
+                                      optix::float3& V)
+{
+  using namespace optix;
+
+  U = cross( n, make_float3( 0.0f, 1.0f, 0.0f ) );
+  if ( dot(U, U) < 1.e-3f )
+    U = cross( n, make_float3( 1.0f, 0.0f, 0.0f ) );
+  U = normalize( U );
+  V = cross( n, U );
+}
 RT_PROGRAM void addition_request()
 {
 	int index = launch_index.y * PixelWidth  + launch_index.x;
@@ -134,9 +166,7 @@ RT_PROGRAM void addition_request()
 	{
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, x, y));
-   
 		float3 ray_direction = reflect(V, normal);
-
 		float3 L = lightPos-ray_origin;
 		float dist = sqrtf(dot(L,L));
 		float3 ray_direction_s = L/dist;
@@ -149,8 +179,6 @@ RT_PROGRAM void addition_request()
 		float shadow = (prd_s.attenuation.x>0)?1:0;
 		optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
 		rtTrace(reflectors, ray, prd);
-	//shadow = 0;
-		//reflection_buffer[FinalPixelPos] = make_float4(prd.result,shadow);
 		reflection_buffer[FinalPixelPos] = make_float4(prd.result,1);
 		return;	 
 	}
@@ -178,7 +206,7 @@ RT_PROGRAM void reflection_request()
  
   if( !isnan(ray_origin.x) ) 
   {
-    if(1)
+    if(0)
 	{
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, launch_index.x, launch_index.y));
@@ -203,46 +231,38 @@ RT_PROGRAM void reflection_request()
 		reflection_buffer[launch_index] = make_float4(prd.result,r_dis);
 		return;	 
 	}
-	return;
 	float3 V = normalize(ray_origin-eye_pos);
     float3 normal = make_float3(tex2D(normal_texture, launch_index.x, launch_index.y));
-   
 	float3 ray_direction = normalize(reflect(V, normal));
-
-
-	float3 L = lightPos-ray_origin;
-	float dist = sqrtf(dot(L,L));
-	float3 ray_direction_s = L/dist;
-	optix::Ray ray_s = optix::make_Ray(ray_origin, 
-		ray_direction_s, 
-		shadow_ray_type, 
-		scene_epsilon, 
-		dist);
-	
-	float a = 0.15;
-	float3 temp = normalize(cross(make_float3(1,0,0),ray_direction));
-	float3 xo = normalize(cross(temp,ray_direction));
-	float3 yo = normalize(cross(xo,ray_direction));
-#define N 4
-	float randomArray[2*N],rx[N],ry[N];
+	float3 xo, yo;
+    createONB(ray_direction, xo, yo);
+#define N 11
+	float2 randomArray[N];
+	float rx[N],ry[N];
 	float3 glossy_direcion[N];
 	 optix::Ray ray[N];
 	 PerRayData_radiance prdArray[N];
 	 float3 sumColor = make_float3(0,0,0);
 	 float seedx = normal.x+ray_origin.y;
 	 float seedy = normal.z+ray_origin.x;
+	 float exponent = 3;
+	 float bsdf_val[N];
+	 float bsdf_pdf[N];
+	 float costheta[N];
 	for(int i =0;i<N;i++)
 	{
 		prdArray[i] = prd;
-		randomArray[2*i] =  random(make_float2(i*1.0/N*seedx,(i+0.5)/N)*seedy);
-		randomArray[2*i+1] =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
-		ConcentricSampleDisk(randomArray[2*i],randomArray[2*i+1],&rx[i],&ry[i]);
+		randomArray[i].x =  random(make_float2(i*1.0/N*seedx,(i+0.5)/N)*seedy);
+		randomArray[i].y =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
+
+		//ConcentricSampleDisk(randomArray[2*i],randomArray[2*i+1],&rx[i],&ry[i]);
 		//rx[i] = randomArray[2*i];
 		//ry[i] = randomArray[2*i+1];
 		/*float angle = -5.5;
 		rx[i] = sin(angle);
 		ry[i] = cos(angle);*/
-		glossy_direcion[i] = ray_direction+rx[i]*a*xo+ry[i]*a*yo;
+		glossy_direcion[i] = sample_phong_lobe( randomArray[i], 50, xo, yo, ray_direction, bsdf_pdf[i], bsdf_val[i] );
+		costheta[i] = dot(glossy_direcion[i], normal);
 		ray[i] = optix::make_Ray(ray_origin, glossy_direcion[i], radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
 	}
 	
@@ -251,17 +271,17 @@ RT_PROGRAM void reflection_request()
 	rtTrace(reflectors, ray[1], prdArray[1]);
  	rtTrace(reflectors, ray[2], prdArray[2]);
  	rtTrace(reflectors, ray[3], prdArray[3]);
- /*	rtTrace(reflectors, ray[4], prdArray[4]);
+ 	rtTrace(reflectors, ray[4], prdArray[4]);
 	rtTrace(reflectors, ray[5], prdArray[5]);
  	rtTrace(reflectors, ray[6], prdArray[6]);
  	rtTrace(reflectors, ray[7], prdArray[7]);
- 		rtTrace(reflectors, ray[8], prdArray[8]);
+ 	rtTrace(reflectors, ray[8], prdArray[8]);
  	rtTrace(reflectors, ray[9], prdArray[9]);
 	rtTrace(reflectors, ray[10], prdArray[10]);
- 	rtTrace(reflectors, ray[11], prdArray[11]);
+ 	/*rtTrace(reflectors, ray[11], prdArray[11]);
  	rtTrace(reflectors, ray[12], prdArray[12]);
  	rtTrace(reflectors, ray[13], prdArray[13]);
- 	rtTrace(reflectors, ray[14], prdArray[14]);
+ 	/*rtTrace(reflectors, ray[14], prdArray[14]);
 	rtTrace(reflectors, ray[15], prdArray[15]);
  	/*rtTrace(reflectors, ray[16], prdArray[16]);
  	rtTrace(reflectors, ray[17], prdArray[17]);
@@ -291,35 +311,23 @@ RT_PROGRAM void reflection_request()
  */
  
 
- 	rtTrace(reflectors, ray_s, prd_s);
-	float shadow = (prd_s.attenuation.x>0)?1:0;
-	float depthSum = 0;
+ 	float depthSum = 0;
 	float depthCount = 0;
 	float r ;
-	float3 color;
+	float3 color ;
+	sumColor = make_float3(0,0,0);
 	for(int i=0;i<N;i++)
 	{
 	//if(prdArray[i].t_hit<8)
-		sumColor+=prdArray[i].result;
+		float3 color = prdArray[i].result*costheta[i]*bsdf_val[i] /bsdf_pdf[i];
+		sumColor +=color;
 		float len = prdArray[i].t_hit;
-		if(len<20) 
-		{
-			r = 1/len;
-			depthSum+=len; 
-			depthCount+=r; 
-			//color = make_float3(1,0,0);
-		} 
-		//else
-		{
-			//color = make_float3(0,0,0);
-		}
+		depthSum+=len; 
 
 	}
 	float avgDepth;
-	 color = (sumColor)/N; 
-	avgDepth = depthSum/depthCount;
-	if(depthCount==0) 
-		avgDepth = 100;
+	color = (sumColor)/N; 
+	avgDepth = depthSum/N;
 	/*color.x = rx[0];
 	color.y = ry[0];
 	color.z = 0;*/
