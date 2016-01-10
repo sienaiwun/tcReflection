@@ -43,7 +43,8 @@
 #include "macro.h"
 #include "RefFrame.h"
 #include "cudaResource.h"
-#include "toiletScene.h"
+//#include "toiletScene.h"
+#include "glossyScene.h"
 unsigned int *Host_PixelSum;
 unsigned int *Host_PixelState;
 
@@ -86,7 +87,7 @@ CCamera g_refCamera,g_currentCamera;
 //uint *Host_PixelSum;
 //MyGeometry teapot;
 int CountTime = 1000;
-TimeMesure g_timeMesure(tcRenderingType,CountTime);
+TimeMesure g_timeMesure(optixRenderingType,CountTime);
 nv::vec3f viewDependentMissColor = nv::vec3f(255,0,0);
 nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 //cudaGraphicsResource *cudaRes_WorldNormal,*cudaRes_WorldPos,*cudaRes_Reflect;
@@ -94,41 +95,7 @@ TestShader g_testShader;
 
 CudaTexResourse poxCudaTex,normalCudaTex,reflectCudaTex,finalEffectCudaTex;
 CudaPboResource vectorCudaArray,lastCudaArray,finalEffectCudaArray;
-/*MyMeterial mat[] = 
-{
-	//"./model/cheat.jpg",
 
-	"/bathroom/masac.jpg",  //0
-	"./bathroom/sceneSight.jpg",    //1
-	"./model/redstone2.jpg",  //2
-	"./model/book2.jpg",	//3
-	"./model/book.jpg",     //4
-	"./model/japen2.jpg",   //5
-	make_float3(0.9,0.9,0.9),     //6
-	make_float3(247.0/255,242.0/255,216.0/255),     //7dish
-	make_float3(237.0/255,136.0/255,54.0/255),    //8soap
-	make_float3(169.0/255,170.0/255,156.0/255),     //9littleBarrier
-	"./aoBathroom/masic.jpg",     //10
-	"./aoBathroom/walls2.jpg",   //11
-	"./aoBathroom/floor.jpg",      //12
-	"./aoBathroom/masic.jpg",         //13 west
-	"./aoBathroom/littleWall.jpg",      //14  esat
-	make_float3(0.9,0.9,0.9),      //15
-	//"./model/cheat.jpg",               //15
-	make_float3(108.0/255,65.0/255,42.0/255),     //16 tooth1
-	make_float3(88.0/255,163.0/255,22.0/255),             //17 tooth2
-	make_float3(1,1,1),             //18 white
-	make_float3(192.0/255,129.0/255,74.0/255),        //19 toothPaste
-	make_float3(198.0/255,219.0/255,207.0/255),          //20 sorport
-	make_float3(1,219.0/255,207.0/255),           //21 mirrorFrame
-	make_float3(1,225.0/255,250.0/255),             //22 paperRoll
-	make_float3(0.7,0.9,0.6) ,              //23 paperSurport
-	make_float3(0.74901,0.678,0.435) ,            //24 metal
-	"./vase/test3.jpg",      //25
-	make_float3(0.91,0.9,0.9),     //26
-	make_float3(0.91,219.0/255,207.0/255)  //27
-
-};*/
 //#define  geoNumber  43
 #define  geoNumber  35
 //#define  geoNumber  2
@@ -139,139 +106,15 @@ TranShader g_transShader;
 MergeShader g_mergeShader;
 TexShader g_texShader;
 BlendShader g_blendShader;
-/*
-GeoPara p[geoNumber] = 
-{
-	//{"./bathroom/q1.obj",19,0,0.0f,1},
-	//{"./bathroom/q2.obj",18,0,0.0f,1},
-	{"model/bathroom/toilet_body_all.3ds",15,0,CHINAREFLECT,3},
-	{"model/bathroom/toilet_up_all.3ds",15,0,CHINAREFLECT,3},
-
-	{"model/bathroom/testSphere.obj",15,0,CHINAREFLECT,0},
-	{"model/bathroom/testBox.obj",15,0,CHINAREFLECT,0},
-	//{"model/bathroom/toilet2.3ds",15,0,CHINAREFLECT,3},
-	//{"model/bathroom/toilet3.3ds",15,0,0,3},
-	//{"model/bathroom/toilet4.3ds",15,0,CHINAREFLECT,3},
-	//{"model/bathroom/toilet5.3ds",15,0,0,3},
-	//{"model/bathroom/toilet6.3ds",15,0,CHINAREFLECT,3},
-	//{"model/bathroom/toiletGap1.3ds",15,0,CHINAREFLECT,2},
-	//{"model/bathroom/toiletGap2.3ds",15,0,0,1},
-	//{"model/bathroom/toiletUp1.3ds",15,0,0,3},
-	//{"model/bathroom/toiletUpbody1.3ds",15,0,CHINAREFLECT,3},
-	//{"model/bathroom/toiletUpUp3.3ds",15,0,0,3},
-	//{"model/bathroom/toiletUpPlane3.3ds",15,0,CHINAREFLECT,3},
-
-	{"model/aoBathroom/littleBarrier.obj",9,0,0.0f,0},
-	{"model/bathroom/ceil.obj",15,0,0.0f,0},
-	{"model/bathroom/cockoff.3ds",24,0,0,5},
-	{"model/bathroom/cupOrigin.3ds",21,0,0.0f,8},
-	{"model/bathroom/floor.obj",15,0,0.0f,0},
-	{"model/aoBathroom/littleWall.obj",14,0,0.0f,0},
-	{"model/aoBathroom/walls.obj",11,0,0.0f,0},
-	{"model/aoBathroom/masic.obj",13,0,0.1,0},//10
 
 
-	{"model/bathroom/metal12.obj",24,0,0.0f,0},//11
-
-	{"model/bathroom/mirror.obj",15,0,1.0f,6},//12
-	{"model/bathroom/mirrorB.3ds",27,0,0.0f,6},//12
-	{"model/bathroom/mirrorFrame.obj",21,0,0.0f,6},//13
-	{"model/bathroom/paperRoll.obj",22,0,0.0f,0},//15
-	{"model/bathroom/paperSurpot.obj",23,0,0.0f,0},//15
-	{"model/bathroom/newwash.obj",15,0,0.15,4},//16
-	//	{"./bathroom/washBasin.obj",15,0,0.152},//17
-	{"model/bathroom/support.3ds",20,0,0.2f,11},//18
-	{"model/bathroom/brushOnBoard.obj",16,0,0.0f,9},//19
-	{"model/bathroom/brush2OnBoard.obj",17,0,0.0f,10},//20
-	{"model/bathroom/white1.3ds",18,0,0.0f,9},
-	{"model/bathroom/white22.3ds",18,0,0.0f,10},
-
-	//{"./bathroom/toothOnDesk/toothBrush.obj",19,0,0.0f,0},//20
-	//{"./bathroom/toothOnDesk/Brush3.obj",18,0,0.0f,0},//20
-	//{"./bathroom/wash.obj",15,0,0.0f},//20
-	{"model/bathroom/wash_basin0n.3ds",15,0,CHINAREFLECT,5},//20
-	{"model/bathroom/washbasin1.3ds",15,0,CHINAREFLECT,5},//20
-	{"model/bathroom/washbasin2_n.3ds",15,0,CHINAREFLECT,5},//20
-	{"model/bathroom/washbasin3_n.3ds",26,0,CHINAREFLECT,5},//20
-	{"model/bathroom/washbasin41.3ds",15,0,CHINAREFLECT,5},//20
-	{"model/bathroom/washbasin42n.3ds",15,0,CHINAREFLECT,5},//20
-
-	{"model/bathroom/scien.obj",1,0,0.0f,0},
-	{"model/bathroom/soapSurport2.obj",24,0,0.0f,0},
-	{"model/bathroom/dish.obj",7,0,0.2f,0},
-	{"model/bathroom/ceilMasac.3DS",6,0,0.2f,0},
-	{"model/bathroom/washbasinCircle.3DS",15,0,0.0f,0},
-
-
-};*/
-
-toiletScene t_scene;
+glossyScene t_scene;
 
 void cameraControl(int,CCamera&);
 
-/*GeoPara p[geoNumber] = 
-{
-//{"./bathroom/q1.obj",19,0,0.0f,1},
-//{"./bathroom/q2.obj",18,0,0.0f,1},
-{"model/bathroom/toilet1.3ds",15,0,0,3},
-{"model/bathroom/toilet2.3ds",15,0,CHINAREFLECT,3},
-{"model/bathroom/toilet3.3ds",15,0,0,3},
-{"model/bathroom/toilet4.3ds",15,0,CHINAREFLECT,3},
-{"model/bathroom/toilet5.3ds",15,0,0,3},
-{"model/bathroom/toilet6.3ds",15,0,CHINAREFLECT,3},
-{"model/bathroom/toiletGap1.3ds",15,0,CHINAREFLECT,2},
-{"model/bathroom/toiletGap2.3ds",15,0,0,1},
-{"model/bathroom/toiletUp1.3ds",15,0,0,3},
-{"model/bathroom/toiletUpbody1.3ds",15,0,CHINAREFLECT,3},
-{"model/bathroom/toiletUpUp3.3ds",15,0,0,3},
-{"model/bathroom/toiletUpPlane3.3ds",15,0,CHINAREFLECT,3},
-
-{"model/aoBathroom/littleBarrier.obj",9,0,0.0f,0},
-{"model/bathroom/ceil.obj",15,0,0.0f,0},
-{"model/bathroom/cockoff.3ds",24,0,0,5},
-{"model/bathroom/cupOrigin.3ds",21,0,0.0f,8},
-{"model/bathroom/floor.obj",15,0,0.0f,0},
-{"model/aoBathroom/littleWall.obj",14,0,0.0f,0},
-{"model/aoBathroom/walls.obj",11,0,0.0f,0},
-{"model/aoBathroom/masic.obj",13,0,0.1,0},//10
 
 
-{"model/bathroom/metal12.obj",24,0,0.0f,0},//11
-
-{"model/bathroom/mirror.obj",15,0,1.0f,6},//12
-{"model/bathroom/mirrorB.3ds",27,0,0.0f,6},//12
-{"model/bathroom/mirrorFrame.obj",21,0,0.0f,6},//13
-{"model/bathroom/paperRoll.obj",22,0,0.0f,0},//15
-{"model/bathroom/paperSurpot.obj",23,0,0.0f,0},//15
-{"model/bathroom/newwash.obj",15,0,0.15,4},//16
-//	{"./bathroom/washBasin.obj",15,0,0.152},//17
-{"model/bathroom/support.3ds",20,0,0.2f,11},//18
-{"model/bathroom/brushOnBoard.obj",16,0,0.0f,9},//19
-{"model/bathroom/brush2OnBoard.obj",17,0,0.0f,10},//20
-{"model/bathroom/white1.3ds",18,0,0.0f,9},
-{"model/bathroom/white22.3ds",18,0,0.0f,10},
-
-//{"./bathroom/toothOnDesk/toothBrush.obj",19,0,0.0f,0},//20
-//{"./bathroom/toothOnDesk/Brush3.obj",18,0,0.0f,0},//20
-//{"./bathroom/wash.obj",15,0,0.0f},//20
-{"model/bathroom/wash_basin0n.3ds",15,0,CHINAREFLECT,5},//20
-{"model/bathroom/washbasin1.3ds",15,0,CHINAREFLECT,5},//20
-{"model/bathroom/washbasin2_n.3ds",15,0,CHINAREFLECT,5},//20
-{"model/bathroom/washbasin3_n.3ds",26,0,CHINAREFLECT,5},//20
-{"model/bathroom/washbasin41.3ds",15,0,CHINAREFLECT,5},//20
-{"model/bathroom/washbasin42n.3ds",15,0,CHINAREFLECT,5},//20
-
-{"model/bathroom/scien.obj",1,0,0.0f,0},
-{"model/bathroom/soapSurport2.obj",24,0,0.0f,0},
-{"model/bathroom/dish.obj",7,0,0.2f,0},
-{"model/bathroom/ceilMasac.3DS",6,0,0.2f,0},
-{"model/bathroom/washbasinCircle.3DS",15,0,0.0f,0},
-
-
-};
-*/
-
-
+/*toilet 
 posPara posArray[] = 
 {
 	//{make_float3(16.033649,38.942272,15.414365  ),make_float3(22.289124,34.077927,9.314583 )},
@@ -325,7 +168,63 @@ posPara posArray[] =
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
 
+};*/
+
+posPara posArray[] = 
+{
+	//{make_float3(16.033649,38.942272,15.414365  ),make_float3(22.289124,34.077927,9.314583 )},
+	//{make_float3(20.541248,38.556011,16.854353  ),make_float3(24.467501,33.042343,9.493363 )},
+	//{make_float3(18.591887,38.901070,18.539888  ),make_float3(22.336548,34.001892,10.667604 )},
+	//{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},
+
+	//{make_float3(24.898901,45.217281,-10.226630  ),make_float3(25.289194,38.099701,-3.213274 )},
+	//	{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},
+	//{make_float3(19.777601,40.256077,18.724140  ),make_float3(21.469124,33.352386,11.690137 )},
+	//{make_float3(21.208389,43.804527,-13.503925  ),make_float3(24.115210,37.705105,-6.132097 )},
+	//{make_float3(18.743200,38.181194,-3.370136  ),make_float3(23.238724,31.557341,2.622727 )},
+	//{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},
+	//{make_float3(24.302208,48.071339,26.106796  ),make_float3(23.576305,42.725662,17.686817 )},
+	//{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.228128,47.533394,25.267078 )},
+	//{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.231396,47.535080,25.265717 )},
+	//{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )},
+	//{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},
+
+	//1st
+	//	{make_float3(-2.403542,34.498703,37.004547  ),make_float3(0.809388,32.024666,27.863651 )},//
+	//Burning add
+	//{make_float3(12.813933,30.045429,23.866928),make_float3(16.026863,27.571392,14.726033)},
+	{make_float3(-23.214741,132.878403,104.965492  ),make_float3(-23.922035,132.399780,105.471191 )},
+	{make_float3(-64.204552,128.025604,54.879829  ),make_float3(-64.709442,127.616676,55.533115 )},
+	{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},//5
+
+	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
+	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
+	//10
+	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
+	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
+
+	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
+	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
+
+	{make_float3(13.948970,43.934372,17.002832  ),make_float3(18.528547,37.866623,10.505962 )},//14
+	//{make_float3(4.111155,44.597073,8.203527  ),make_float3(12.948935,40.556053,5.844954 )},
+	//{make_float3(3.722486,49.674381,28.524050  ),make_float3(10.202328,45.074345,22.453533 )},//7
+	{make_float3(6.768429,44.201805,11.434514  ),make_float3(7.580947,43.711884,11.118615 )},
+	{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )}, //16
+	{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )},  //18
+	//{make_float3(21.208389,43.804527,-13.503925  ),make_float3(24.115210,37.705105,-6.132097 )},  //14
+
+	//{make_float3(8.996864,46.504173,-18.891628  ),make_float3(14.546986,39.261303,-14.800542 )},//16
+	//{make_float3(-0.140227,33.588104,3.662050  ),make_float3(8.603185,30.805325,-0.314001 )},  //18
+	//{make_float3(-0.140227,33.588104,3.662050  ),make_float3(1.301753,30.177917,-5.627264 )},    //1000
+	//{make_float3(-0.140227,33.588104,3.662050  ),make_float3(1.301753,30.177917,-5.627264 )},    //1000
+
+	//{make_float3(-19.653139,33.588104,-3.880467  ),make_float3(-14.104563,29.767727,-11.270871 )},   //800
+	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
+	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
+
 };
+
 
 //float k = 900/25.0;
 float k = 1800/25.0;
@@ -336,7 +235,6 @@ int currentTime2 = 9;
 int OptixFrame;
 FPS fcount(CountTime);
 
-MyGeometry geo[geoNumber];
 
 GLuint             normalTex;
 GLuint             worldSpaceTex;
@@ -468,97 +366,6 @@ void cgErrorCallback()
 		exit(1);
 	}
 }
-#define WIDTHBYTES(bits)    (((bits) + 31) / 32 * 4)
-void SaveBMP(char* fileName,BYTE * buf,UINT width,UINT height)
-{
-	short res1=0;
-	short res2=0;
-	long pixoff=54;
-	long compression=0;
-	long cmpsize=0;
-	long colors=0;
-	long impcol=0;
-	char m1='B';
-	char m2='M';
-
-	DWORD widthDW = WIDTHBYTES(width * 24);
-
-	long bmfsize=sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) +
-		widthDW * height;	
-	long byteswritten=0;
-
-	BITMAPINFOHEADER header;
-	header.biSize=40; 						
-	header.biWidth=width;
-	header.biHeight=height;
-	header.biPlanes=1;
-	header.biBitCount=24;					
-	header.biCompression=BI_RGB;			
-	header.biSizeImage=0;
-	header.biXPelsPerMeter=0;
-	header.biYPelsPerMeter=0;
-	header.biClrUsed=0;
-	header.biClrImportant=0;
-
-	FILE *fp;	
-	fp=fopen(fileName,"wb");
-	if (fp==NULL)
-	{
-		//MessageBox("error","Can't open file for writing");
-		return;
-	}
-
-	BYTE *topdown_pixel = (BYTE *) malloc( width*height*3*sizeof(BYTE) );
-	for(int j=0; j<height; j++ )
-		for(int k=0; k<width; k++)
-		{
-			memcpy( &topdown_pixel[(j*width+k)*3], &buf[(j*width+k)*3+2], sizeof(BYTE) );
-			memcpy( &topdown_pixel[(j*width+k)*3+2], &buf[(j*width+k)*3], sizeof(BYTE) );
-			memcpy( &topdown_pixel[(j*width+k)*3+1], &buf[(j*width+k)*3+1], sizeof(BYTE) );
-		}
-		buf = topdown_pixel;
-
-		//Ìî³äBITMAPFILEHEADER
-		fwrite((BYTE  *)&(m1),1,1,fp); byteswritten+=1;
-		fwrite((BYTE  *)&(m2),1,1,fp); byteswritten+=1;
-		fwrite((long  *)&(bmfsize),4,1,fp);	byteswritten+=4;
-		fwrite((int  *)&(res1),2,1,fp); byteswritten+=2;
-		fwrite((int  *)&(res2),2,1,fp); byteswritten+=2;
-		fwrite((long  *)&(pixoff),4,1,fp); byteswritten+=4;
-
-		//Ìî³äBITMAPINFOHEADER
-		fwrite((BITMAPINFOHEADER *)&header,sizeof(BITMAPINFOHEADER),1,fp);
-		byteswritten+=sizeof(BITMAPINFOHEADER);
-
-
-		//Ìî³äÎ»Í¼Êý¾Ý
-		long row=0;
-		long rowidx;
-		long row_size;
-		row_size=header.biWidth*3;
-		long rc;
-		for (row=0;row<header.biHeight;row++) {
-			rowidx=(long unsigned)row*row_size;						      
-
-			// Ð´Ò»ÐÐ
-			rc=fwrite((void  *)(buf+rowidx),row_size,1,fp);
-			if (rc!=1) 
-			{
-				break;
-			}
-			byteswritten+=row_size;	
-
-			for (DWORD count=row_size;count<widthDW;count++) {
-				char dummy=0;
-				fwrite(&dummy,1,1,fp);
-				byteswritten++;							  
-			}
-
-		}
-
-		fclose(fp);
-}
-
 void getEffectParam( CGeffect effect,
 					const char* semantic,
 					CGparameter* param )
@@ -1042,11 +849,6 @@ void init_gl()
 void init_scene(const char* model_filename)
 {
 	printf("init scence\n");
-	/*MyGeometry::setMatArray(mat);
-	for(int i =0;i<geoNumber;i++)
-	{
-		geo[i].initGeometry(p[i]);
-	}*/
 	t_scene.init();
 	float diag;
 	//model->computeBoundingBox(modelBBMin, modelBBMax);
@@ -2195,7 +1997,8 @@ void cameraControl(int currentTime,CCamera& NowCamera)
 	// cupRound*/
 	//	cupRound(10*k,12*k);
 	// updateGeometry();
-
+	//if(once ==0)
+	{
 	if(currentTime<=kk[0])
 	{
 		NowCamera.navigate(posArray[0],posArray[1],currentTime,0,kk[0]);
@@ -2253,6 +2056,8 @@ void cameraControl(int currentTime,CCamera& NowCamera)
 		NowCamera.navigate(posArray[13],posArray[14],currentTime,kk[12],kk[13]);
 	}
 	NowCamera.Look();
+	//once = 1;
+	}
 	//currentTime++;
 
 
@@ -2415,9 +2220,10 @@ void optixRendering()
 		// sutilCurrentTime(&display_start);
 		g_timeMesure.setBeginTime(display_start);
 	}
-	cameraControl(currentTime,g_refCamera);
+	CVector3& pos =g_refCamera.Position();
+	//cameraControl(currentTime,g_refCamera);
 	cameraControl(currentTime2,g_currentCamera);
-
+	g_refCamera = g_currentCamera;
 	currentGbuffer.begin();
 	draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);
 	//currentGbuffer.SaveBMP("test/worldPos.bmp",0);
@@ -3247,7 +3053,7 @@ void resize(int w, int h)
 
 void idle()
 {
-	//g_currentCamera.Update();
+	g_currentCamera.Update();
 	// Optix_Camare.Update();
 	//  manipulator.idle();
 	glutPostRedisplay();
@@ -3438,8 +3244,8 @@ void printUsageAndExit( const std::string& argv0, bool doExit = true )
 int main(int argc, char** argv)
 {
 	// Allow glut to consume its args first
-	//freopen("stdout.txt","w",stdout);
-	//freopen("stderr.txt","w",stderr);
+	freopen("stdout.txt","w",stdout);
+	freopen("stderr.txt","w",stderr);
 	glutInit(&argc, argv);
 
 	bool dobenchmark = false;

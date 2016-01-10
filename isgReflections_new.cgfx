@@ -341,7 +341,7 @@ float4 glossy_reflections_fp(Fragment f) : COLOR
   
   //reflectValue = 0.158;
  refl = tex2D(pReflectionMap, uv).xyz;
- 	return float4(refl,1);
+ //	return float4(refl,1);
  if (refl.x <0)
 	reflectValue = 0.0f;
   // a little fresnel
@@ -382,7 +382,6 @@ float4 glossy_reflections_fp(Fragment f) : COLOR
 	sourceColor*=(kd);/**(1-0.2*tex2D(pReflectionMap, uv).w)*/;
 	//return float4(sourceColor,1.0);
 	//sourceColor = normal;
-
 	if(reflectValue>0.05)
 	{
 

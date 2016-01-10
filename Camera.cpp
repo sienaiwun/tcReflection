@@ -378,7 +378,7 @@ void CCamera::Update()
 	m_vStrafe = Normalize(vCross);
 
 	// Move the camera's view by the mouse
-	//SetViewByMouse();
+	SetViewByMouse();
 
 	// This checks to see if the keyboard was pressed
 	CheckForMovement();
