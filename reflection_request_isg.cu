@@ -131,21 +131,19 @@ __device__ __inline__ void createONB( const optix::float3& n,
   U = normalize( U );
   V = cross( n, U );
 }
+#define N 64
 RT_PROGRAM void addition_request()
 {
 	int index = launch_index.y * PixelWidth  + launch_index.x;
 	if(index >= PixelNum)
  			return;
  	uint x,y;
- //	uint PixPos = Pixels_Buffer[index];
 	uint PixPos = Pixels_Buffer[index];
     x = PixPos%1024;
 	y = PixPos/1024;
-	//x =  launch_index.x;
-    //y =  launch_index.y;
 	uint2 FinalPixelPos = make_uint2(x,y);
 	 float3 ray_origin = make_float3(tex2D(request_texture, x, y));
-  float reflectValue = tex2D(request_texture, x, y).w;
+	float reflectValue = tex2D(request_texture, x, y).w;
   PerRayData_radiance prd;
   PerRayData_shadow prd_s;
   prd_s.attenuation = make_float3(0);
@@ -162,7 +160,7 @@ RT_PROGRAM void addition_request()
  
   if( !isnan(ray_origin.x) ) 
   {
-    if(1)
+    if(0)
 	{
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, x, y));
@@ -182,8 +180,42 @@ RT_PROGRAM void addition_request()
 		reflection_buffer[FinalPixelPos] = make_float4(prd.result,1);
 		return;	 
 	}
+	float3 V = normalize(ray_origin-eye_pos);
+    float3 normal = make_float3(tex2D(normal_texture, launch_index.x, launch_index.y));
+	float3 ray_direction = normalize(reflect(V, normal));
+	float3 xo, yo;
+    createONB(ray_direction, xo, yo);
+
+	float2 randomArray;
+	float3 glossy_direcion;
+	 optix::Ray ray;
+	 PerRayData_radiance prdArray;
+	 float3 sumColor = make_float3(0,0,0);
+	 float seedx = normal.x+ray_origin.y;
+	 float seedy = normal.z+ray_origin.x;
+	 float exponent = 30;
+	 float bsdf_val,bsdf_pdf,costheta; 
+	 float depthSum = 0;
+	 float3 color ;
+	for(int i =0;i<N;i++)
+	{
+			prdArray = prd;
+			randomArray.x =  random(make_float2(i*1.0/N*seedx,(i+0.5)/N)*seedy);
+			randomArray.y =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
+			glossy_direcion = sample_phong_lobe( randomArray, exponent, xo, yo, ray_direction, bsdf_pdf, bsdf_val );
+			costheta = dot(glossy_direcion, normal);
+			ray = optix::make_Ray(ray_origin, glossy_direcion, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+			rtTrace(reflectors, ray, prdArray);
+			sumColor += prdArray.result*costheta*bsdf_val /bsdf_pdf;;
+			depthSum += prdArray.t_hit*costheta*bsdf_val /bsdf_pdf; 
+	}
+	
+	
+	float avgDepth;
+	color = (sumColor)/N; 
+	avgDepth = depthSum/N;
+	reflection_buffer[launch_index] = make_float4(color, avgDepth);
   }
- 	
 }
 RT_PROGRAM void reflection_request()
 {
@@ -236,132 +268,36 @@ RT_PROGRAM void reflection_request()
 	float3 ray_direction = normalize(reflect(V, normal));
 	float3 xo, yo;
     createONB(ray_direction, xo, yo);
-#define N 11
-	float2 randomArray[N];
-	float rx[N],ry[N];
-	float3 glossy_direcion[N];
-	 optix::Ray ray[N];
-	 PerRayData_radiance prdArray[N];
+
+	float2 randomArray;
+	float3 glossy_direcion;
+	 optix::Ray ray;
+	 PerRayData_radiance prdArray;
 	 float3 sumColor = make_float3(0,0,0);
 	 float seedx = normal.x+ray_origin.y;
 	 float seedy = normal.z+ray_origin.x;
-	 float exponent = 3;
-	 float bsdf_val[N];
-	 float bsdf_pdf[N];
-	 float costheta[N];
+	 float exponent = 30;
+	 float bsdf_val,bsdf_pdf,costheta; 
+	 float depthSum = 0;
+	 float3 color ;
 	for(int i =0;i<N;i++)
 	{
-		prdArray[i] = prd;
-		randomArray[i].x =  random(make_float2(i*1.0/N*seedx,(i+0.5)/N)*seedy);
-		randomArray[i].y =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
-
-		//ConcentricSampleDisk(randomArray[2*i],randomArray[2*i+1],&rx[i],&ry[i]);
-		//rx[i] = randomArray[2*i];
-		//ry[i] = randomArray[2*i+1];
-		/*float angle = -5.5;
-		rx[i] = sin(angle);
-		ry[i] = cos(angle);*/
-		glossy_direcion[i] = sample_phong_lobe( randomArray[i], 50, xo, yo, ray_direction, bsdf_pdf[i], bsdf_val[i] );
-		costheta[i] = dot(glossy_direcion[i], normal);
-		ray[i] = optix::make_Ray(ray_origin, glossy_direcion[i], radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+			prdArray = prd;
+			randomArray.x =  random(make_float2(i*1.0/N*seedx,(i+0.5)/N)*seedy);
+			randomArray.y =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
+			glossy_direcion = sample_phong_lobe( randomArray, exponent, xo, yo, ray_direction, bsdf_pdf, bsdf_val );
+			costheta = dot(glossy_direcion, normal);
+			ray = optix::make_Ray(ray_origin, glossy_direcion, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+			rtTrace(reflectors, ray, prdArray);
+			sumColor += prdArray.result*costheta*bsdf_val /bsdf_pdf;;
+			depthSum += prdArray.t_hit*costheta*bsdf_val /bsdf_pdf; 
 	}
 	
-
-	rtTrace(reflectors, ray[0], prdArray[0]);
-	rtTrace(reflectors, ray[1], prdArray[1]);
- 	rtTrace(reflectors, ray[2], prdArray[2]);
- 	rtTrace(reflectors, ray[3], prdArray[3]);
- 	rtTrace(reflectors, ray[4], prdArray[4]);
-	rtTrace(reflectors, ray[5], prdArray[5]);
- 	rtTrace(reflectors, ray[6], prdArray[6]);
- 	rtTrace(reflectors, ray[7], prdArray[7]);
- 	rtTrace(reflectors, ray[8], prdArray[8]);
- 	rtTrace(reflectors, ray[9], prdArray[9]);
-	rtTrace(reflectors, ray[10], prdArray[10]);
- 	/*rtTrace(reflectors, ray[11], prdArray[11]);
- 	rtTrace(reflectors, ray[12], prdArray[12]);
- 	rtTrace(reflectors, ray[13], prdArray[13]);
- 	/*rtTrace(reflectors, ray[14], prdArray[14]);
-	rtTrace(reflectors, ray[15], prdArray[15]);
- 	/*rtTrace(reflectors, ray[16], prdArray[16]);
- 	rtTrace(reflectors, ray[17], prdArray[17]);
- 	rtTrace(reflectors, ray[18], prdArray[18]);
- 	rtTrace(reflectors, ray[19], prdArray[19]);
-	rtTrace(reflectors, ray[20], prdArray[20]);
- 	rtTrace(reflectors, ray[21], prdArray[21]);
- 	rtTrace(reflectors, ray[22], prdArray[22]);
- 	rtTrace(reflectors, ray[23], prdArray[23]);
- 	rtTrace(reflectors, ray[24], prdArray[24]);
-	rtTrace(reflectors, ray[25], prdArray[25]);
- 	rtTrace(reflectors, ray[26], prdArray[26]);
- 	rtTrace(reflectors, ray[27], prdArray[27]);
- 	rtTrace(reflectors, ray[28], prdArray[28]);
- 	rtTrace(reflectors, ray[29], prdArray[29]);
- 
-	/*rtTrace(reflectors, ray[30], prdArray[30]);
- 	rtTrace(reflectors, ray[31], prdArray[31]);
- 	rtTrace(reflectors, ray[32], prdArray[32]);
- 	rtTrace(reflectors, ray[33], prdArray[33]);
- 	rtTrace(reflectors, ray[34], prdArray[34]);
-	rtTrace(reflectors, ray[35], prdArray[35]);
- 	rtTrace(reflectors, ray[36], prdArray[36]);
- 	rtTrace(reflectors, ray[37], prdArray[37]);
- 	rtTrace(reflectors, ray[38], prdArray[38]);
- 	rtTrace(reflectors, ray[39], prdArray[39]);
- */
- 
-
- 	float depthSum = 0;
-	float depthCount = 0;
-	float r ;
-	float3 color ;
-	sumColor = make_float3(0,0,0);
-	for(int i=0;i<N;i++)
-	{
-	//if(prdArray[i].t_hit<8)
-		float3 color = prdArray[i].result*costheta[i]*bsdf_val[i] /bsdf_pdf[i];
-		sumColor +=color;
-		float len = prdArray[i].t_hit;
-		depthSum+=len; 
-
-	}
+	
 	float avgDepth;
 	color = (sumColor)/N; 
 	avgDepth = depthSum/N;
-	/*color.x = rx[0];
-	color.y = ry[0];
-	color.z = 0;*/
-	//color = normalize(rx[0]*a*xo+ry[0]*a*yo);
-	 reflection_buffer[launch_index] = make_float4(color, avgDepth);
-	
-/*#define  SampleCount  4
-	float3 sumColor = make_float3(0,0,0);
-	int count = 1;
-	//int i=1;
-	PerRayData_radiance prdArray[4];
-	optix::Ray rayArray[4];
-	for(int i =0;i<SampleCount;i++)
-	{
-		prdArray[i] = prd;
-		float seed1= i*1.0/(SampleCount+1),seed2 = (i+1)*1.0/(SampleCount+1);
-		float random1 = random(make_float2(seed1,seed2));
-		float random2 = random(make_float2(seed2,seed1));
-		float r1x,r1y;
-		ConcentricSampleDisk(random1,random2,&r1x,&r1y);
-		float3 glossy_direcion1 = ray_direction+r1x*a*xo+r1y*a*yo;
-		rayArray[i] = optix::make_Ray(ray_origin, glossy_direcion1, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
-		//rtTrace(reflectors, ray2, prdArray[i]);
-		//sumColor+=prdArray[i].result;
-	}
-	rtTrace(reflectors, rayArray[0], prdArray[0]);
-	rtTrace(reflectors, rayArray[1], prdArray[1]);
-	rtTrace(reflectors, rayArray[2], prdArray[2]);
-	rtTrace(reflectors, rayArray[3], prdArray[3]);
-	rtTrace(reflectors, ray_s, prd_s);
-	float shadow = (prd_s.attenuation.x>0)?1:0;
-	float3 color = prdArray[0].result;
-    reflection_buffer[launch_index] = make_float4(color, shadow);
-*/	
+	reflection_buffer[launch_index] = make_float4(color, avgDepth);
   }
 }
 RT_PROGRAM void reflection_exception()

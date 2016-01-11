@@ -44,7 +44,7 @@
 #include "RefFrame.h"
 #include "cudaResource.h"
 //#include "toiletScene.h"
-#include "glossyScene.h"
+
 unsigned int *Host_PixelSum;
 unsigned int *Host_PixelState;
 
@@ -87,7 +87,7 @@ CCamera g_refCamera,g_currentCamera;
 //uint *Host_PixelSum;
 //MyGeometry teapot;
 int CountTime = 1000;
-TimeMesure g_timeMesure(optixRenderingType,CountTime);
+TimeMesure g_timeMesure(tcRenderingType,CountTime);
 nv::vec3f viewDependentMissColor = nv::vec3f(255,0,0);
 nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 //cudaGraphicsResource *cudaRes_WorldNormal,*cudaRes_WorldPos,*cudaRes_Reflect;
@@ -107,14 +107,14 @@ MergeShader g_mergeShader;
 TexShader g_texShader;
 BlendShader g_blendShader;
 
-
+#include "glossyScene.h"
 glossyScene t_scene;
 
 void cameraControl(int,CCamera&);
 
 
 
-/*toilet 
+/*
 posPara posArray[] = 
 {
 	//{make_float3(16.033649,38.942272,15.414365  ),make_float3(22.289124,34.077927,9.314583 )},
@@ -169,6 +169,7 @@ posPara posArray[] =
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
 
 };*/
+
 
 posPara posArray[] = 
 {
@@ -230,7 +231,7 @@ posPara posArray[] =
 float k = 1800/25.0;
 float kk[13]={2*k,4*k,5*k,7*k,10*k,13*k,15*k,19*k,21*k,23*k,25*k,25*k,25*k};
 //float kk[12]={2*k,3*k,5*k,8*k,11*k,13*k,17*k,19*k,21*k,23*k,23*k,23*k};//,25*k,25*k,25*k};
-int currentTime  = 0;
+int currentTime  = 9;
 int currentTime2 = 9;
 int OptixFrame;
 FPS fcount(CountTime);
@@ -1043,37 +1044,8 @@ void init_optix()
 		MyGeometry::msgCgDiffuseTexParam = &cgDiffuseTexParam;
 		MyGeometry::msgCgreflectVale = &cgReflectVale;
 		//optix::Geometry sofaGemetry = sofa.getOptixGeometry(rtContext);
-		
 		t_scene.setOptix(&rtContext);
 		t_scene.optixInit();
-		/*
-		optix::GeometryInstance geoInstance[geoNumber];
-		for(int i =0;i<geoNumber;i++)
-		{
-			geoInstance[i] = t_scene.getObject(i).getInstance();
-		}
-
-		printf("333");
-		geometrygroup = rtContext->createGeometryGroup();
-		geometrygroup->setChildCount(geoNumber);
-		for(int i=0;i<geoNumber;i++)
-			geometrygroup->setChild(i, geoInstance[i]);
-		// geometrygroup->setChild(geoNumber, teapotInstance);
-		// geometrygroup->setChild(1, floor_instance);
-
-		// geometrygroup->setChild(3, wall1_instance);
-		//geometrygroup->setChild(4, tableInstance);
-		//geometrygroup->setChild(0, teapot3Instance);
-		//geometrygroup->setChild(1, geoInstance[1]);
-		// geometrygroup->setChild(0, geoInstance[2]);
-		double time1,time2;
-		sutilCurrentTime(&time1);
-		geometrygroup->setAcceleration( rtContext->createAcceleration("Bvh","Bvh") );
-		sutilCurrentTime(&time2);
-		//printf("%f\n",dt);
-		
-		rtContext["reflectors"]->set(geometrygroup);
-		*/
 		rtContext["max_depth"]->setUint(2u);
 		rtContext["lightPos"]->set3fv((const float*)&make_float3(t_scene.getLightPos().x,
 			t_scene.getLightPos().y,
@@ -1349,8 +1321,12 @@ void blending()
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	g_blendShader.setParemeter(FinalEffectFbo.getTexture(0),reflectionMapTex_Now);
 	MyGeometry::drawQuad(g_blendShader);
-	MergeEffectFbo.SaveBMP("./test/123.bmp",0);
 	MergeEffectFbo.end();
+	cgGLSetTextureParameter(cgReflectionMapParam,MergeEffectFbo.getTexture(0));
+	currentGbuffer.begin();
+	draw_scene(cgTechniqueGlossyReflections,&g_currentCamera);
+	currentGbuffer.end();
+
 }
 void reductionGPU()
 {
@@ -2358,7 +2334,7 @@ void optixRendering()
 
 	char str[100];
 	sprintf(str,"./test/optix%d_%d.bmp",currentTime,currentTime2);
-	//currentGbuffer.SaveBMP(str,0);
+	currentGbuffer.SaveBMP(str,0);
 	glFinish();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);     // bind the screen FBO
