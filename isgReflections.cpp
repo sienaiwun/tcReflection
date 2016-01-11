@@ -43,6 +43,9 @@
 #include "macro.h"
 #include "RefFrame.h"
 #include "cudaResource.h"
+#include "reflectionShader.h"
+#include "gBufferShader.h"
+#include "reflectionShader.h"
 //#include "toiletScene.h"
 
 unsigned int *Host_PixelSum;
@@ -97,15 +100,18 @@ CudaTexResourse poxCudaTex,normalCudaTex,reflectCudaTex,finalEffectCudaTex;
 CudaPboResource vectorCudaArray,lastCudaArray,finalEffectCudaArray;
 
 //#define  geoNumber  43
-#define  geoNumber  35
+
 //#define  geoNumber  2
-#define  CHINAREFLECT 0.185f
+
 
 ReprojectShader g_reprojectShader;
 TranShader g_transShader;
 MergeShader g_mergeShader;
 TexShader g_texShader;
+GbufferShader g_gBufferShader;
+reflectShader g_reflectionShader;
 BlendShader g_blendShader;
+
 
 #include "glossyScene.h"
 glossyScene t_scene;
@@ -683,6 +689,8 @@ void init_gl()
 	g_reprojectShader.setClearColor(viewIndepentdentMissColor);
 	g_texShader.init();
 	g_blendShader.init();
+	g_gBufferShader.init();
+	g_reflectionShader.init();
 	/*
 #if DrawPoint
 	myTransShader.loadShader("Shader/Trans_Point.vert",0,"Shader/Trans_Point.frag");
@@ -2691,28 +2699,12 @@ void tcRendering()
 
 	cameraControl(OptixFrame*10,g_refCamera);
 	//test();
-	/*for(int i = 0;i<4;i++)
-	{
-			
-		glEnable(GL_TEXTURE_2D);
-	BYTE *pTexture = NULL;
-	pTexture = new BYTE[rasterWidth*rasterHeight * 3];
-	memset(pTexture, 0, rasterWidth*rasterHeight * 3 * sizeof(BYTE));
-
-	glBindTexture(GL_TEXTURE_2D, (reflectionMaps[i]));//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
-
-	int w = rasterWidth;
-	int h = rasterHeight;
-	char str [32];
-	sprintf(str,"test%d.bmp",i);
-	SaveBMP(str, pTexture, w, h);
-	if (pTexture)
-	   delete[] pTexture;
-	}*/
+	
 	refGbuffer.begin();
-	draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);	
+	//draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);
+    t_scene.draw_model(g_gBufferShader,&g_refCamera);
+	//draw_scene(g_gBufferShader,&g_refCamera);
+	//refGbuffer.SaveBMP("./test/gbuffer.bmp",0);
 	refGbuffer.end();
 	
 	//checkCudaErrors(cudaGraphicsGLRegisterImage(&cudaRes_Reflect,reflectionMaps[OptixFrame+1],GL_TEXTURE_2D,cudaGraphicsMapFlagsReadOnly));
@@ -3220,8 +3212,8 @@ void printUsageAndExit( const std::string& argv0, bool doExit = true )
 int main(int argc, char** argv)
 {
 	// Allow glut to consume its args first
-	freopen("stdout.txt","w",stdout);
-	freopen("stderr.txt","w",stderr);
+	//freopen("stdout.txt","w",stdout);
+	//freopen("stderr.txt","w",stderr);
 	glutInit(&argc, argv);
 
 	bool dobenchmark = false;

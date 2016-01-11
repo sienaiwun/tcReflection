@@ -197,6 +197,7 @@ RT_PROGRAM void addition_request()
 	 float bsdf_val,bsdf_pdf,costheta; 
 	 float depthSum = 0;
 	 float3 color ;
+	 int usefulSample = 0;
 	for(int i =0;i<N;i++)
 	{
 			prdArray = prd;
@@ -204,16 +205,19 @@ RT_PROGRAM void addition_request()
 			randomArray.y =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
 			glossy_direcion = sample_phong_lobe( randomArray, exponent, xo, yo, ray_direction, bsdf_pdf, bsdf_val );
 			costheta = dot(glossy_direcion, normal);
+			if(costheta<0)
+				continue;
 			ray = optix::make_Ray(ray_origin, glossy_direcion, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
 			rtTrace(reflectors, ray, prdArray);
 			sumColor += prdArray.result*costheta*bsdf_val /bsdf_pdf;;
-			depthSum += prdArray.t_hit*costheta*bsdf_val /bsdf_pdf; 
+			depthSum += prdArray.t_hit*costheta*bsdf_val /bsdf_pdf;
+			usefulSample++;
 	}
 	
 	
 	float avgDepth;
-	color = (sumColor)/N; 
-	avgDepth = depthSum/N;
+	color = (sumColor)/usefulSample; 
+	avgDepth = depthSum/usefulSample;
 	reflection_buffer[launch_index] = make_float4(color, avgDepth);
   }
 }
@@ -280,6 +284,7 @@ RT_PROGRAM void reflection_request()
 	 float bsdf_val,bsdf_pdf,costheta; 
 	 float depthSum = 0;
 	 float3 color ;
+	 int usefulSample = 0;
 	for(int i =0;i<N;i++)
 	{
 			prdArray = prd;
@@ -287,16 +292,21 @@ RT_PROGRAM void reflection_request()
 			randomArray.y =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
 			glossy_direcion = sample_phong_lobe( randomArray, exponent, xo, yo, ray_direction, bsdf_pdf, bsdf_val );
 			costheta = dot(glossy_direcion, normal);
+			if(costheta<0)
+				continue;
 			ray = optix::make_Ray(ray_origin, glossy_direcion, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
 			rtTrace(reflectors, ray, prdArray);
 			sumColor += prdArray.result*costheta*bsdf_val /bsdf_pdf;;
-			depthSum += prdArray.t_hit*costheta*bsdf_val /bsdf_pdf; 
+			depthSum += prdArray.t_hit*costheta*bsdf_val /bsdf_pdf;
+			usefulSample++;
 	}
 	
 	
 	float avgDepth;
-	color = (sumColor)/N; 
-	avgDepth = depthSum/N;
+	color = (sumColor)/usefulSample; 
+	avgDepth = depthSum/usefulSample;
+	
+
 	reflection_buffer[launch_index] = make_float4(color, avgDepth);
   }
 }

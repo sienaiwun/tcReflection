@@ -1,12 +1,28 @@
 #include "scene.h"
-void scene::draw_model(glslShader& shader)
+void scene::draw_model(glslShader& shader,CCamera *pCamera)
 {
+	CHECK_ERRORS();
+	shader.begin();
+	if(pCamera != NULL)	
+	{
+		pCamera->Look();
+		CHECK_ERRORS();
+		shader.setCamera(pCamera);
+		CHECK_ERRORS();
+	}
+	CHECK_ERRORS();
+	shader.setScene(this);
 	for(int i =0;i<m_objectNum;i++)
 	{
+		shader.setGeometry(&m_geometryArray[i]);
+		CHECK_ERRORS();
+		shader.setGeomtryIndex(i);
+		CHECK_ERRORS();
 		m_geometryArray[i].drawGeometry(shader,0);
 	}
+	shader.end();
 }
-void scene::draw_model(CGtechnique& tech)
+void scene::draw_model(CGtechnique& tech,CCamera *pCamera)
 {
 	extern CGparameter cgModelIdParam;
 	for(int i =0;i<m_objectNum;i++)

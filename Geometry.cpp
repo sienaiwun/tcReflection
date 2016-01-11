@@ -1,5 +1,6 @@
 #include "Geometry.h"
 #include "cgShader.h"
+#include "glslShader.h"
 nv::vec3f MyGeometry::modelBBMax = nv::vec3f (-999.0f,-999.0f,-999.0f);
 nv::vec3f MyGeometry::modelBBMin = nv::vec3f (999.0f,999.0f,999.0f);
 optix::Context MyGeometry::ms_rtContext = optix::Context::create();
@@ -138,8 +139,9 @@ extern transform1 transformArray[];
 extern action ActArray[];*/
 void MyGeometry::drawGeometry(glslShader& shader,int actionNumber)
 {
+	CHECK_ERRORS();
 	glBindBuffer(GL_ARRAY_BUFFER, m_ModelVb);
-	glEnableClientState(GL_VERTEX_ARRAY);
+	/*glEnableClientState(GL_VERTEX_ARRAY);
 	glVertexPointer(  m_model->getPositionSize(),
 		GL_FLOAT,
 		m_model->getCompiledVertexSize()*sizeof(float),
@@ -157,19 +159,27 @@ void MyGeometry::drawGeometry(glslShader& shader,int actionNumber)
 			GL_FLOAT,
 			m_model->getCompiledVertexSize()*sizeof(float),
 			(void*) (m_model->getCompiledTexCoordOffset()*sizeof(float)));
-	}
+	}*/
+	glEnableVertexAttribArray(0);
+	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, m_model->getCompiledVertexSize()*sizeof(float), (void*) (m_model->getCompiledPositionOffset()*sizeof(float)));
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_TRUE, m_model->getCompiledVertexSize()*sizeof(float), (void*) (m_model->getCompiledNormalOffset()*sizeof(float)));
+	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, m_model->getCompiledVertexSize()*sizeof(float), (void*) (m_model->getCompiledTexCoordOffset()*sizeof(float)));
 
 	glBindBuffer( GL_ELEMENT_ARRAY_BUFFER, m_ModelIb);
 
-	shader.setGeometry(this);
-	shader.begin();
-		glDrawElements( GL_TRIANGLES, m_model->getCompiledIndexCount(), GL_UNSIGNED_INT, 0 );
-	shader.end();
+	
+	glDrawElements( GL_TRIANGLES, m_model->getCompiledIndexCount(), GL_UNSIGNED_INT, 0 );
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	glDisableClientState( GL_VERTEX_ARRAY );
-	glDisableClientState( GL_NORMAL_ARRAY );
-	glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+	glDisableVertexAttribArray(0);
+	glDisableVertexAttribArray(1);
+	
+	glDisableVertexAttribArray(2);
+	//glDisableClientState( GL_VERTEX_ARRAY );
+	//glDisableClientState( GL_NORMAL_ARRAY );
+	//glDisableClientState( GL_TEXTURE_COORD_ARRAY );
 
 
 	CHECK_ERRORS();
@@ -185,13 +195,15 @@ void MyGeometry::drawGeometry(CGtechnique& tech,int actionNumber)
 		m_model->getCompiledVertexSize()*sizeof(float),
 		(void*) (m_model->getCompiledPositionOffset()*sizeof(float)));
 
-	if ( m_model->hasNormals() ) {
+	if ( m_model->hasNormals() ) 
+	{
 		glEnableClientState(GL_NORMAL_ARRAY);
 		glNormalPointer(    GL_FLOAT,
 			m_model->getCompiledVertexSize()*sizeof(float),
 			(void*) (m_model->getCompiledNormalOffset()*sizeof(float)));
 	}
-	if (m_model->hasTexCoords()) {
+	if (m_model->hasTexCoords()) 
+	{
 		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 		glTexCoordPointer(   m_model->getPositionSize(),
 			GL_FLOAT,

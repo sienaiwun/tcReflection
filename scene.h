@@ -1,6 +1,8 @@
 #include <string>
 #include <vector>
 #include "Geometry.h"
+#include "Camera.h"
+#include "glslShader.h"
 #include "MyMeterial .h"
 #ifndef SCENEH
 #define SCENEH
@@ -14,8 +16,8 @@ public:
 	}
 	 void optixInit() ;
 	 void init() ;
-	void draw_model(glslShader& shader);
-	void draw_model(CGtechnique& tech);
+	 void draw_model(glslShader& shader,CCamera* pCamera = 0);
+	void draw_model(CGtechnique& tech,CCamera* pCamera = 0);
 	inline void setOptix(optix::Context * p)
 	{
 		pContext = p;

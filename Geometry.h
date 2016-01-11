@@ -18,7 +18,7 @@
 #include <math.h>
 #include "MyMeterial .h"
 #include "transform.h"
-#include "glslShader.h"
+class glslShader; 
 typedef struct GeoPara
 {
 	char * name;
@@ -61,11 +61,12 @@ public:
 	{
 		s_mat = pMatArray;
 	}
+	float reflectValue;
 private:
 
 	char * filename;
 	int m_hasTX;
-	float reflectValue,shiness;
+	float shiness;
 	MyMeterial* mp_met;
 	std::string ptxpath( const std::string& base )
 	{

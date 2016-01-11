@@ -13,20 +13,24 @@ public :
 	virtual void bindParemeter();
 	virtual void begin();
 	virtual void end();
-	inline void setParemeter(GLuint reflectTex,GLuint worldPosTex,GLuint lastWorld,const float* lastmvp)
-	{
-		
-	}
-	virtual void setCamera(CCamera * pCamera);
-	
+    virtual void setCamera(CCamera * pCamera);
+	virtual void setScene(scene * pScene);
+	virtual void setGeometry(MyGeometry * pGeometry);
+	virtual void setGeomtryIndex(int i);
 private:
+	
 	GLuint m_vmpBinding;
 	float* m_mvp;
-	/*
-	glUniform1i(m_refelctTexUniform,0);
-	glUniform1i(m_transVecTexUniform,1);
-	glUniform1i(m_tranWorPosTexUniform,2);
-	glUniform1i(m_tranRePosTexUniform,3);
-	*/
+	GLuint m_objectTexBinding;
+	GLuint m_objectDiffuseBinding;
+	GLuint m_cameraPosBinding;
+	GLuint m_lightPosBinding;
+	GLuint m_hasTex;
+	GLuint m_objectId;
+	
+	nv::vec3f m_lightPos;
+	nv::vec3f m_cameraPos;
+
+	
 };
 #endif

@@ -1,63 +1,40 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include "main.h"
-#include "Cg/Cg.h"
-#include "Cg/cgGL.h"
-#include "cgShader.h"
-#ifndef REFLECTION_H
-#define REFLECTION_H
-void getEffectParam( CGeffect effect,
-					const char* semantic,
-					CGparameter* param );
-class ReflectionShader:public CgShader
+#include "glslShader.h"
+#ifndef REFLECTIONSHADER_H
+#define REFLECTIONSHADER_H
+class reflectShader:public glslShader
 {
-	CGeffect cgEffect;
-	CGtechnique cgTech;
-public:
-	
-	virtual inline CGtechnique getTechnique()
+public :
+	reflectShader()
 	{
-		return cgTech;
+		m_vertexFileName = "Shader/gBuffer.vert";
+		m_fragmentFileName = "Shader/reflection.frag";
 	}
-	ReflectionShader()
+	virtual void init();
+	virtual void bindParemeter();
+	virtual void begin();
+	virtual void end();
+	inline void setParemeter(GLuint reflectTex,GLuint worldPosTex,GLuint lastWorld,const float* lastmvp)
 	{
-		CGFX_SCEENPATH = std::string( sutilSamplesDir() ) + "/isgReflections/reflectionShader.cgfx";
-		//CGFX_SCEENPATH = std::string("drawQuad.cgfx");
+		
 	}
-	void initCG(CGcontext cgContext);
-	void setWorkingTex(GLuint );
-	void setMvpMatrix(float *);
-	void setModelViewMatrix(float*);
+	virtual void setCamera(CCamera * pCamera);
+	virtual void setScene(scene * pScene);
+	virtual void setGeometry(MyGeometry * pGeometry);
+	virtual void setGeomtryIndex(int i);
+	void setReflectMap(GLuint reflectMap);
 private:
-	CGparameter cgWorldViewProjParam;
-	CGparameter cgWorldViewInvParam;
-	CGparameter cgWorldViewParam;
-	CGparameter cgBlendFactor;
-	CGparameter cgCameraMVPParam;
-	CGparameter cgCameraModelViewParam;
-	CGparameter cgCameraModelViewInvParem;
-	CGparameter cgGlossinessParam;
-	CGparameter cgReflectionMapParam;
-	CGparameter cgWorldPosMapParam;
-	CGparameter cgNormalMapParam;
-	CGparameter cgDoISGParam;
-	CGparameter cgDiffuseTexParam;
-	CGparameter cgInvSceneScaleParam;
-	CGparameter cgLightPosParam;
-	CGparameter cgDoReflectionsParam;
-	CGparameter cgIsModelParam;
-	CGparameter cgIsWallParam;
-	CGparameter cgDiffuseColor;
-	CGparameter cgIsTex;
-	CGparameter cgShiness;
-	CGparameter cgReflectVale;
-	CGparameter cgCameraPosition;
-	CGparameter cgCudaTransTexParam;
-	CGparameter cgModelIdParam;
-	CGparameter NewWorldPosTexParam;
-	CGparameter LastEffectTexParam;
-	CGparameter lastMVPParam;
+	
+	GLuint m_vmpBinding;
+	float* m_mvp;
+	GLuint m_objectTexBinding;
+	GLuint m_objectDiffuseBinding;
+	GLuint m_cameraPosBinding;
+	GLuint m_lightPosBinding;
+	GLuint m_hasTex;
+	GLuint m_objectId;
 
-
+	GLuint m_reflectValueBinding;
+	GLuint m_reflectMapBinding;
+	
 };
 #endif
