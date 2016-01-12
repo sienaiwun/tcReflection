@@ -1,6 +1,6 @@
 #include "main.h"
 #include "macro.h"
-#include "Fbo1.h"
+#include "Fbo.h"
 #include "Camera.h"
 #ifndef REFFRAME_H
 #define REFFRAME_H

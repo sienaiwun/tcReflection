@@ -52,11 +52,6 @@ using namespace optix;
 	exit(-1);                                                      \
 	}                                                                \
 	} while(0)
-typedef struct posPara 
-{
-	float3 pos;
-	float3 view;
-} posPara;
 #endif
 
 

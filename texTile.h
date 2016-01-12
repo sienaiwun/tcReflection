@@ -1,5 +1,5 @@
 #include "geometry.h"
-#include "Fbo1.h"
+#include "Fbo.h"
 #include "drawQuad.h"
 #ifndef TEXTILE_H
 #define TEXTILE_H

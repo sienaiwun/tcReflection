@@ -24,13 +24,7 @@ void scene::draw_model(glslShader& shader,CCamera *pCamera)
 }
 void scene::draw_model(CGtechnique& tech,CCamera *pCamera)
 {
-	extern CGparameter cgModelIdParam;
-	for(int i =0;i<m_objectNum;i++)
-	{
-
-		cgSetParameter1f(cgModelIdParam, 1.0 * i);
-		m_geometryArray[i].drawGeometry(tech,0);
-	}
+	// to do
 }
 
 void scene::init()

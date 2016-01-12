@@ -50,7 +50,11 @@ public:
 	float x, y, z;						
 };
 
-
+typedef struct posPara 
+{
+	float3 pos;
+	float3 view;
+} posPara;
 // This is our camera class
 class CCamera {
 

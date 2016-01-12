@@ -51,8 +51,10 @@ public:
 	nv::vec3f m_lightPos;
 	optix::GeometryGroup m_geometrygroup;
 	optix::Context *pContext;
+	CCamera m_freeCamera;
 protected:
 	GeoPara * m_pObjectDis;
 	MyMeterial * m_pMatDis;
+	posPara * m_posArray;
 };
 #endif

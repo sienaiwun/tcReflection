@@ -26,7 +26,7 @@
 #include "fpsCount.h"
 #include "transform.h"
 //#include"CFbo.h"
-#include "Fbo1.h"
+#include "Fbo.h"
 //#include<glm/vec4.hpp>
 //#include<glm/vec3.hpp>
 #include<nvMath.h>
@@ -296,38 +296,6 @@ GLuint MergeComputTex,MergeOptixTex;
 
 // OptiX
 unsigned int traceWidth, traceHeight;
-CGparameter cgBlendFactor;
-CGparameter cgCameraMVPParam;
-CGparameter cgCameraModelViewParam;
-CGparameter cgCameraModelViewInvParem;
-CGparameter cgWorldViewProjParam;
-CGparameter cgWorldViewInvParam;
-CGparameter cgWorldViewParam;
-CGparameter cgGlossinessParam;
-CGparameter cgReflectionMapParam;
-CGparameter cgWorldPosMapParam;
-CGparameter cgNormalMapParam;
-CGparameter cgDoISGParam;
-CGparameter cgDiffuseTexParam;
-CGparameter cgInvSceneScaleParam;
-CGparameter cgLightPosParam;
-CGparameter cgDoReflectionsParam;
-CGparameter cgIsModelParam;
-CGparameter cgIsWallParam;
-CGparameter cgDiffuseColor;
-CGparameter cgIsTex;
-CGparameter cgShiness;
-CGparameter cgReflectVale;
-CGparameter cgCameraPosition;
-
-CGparameter cgCudaTransTexParam;
-
-CGparameter cgModelIdParam;
-
-CGparameter NewWorldPosTexParam;
-CGparameter LastEffectTexParam;
-CGparameter lastMVPParam;
-
 
 optix::Context        rtContext;
 optix::Buffer         rtReflectionBuffer;
@@ -484,93 +452,6 @@ void IniteMyVBO(){
 }
 
 
-void init_cg()
-{
-	
-	cgContext = cgCreateContext();
-	cgSetErrorCallback(cgErrorCallback);
-	cgGLSetDebugMode( CG_FALSE );
-	cgSetParameterSettingMode(cgContext, CG_DEFERRED_PARAMETER_SETTING);
-	cgGLRegisterStates(cgContext);
-
-#ifdef __APPLE__
-	const char* cgc_args[] = { "-DCG_FRAGMENT_PROFILE=fp40", "-DCG_VERTEX_PROFILE=vp40", NULL };
-#else
-	const char* cgc_args[] = { "-DCG_FRAGMENT_PROFILE=gp4fp", "-DCG_VERTEX_PROFILE=gp4vp", NULL };
-#endif
-
-	cgEffect = cgCreateEffectFromFile(cgContext, CGFX_PATH.c_str(), cgc_args);
-	if(!cgEffect) {
-		printf("CGFX error:\n %s\n", cgGetLastListing(cgContext));
-		exit(-1);
-	}
-
-	cgTechniqueWorldPosNormal = cgGetNamedTechnique(cgEffect, "WorldPosNormal");
-	if(!cgTechniqueWorldPosNormal) {
-		printf("CGFX error:\n %s\n", cgGetLastListing(cgContext));
-		exit(-1);
-	}
-
-	cgTechniqueGlossyReflections = cgGetNamedTechnique(cgEffect, "GlossyReflections");
-	if(!cgTechniqueGlossyReflections) {
-		printf("CGFX error:\n %s\n", cgGetLastListing(cgContext));
-		exit(-1);
-	}
-
-	cgReProjectTechnique = cgGetNamedTechnique(cgEffect,"ReProject");
-	if(!cgReProjectTechnique){
-		printf("CGFX error:\n %s\n", cgGetLastListing(cgContext));
-		exit(-1);
-	}
-	//  
-	cgTechniqueTranMap = cgGetNamedTechnique(cgEffect, "TransMap");
-	if(!cgTechniqueGlossyReflections) {
-		printf("CGFX error:\n %s\n", cgGetLastListing(cgContext));
-		exit(-1);
-	}
-
-
-	getEffectParam(cgEffect, "mvpMat" ,&cgCameraMVPParam);
-	getEffectParam(cgEffect, "modelViewMat", &cgCameraModelViewParam);
-	getEffectParam(cgEffect, "modelViewInv", &cgCameraModelViewInvParem);
-
-	getEffectParam(cgEffect, "WorldViewProj", &cgWorldViewProjParam);
-	getEffectParam(cgEffect, "WorldViewInv", &cgWorldViewInvParam);
-	getEffectParam(cgEffect, "WorldView", &cgWorldViewParam);
-	getEffectParam(cgEffect, "LightPos", &cgLightPosParam);
-	getEffectParam(cgEffect, "ReflectionMap", &cgReflectionMapParam);
-	getEffectParam(cgEffect, "WorldPosMap", &cgWorldPosMapParam);
-	getEffectParam(cgEffect, "NormalMap", &cgNormalMapParam);
-	getEffectParam(cgEffect, "DiffuseTex", &cgDiffuseTexParam);
-	getEffectParam(cgEffect, "InvSceneScale", &cgInvSceneScaleParam);
-	getEffectParam(cgEffect, "Glossiness", &cgGlossinessParam);
-	getEffectParam(cgEffect, "DiffuseColor", &cgDiffuseColor);
-	getEffectParam(cgEffect, "isTex", &cgIsTex);
-	getEffectParam(cgEffect, "shiness", &cgShiness);
-	getEffectParam(cgEffect,"reflectValue",&cgReflectVale);
-	getEffectParam(cgEffect, "DoISG", &cgDoISGParam);
-	getEffectParam(cgEffect,"cameraPosition",&cgCameraPosition);
-	getEffectParam(cgEffect,"BlendFactorTex",&cgBlendFactor);
-
-	getEffectParam(cgEffect,"TheModelId",&cgModelIdParam);
-	// getEffectParam(cgEffect,"CudaTransMap",&cgCudaTransTexParam);
-	//cgBlendFactor
-	cgSetParameter1i(cgDoISGParam, (int)doISG);
-
-	getEffectParam(cgEffect, "DoReflections", &cgDoReflectionsParam);
-	cgSetParameter1i(cgDoReflectionsParam, (int)doReflections);
-
-	getEffectParam(cgEffect, "IsModel", &cgIsModelParam);
-	getEffectParam(cgEffect, "IsWall", &cgIsWallParam);
-
-	//For Reprojection 
-
-	getEffectParam(cgEffect,"NewWorldPosMap",&NewWorldPosTexParam);
-	getEffectParam(cgEffect,"LastEffectMap",&LastEffectTexParam);
-	getEffectParam(cgEffect,"LastMVP",&lastMVPParam);
-	g_testShader.initCG(cgContext);
-	
-}
 void init_gl()
 {
 #ifndef __APPLE__
@@ -596,7 +477,7 @@ void init_gl()
 	glClearColor(.2f,.2f,.2f,1.f);
 	glEnable(GL_DEPTH_TEST);
 
-	init_cg();
+	//init_cg();
 
 	// create PBO's
 	glGenBuffers(1, &reflectionMapPBO);
@@ -781,12 +662,7 @@ void init_gl()
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, 1024, 1024, 0, GL_RGBA, GL_FLOAT, NULL);
 	glBindTexture(GL_TEXTURE_2D, 0);
-#if MerGe
-	cgGLSetTextureParameter(cgReflectionMapParam, FinalEffectFbo.getTexture(0));
-#else
-	cgGLSetTextureParameter(cgReflectionMapParam,FinalEffectFbo.getTexture(0));
 
-#endif
 
 	glGenFramebuffersEXT(1, &sampleFbo);
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, sampleFbo);
@@ -861,33 +737,8 @@ void init_scene(const char* model_filename)
 	printf("init scence\n");
 	t_scene.init();
 	float diag;
-	//model->computeBoundingBox(modelBBMin, modelBBMax);
-	modelBBMin = MyGeometry::modelBBMin,modelBBMax = MyGeometry::modelBBMax;
-	modelBBCenter = (modelBBMin + modelBBMax) * 0.5;
-
-	diag = nv::length(modelBBMax - modelBBMin);
-	cgSetParameter1f(cgInvSceneScaleParam, 1.f/diag);
-
-	cgSetParameter3f(   cgLightPosParam,
-		t_scene.getLightPos().x,
-		t_scene.getLightPos().y,
-		t_scene.getLightPos().z );
-
-	/* manipulator.setTrackballActivate(GLUT_LEFT_BUTTON, 0);
-	manipulator.setDollyActivate( GLUT_RIGHT_BUTTON, 0);
-	manipulator.setPanActivate( GLUT_MIDDLE_BUTTON, 0);
-
-	manipulator.setDollyScale( diag*0.02f );
-	manipulator.setPanScale( diag*0.02f );
-	manipulator.setDollyPosition(-diag);
-	manipulator.rotate( nv::vec3f(0.f,1.f,0.f), 3.f/4.f * 3.14159f );
-	manipulator.rotate( nv::vec3f(1.f,0.f,0.f), .4f );
-	// manipulator.setCenterOfRotation(nv::vec3f(178,21,156));
-	*/
-	CLoad3DS* loader=new(CLoad3DS);
-	loader->BuildTexture(blendFactorPath, blendFactorTex);
-	delete loader;
-	cgGLSetTextureParameter(cgBlendFactor, blendFactorTex);
+	
+	
 	// g_currentCamera.PositionCamera(-40, 54, -151,    -22.8827, 42.5, -180.212,     0, 1, 0);
 	// g_currentCamera.navigate(posArray[0],posArray[1],currentTime,0,kk[0]);
 	// bathroom scene
@@ -1045,13 +896,6 @@ void init_optix()
 		// printf("222");
 		MyGeometry::ms_rtContext = rtContext;
 		MyMeterial::ms_rtContext = rtContext;
-		MyGeometry::mspCgisTex = &cgIsTex;
-		MyGeometry::mspCgshiness = &cgShiness;
-		MyGeometry::mspCgIsModel = &cgIsModelParam;
-		MyGeometry::mspCgIsWall = &cgIsWallParam;
-		MyGeometry::mspCgDiffuseColor = &cgDiffuseColor;
-		MyGeometry::msgCgDiffuseTexParam = &cgDiffuseTexParam;
-		MyGeometry::msgCgreflectVale = &cgReflectVale;
 		//optix::Geometry sofaGemetry = sofa.getOptixGeometry(rtContext);
 		t_scene.setOptix(&rtContext);
 		t_scene.optixInit();
@@ -1224,33 +1068,6 @@ void draw_scene(glslShader& shader,CCamera * pCamera)
 
 	CHECK_ERRORS();
 }
-void draw_scene(CGtechnique& current_technique, CCamera * pCamera)
-{
-	// glLoadIdentity();
-	if(fixedCamera) 
-	{
-		glMultMatrixf(fixedCameraMatrix.get_value());
-	} else {
-		// manipulator.applyTransform();
-		glMatrixMode(GL_MODELVIEW);
-		glLoadIdentity();
-		pCamera->Look();
-	}
-
-	cgGLSetMatrixParameterfc(cgCameraMVPParam,pCamera->getMvpMat());
-	cgGLSetMatrixParameterfc(cgCameraModelViewParam,pCamera->getModelViewMat());
-	cgGLSetMatrixParameterfc(cgCameraModelViewInvParem,pCamera->getModelViewInvMat());
-
-
-
-	cgSetParameter1i(cgIsWallParam, 0);
-	cgSetParameter1i(cgIsModelParam, 1);
-	cgSetParameter3f(cgDiffuseColor,0.0f,0.0f,0.0f);
-	cgSetParameter3f(cgCameraPosition,pCamera->Position().x,pCamera->Position().y,pCamera->Position().z);
-	cgGLSetTextureParameter(cgDiffuseTexParam, woodTex);
-	t_scene.draw_model(current_technique);
-	CHECK_ERRORS();
-}
 extern unsigned int  *g_PixelPos;
 void addtionalTracing(int pixelNum)
 {
@@ -1332,13 +1149,7 @@ void blending()
 	g_blendShader.setParemeter(FinalEffectFbo.getTexture(0),reflectionMapTex_Now);
 	MyGeometry::drawQuad(g_blendShader);
 	MergeEffectFbo.end();
-	cgGLSetTextureParameter(cgReflectionMapParam,MergeEffectFbo.getTexture(0));
-	g_reflectionShader.setReflectMap(MergeEffectFbo.getTexture(0));
-	currentGbuffer.begin();
-	//draw_scene(cgTechniqueGlossyReflections,&g_currentCamera);
-	t_scene.draw_model(g_reflectionShader,&g_currentCamera);
-	currentGbuffer.SaveBMP("./test/blending.bmp",0);
-	currentGbuffer.end();
+	
 
 }
 void reductionGPU()
@@ -1965,8 +1776,7 @@ void cupRound(int beginTime,int endTime)
 	}
 	//  delta = 0;	
 }
-extern transform1 transformArray[];
-extern action ActArray[];
+
 
 void cameraControl(int currentTime,CCamera& NowCamera)
 {
@@ -2337,8 +2147,7 @@ void optixRendering()
 		g_timeMesure.setFinalRenderingTime(finalRendingTime);
 	}
 
-	cgGLSetTextureParameter(cgReflectionMapParam,reflectionMapTex_Now);
-
+	
 	g_reflectionShader.setReflectMap(reflectionMapTex_Now);
 	currentGbuffer.begin();
 
@@ -2391,139 +2200,6 @@ void optixRendering()
 
 
 }
-void testRendering()
-{
-	glDisable(GL_DEPTH_TEST);
-	g_testShader.setMvpMatrix(g_currentCamera.getMvpMat());
-	g_testShader.setModelViewMatrix(g_currentCamera.getModelViewMat());
-	CGtechnique tech= g_testShader.getTechnique();
-	CGpass pass = cgGetFirstPass(tech);
-	while(pass) {
-		cgSetPassState(pass);
-		glPointSize(4);
-		glBegin(GL_POINTS);
-// 
- 			glVertex3f(36.3191872,-45.5569725,-50.4489975 );
- 			glVertex3f(36.2738419 ,-45.6298523 ,-50.3806381  );
- 		glEnd();
-
-		cgResetPassState(pass);
-		pass = cgGetNextPass(pass);
-	}
-	glEnable(GL_DEPTH_TEST);
-}
-void test()
-{
-	nv::vec3f reflectedPos = nv::vec3f(2.78407288,167.412674,77.0427780);
-	nv::vec3f floorPos = nv::vec3f(-1.76701510,0.000000000,0.142561898	);
-	nv::vec3f floorNomral = nv::vec3f(0,1,0);
-
-	nv::vec3f cameraPos = g_refCamera.getCameraPos();
-	nv::vec3f toCamera = normalize(cameraPos-floorPos);
-	float toFloorDis = dot(( floorPos-reflectedPos),-floorNomral);
-	nv::vec3f mirrorPos = reflectedPos - 2*toFloorDis*floorNomral;
-	nv::vec3f mirrorPosToCamera = normalize(cameraPos - mirrorPos);
-	float delta = dot(mirrorPosToCamera,floorNomral);
-	nv::vec3f intersectPos = reflectedPos- toFloorDis/delta*mirrorPosToCamera;
-	
-	nv::matrix4f mvp = g_currentCamera.getMvpMat();
-	nv::vec4f temp = (mvp*nv::vec4f(reflectedPos,1));
-	temp /= temp.w;
-	temp.x = temp.x*0.5+0.5;
-	temp.y = temp.y*0.5+0.5;
-	temp.x*=1024;
-	temp.y*=1024;
-}
-#define WIDTHBYTES(bits)    (((bits) + 31) / 32 * 4)
-void SaveBMP(char* fileName,BYTE * buf,UINT width,UINT height)
-{
-	short res1=0;
-	short res2=0;
-	long pixoff=54;
-	long compression=0;
-	long cmpsize=0;
-	long colors=0;
-	long impcol=0;
-	char m1='B';
-	char m2='M';
-
-	DWORD widthDW = WIDTHBYTES(width * 24);
-
-	long bmfsize=sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) +
-		widthDW * height;	
-	long byteswritten=0;
-
-	BITMAPINFOHEADER header;
-	header.biSize=40; 						
-	header.biWidth=width;
-	header.biHeight=height;
-	header.biPlanes=1;
-	header.biBitCount=24;					
-	header.biCompression=BI_RGB;			
-	header.biSizeImage=0;
-	header.biXPelsPerMeter=0;
-	header.biYPelsPerMeter=0;
-	header.biClrUsed=0;
-	header.biClrImportant=0;
-
-	FILE *fp;	
-	fp=fopen(fileName,"wb");
-	if (fp==NULL)
-	{
-		//MessageBox("error","Can't open file for writing");
-		return;
-	}
-
-	BYTE *topdown_pixel = (BYTE *) malloc( width*height*3*sizeof(BYTE) );
-	for(int j=0; j<height; j++ )
-		for(int k=0; k<width; k++)
-		{
-			memcpy( &topdown_pixel[(j*width+k)*3], &buf[(j*width+k)*3+2], sizeof(BYTE) );
-			memcpy( &topdown_pixel[(j*width+k)*3+2], &buf[(j*width+k)*3], sizeof(BYTE) );
-			memcpy( &topdown_pixel[(j*width+k)*3+1], &buf[(j*width+k)*3+1], sizeof(BYTE) );
-		}
-		buf = topdown_pixel;
-
-		//���BITMAPFILEHEADER
-		fwrite((BYTE  *)&(m1),1,1,fp); byteswritten+=1;
-		fwrite((BYTE  *)&(m2),1,1,fp); byteswritten+=1;
-		fwrite((long  *)&(bmfsize),4,1,fp);	byteswritten+=4;
-		fwrite((int  *)&(res1),2,1,fp); byteswritten+=2;
-		fwrite((int  *)&(res2),2,1,fp); byteswritten+=2;
-		fwrite((long  *)&(pixoff),4,1,fp); byteswritten+=4;
-
-		//���BITMAPINFOHEADER
-		fwrite((BITMAPINFOHEADER *)&header,sizeof(BITMAPINFOHEADER),1,fp);
-		byteswritten+=sizeof(BITMAPINFOHEADER);
-
-
-		//���λͼ����
-		long row=0;
-		long rowidx;
-		long row_size;
-		row_size=header.biWidth*3;
-		long rc;
-		for (row=0;row<header.biHeight;row++) {
-			rowidx=(long unsigned)row*row_size;						      
-
-			// дһ��
-			rc=fwrite((void  *)(buf+rowidx),row_size,1,fp);
-			if (rc!=1) 
-			{
-				break;
-			}
-			byteswritten+=row_size;	
-
-			for (DWORD count=row_size;count<widthDW;count++) {
-				char dummy=0;
-				fwrite(&dummy,1,1,fp);
-				byteswritten++;							  
-			}
-
-		}
-
-		fclose(fp);
-}
 
 void init_RefcletTex()
 {
@@ -2548,17 +2224,21 @@ void init_RefcletTex()
 		cameraControl(FrameNums,camera);
 
 		frame.getGbuffer().begin();
-		//draw_scene(cgTechniqueWorldPosNormal,&camera);
-
-		  t_scene.draw_model(g_gBufferShader,&camera);
-		//frame.getGbuffer().end();
-		
+		t_scene.draw_model(g_gBufferShader,&camera);
+		frame.getGbuffer().end();
 		currentGbuffer.copyFromBuffer(frame.getGbuffer());
-		//currentGbuffer.SaveBMP("./test/world234.bmp",0);
-		//currentGbuffer.SaveBMP("./test/world123.bmp",1);
-		/*currentGbuffer.begin();
-		draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
-		currentGbuffer.end();*/
+		/*
+		rtWorldSpaceTexture->unregisterGLTexture();
+		glBindTexture(GL_TEXTURE_2D, nextframe.getGbuffer().getTexture(0) );
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, traceWidth, traceHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+		rtWorldSpaceTexture->registerGLTexture();
+
+		rtNormalTexture->unregisterGLTexture();
+		glBindTexture(GL_TEXTURE_2D, nextframe.getGbuffer().getTexture(1) );
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, traceWidth, traceHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+		rtNormalTexture->registerGLTexture();
+		*/
+
 		rtContext["eye_pos"]->setFloat(camera.Position().x, camera.Position().y, camera.Position().z);
 		try
 		{
@@ -2593,94 +2273,11 @@ void init_RefcletTex()
 		int h = rasterHeight;
 		char str [32];
 		sprintf(str,"./test/ref%d.bmp",0);
-		SaveBMP(str, pTexture, w, h);
+		Fbo::SaveBMP(str, pTexture, w, h);
 		if (pTexture)
 		   delete[] pTexture;*/
 	}
-	/*
-	for(int i = 0;i<ReflectNum;i++)
-	{
-
-		int FrameNums = i * 10;
-		cameraControl(FrameNums,g_currentCamera);
-
-		currentGbuffer.begin();
-		draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
-		currentGbuffer.end();
-		currentGbuffer.SaveBMP("worPos.bmp",0);
-
-		rtContext["eye_pos"]->setFloat(g_currentCamera.Position().x, g_currentCamera.Position().y, g_currentCamera.Position().z);
-		try
-		{
-			rtContext->launch(0, rasterWidth, rasterHeight);
-		}
-		catch (optix::Exception& e) 
-		{
-			sutilReportError( e.getErrorString().c_str() );
-			exit(1);
-		}
-
-		glPushAttrib(GL_PIXEL_MODE_BIT);
-		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, reflectionMapPBO);
-		glBindTexture(GL_TEXTURE_2D, reflectionMaps[i]);
-		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rasterWidth, rasterHeight,
-			GL_RGBA, GL_FLOAT, 0);
-		glBindTexture(GL_TEXTURE_2D, 0);
-		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-		glPopAttrib();
-		
-		glEnable(GL_TEXTURE_2D);
-	BYTE *pTexture = NULL;
-	pTexture = new BYTE[rasterWidth*rasterHeight * 3];
-	memset(pTexture, 0, rasterWidth*rasterHeight * 3 * sizeof(BYTE));
-
-	glBindTexture(GL_TEXTURE_2D, (reflectionMaps[i]));//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
-
-	int w = rasterWidth;
-	int h = rasterHeight;
-	char str [32];
-	sprintf(str,"ref%d.bmp",i);
-	SaveBMP(str, pTexture, w, h);
-	if (pTexture)
-	   delete[] pTexture;
-		/*
-		glEnable(GL_TEXTURE_2D);
-		BYTE *pTexture = NULL;
-		pTexture = new BYTE[rasterWidth*  rasterHeight * 3];
-		memset(pTexture, 0, rasterWidth* rasterHeight * 3 * sizeof(BYTE));
-
-		glBindTexture(GL_TEXTURE_2D, reflectionMaps[i]);//TexPosId   PboTex
-
-		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
-
-		int w = rasterWidth;
-		int h = rasterHeight;
-		SaveBMP("234.bmp", pTexture, w, h);
-		if (pTexture)
-		delete[] pTexture;
-		*/
-
-		// 		char filename[256];
-		// 		sprintf(filename,"pic/reflec/pic%d.bmp",FrameNums);
-		// 		BYTE *pTexture = new BYTE[rasterWidth*rasterHeight*3];
-		// 		memset(pTexture, 0, rasterWidth*rasterHeight*3 * sizeof(BYTE));
-		// 
-		// 		glBindTexture(GL_TEXTURE_2D, reflectionMaps[i]);//TexPosId   PboTex
-		// 
-		// 		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
-		// 
-		// 		SaveBMP(filename,pTexture,rasterWidth,rasterHeight);
-		// 		delete[] pTexture;
-		// 		glBindTexture(GL_TEXTURE_2D,0);
-	/*
-	}
-
-	cout<<"reflec ok"<<endl;
-	*/
-
+	
 
 
 
@@ -2688,100 +2285,17 @@ void init_RefcletTex()
 
 
 
-void setTile()
+void setTitle()
 {
 	static char titleBuffer[48];
 	sprintf(titleBuffer,"Frame:%d",currentTime2);
 	glutSetWindowTitle(titleBuffer); 
 }
-nv::vec4f myTex2d(GLuint texId,nv::vec2f coor)
-{
-	glEnable(GL_TEXTURE_2D);
-	float *pTexture = NULL;
-	pTexture = new float[rasterWidth*rasterHeight * 4];
-	memset(pTexture, 0, rasterWidth*rasterHeight * 4 * sizeof(float));
-
-	glBindTexture(GL_TEXTURE_2D, texId);//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pTexture);
-
-	int w = rasterWidth;
-	int h = rasterHeight;
-	nv::vec4f test = nv::vec4f(&pTexture[4*((int)coor.y*rasterHeight+(int)coor.x)]);
-	if (pTexture)
-	   delete[] pTexture;
-	glBindTexture(GL_TEXTURE_2D, 0);
-	return test;
-}
-nv::vec3f to3(nv::vec4f test)
-{
-	return nv::vec3f(test.x,test.y,test.z);
-}
-nv::vec3f myReflect(const nv::vec3f& i, const nv::vec3f& n)
-{
-  return i - 2.0f * n * dot(n,i);
-}
-
-void CpuTracint(GLuint reflectOptix)
-{
-	return;
-	nv::vec2f coord = nv::vec2f(0,0);
-	nv::vec3f worldPos = to3(myTex2d(refGbuffer.getTexture(0),coord));
-	nv::vec3f worldNormal = to3(myTex2d(refGbuffer.getTexture(1),coord));
-	nv::vec4f reflectValue = myTex2d(reflectOptix,coord);
-
-	printf("woldPos:(%f,%f,%f)\n",worldPos.x,worldPos.y,worldPos.z);
-	printf("worldNomal:(%f,%f,%f)\n",worldNormal.x,worldNormal.y,worldNormal.z);
-	
-	float ReflectDis = reflectValue.w;
-	
-	nv::vec3f refCamera = nv::vec3f(g_refCamera.Position().x,g_refCamera.Position().y,g_refCamera.Position().z);
-
-	nv::vec3f newCameraPos = nv::vec3f(g_currentCamera.Position().x,g_currentCamera.Position().y,g_currentCamera.Position().z);
-
-	nv::vec3f LookVec = normalize(worldPos - refCamera);
-	//计算反射光线方向
-	nv::vec3f ReflectVec = normalize(myReflect(LookVec,worldNormal));
-	//计算被反射物体坐标
-	nv::vec3f ReflectPos = worldPos + ReflectVec * ReflectDis;
-	
-
- 	//RefelctInCameraDepth  = TMpReflecPosInCamera.z / TMpReflecPosInCamera.w;
-
-
-	float CosReCorner = dot(ReflectVec,worldNormal);
-	//镜像点的坐标
-	nv::vec3f ReMirrorPos = ReflectDis * CosReCorner * 2 * (-1) * worldNormal + ReflectPos;
-	printf("ReMirrorPos(%f,%f,%f)\n",ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z);
-
-	
-	{
-	nv::matrix4f mvpMatr = nv::matrix4f(g_currentCamera.getMvpMat());
-	nv::vec4f temp = mvpMatr*nv::vec4f(ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z,1);
-	temp /= temp.w;
-	temp.x  = temp.x*0.5+0.5;
-	temp.y = temp.y*0.5+0.5;
-	printf("cpu coord;%f,%f\n",temp.x*1024,temp.y*1024);
-	//相机到反射面的距离
-	}
-	{
-		nv::matrix4f mvpMatr = nv::matrix4f(g_refCamera.getMvpMat());
-	nv::vec4f temp = mvpMatr*nv::vec4f(ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z,1);
-	temp /= temp.w;
-	temp.x  = temp.x*0.5+0.5;
-	temp.y = temp.y*0.5+0.5;
-	printf("g_refCamera cpu coord;%f,%f\n",temp.x*1024,temp.y*1024);
-	//相机到反射面的距离
-	}
-}
-
 void tcRendering()
 {
 
-	//if(currentTime2>=200)
-	//return;
 	printf("frame#:%d\n",currentTime2);
-	setTile();
+	setTitle();
 	sutilFrameBenchmark("isgReflections", warmup_frames, timed_frames);
 	double FrameStart,FrameEnd;
 
@@ -2893,7 +2407,7 @@ void tcRendering()
 	TransMapFbo.end();
 	char str[100];
 	sprintf(str,"test/tttransMap%d.bmp",currentTime2);
-	TransMapFbo.debugPixel(0,0,1023,1024);
+	//TransMapFbo.debugPixel(0,0,1023,1024);
 	TransMapFbo.SaveBMP(str,0);
 	if(stat_breakdown)
 	{
@@ -2955,7 +2469,6 @@ void tcRendering()
 
 	glFinish();
 	sutilCurrentTime(&DrawTime1);
-	cgGLSetTextureParameter(cgReflectionMapParam,FinalEffectFbo.getTexture(0));
 	if (stat_breakdown) 
 	{
 		// glFinish();
@@ -2963,10 +2476,14 @@ void tcRendering()
 		g_timeMesure.setFinalRenderingTime(finalRenderingTime);
 	}
 
+	
+
+
+	g_reflectionShader.setReflectMap(MergeEffectFbo.getTexture(0));
 	currentGbuffer.begin();
-
-	draw_scene(cgTechniqueGlossyReflections,&g_currentCamera);
-
+	//draw_scene(cgTechniqueGlossyReflections,&g_currentCamera);
+	t_scene.draw_model(g_reflectionShader,&g_currentCamera);
+	currentGbuffer.SaveBMP("./test/blending.bmp",0);
 	currentGbuffer.end();
 
 	// currentGbuffer.SaveBMP("asd.bmp",0);
@@ -3149,7 +2666,6 @@ void keyboard(unsigned char k, int x, int y)
 
 	case 'b':
 		doISG = !doISG;
-		cgSetParameter1i(cgDoISGParam, (int)doISG);
 		break;
 
 	case 'c': {
@@ -3242,10 +2758,7 @@ void keyboard(unsigned char k, int x, int y)
 		reshape = true;
 		break;
 		*/
-	case 't':
-		doReflections = !doReflections;
-		cgSetParameter1i(cgDoReflectionsParam, (int)doReflections);
-		break;
+	
 	case '=':
 		currentTime2++;
 		break;

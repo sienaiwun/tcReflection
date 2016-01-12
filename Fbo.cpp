@@ -1,4 +1,4 @@
-#include"Fbo1.h"
+#include"Fbo.h"
 #include<iostream>
 #include<fstream>
 //#include<glm\vec2.hpp>
