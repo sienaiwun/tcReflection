@@ -150,10 +150,6 @@ void worldposnormal_fp(Fragment f,
   normal.xyz   = normalize(f.worldNormal);
   worldPos.w =reflectValue;
   normal.w = ModeId;
-
-  /*orldPos.xy = f.texcoord;
-   worldPos.z = 1;*/
-   worldPos = normal;
   //normal2 = normal;
   //worldPos2 = worldPos;
   //return p;

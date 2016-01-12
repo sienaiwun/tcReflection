@@ -1,4 +1,4 @@
-
+Ôªø
 /*
 * Copyright (c) 2010 NVIDIA Corporation.  All rights reserved.
 *
@@ -90,7 +90,7 @@ CCamera g_refCamera,g_currentCamera;
 //uint *Host_PixelSum;
 //MyGeometry teapot;
 int CountTime = 1000;
-TimeMesure g_timeMesure(optixRenderingType,CountTime);
+TimeMesure g_timeMesure(tcRenderingType,CountTime);
 nv::vec3f viewDependentMissColor = nv::vec3f(255,0,0);
 nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 //cudaGraphicsResource *cudaRes_WorldNormal,*cudaRes_WorldPos,*cudaRes_Reflect;
@@ -113,14 +113,14 @@ reflectShader g_reflectionShader;
 BlendShader g_blendShader;
 
 
-#include "glossyScene.h"
-glossyScene t_scene;
+#include "toiletScene.h"
+toiletScene t_scene;
 
 void cameraControl(int,CCamera&);
 
 
 
-/*
+
 posPara posArray[] = 
 {
 	//{make_float3(16.033649,38.942272,15.414365  ),make_float3(22.289124,34.077927,9.314583 )},
@@ -174,9 +174,9 @@ posPara posArray[] =
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
 
-};*/
+};
 
-
+/*
 posPara posArray[] = 
 {
 	//{make_float3(16.033649,38.942272,15.414365  ),make_float3(22.289124,34.077927,9.314583 )},
@@ -230,7 +230,7 @@ posPara posArray[] =
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
 
-};
+};*/
 
 
 //float k = 900/25.0;
@@ -389,7 +389,7 @@ void init_cuda(int argc,char**argv)
 {
 
 	findCudaDevice(argc,(const char**) argv);
-    //∞Û∂®openglŒ∆¿ÌµΩcuda
+    //ÁªëÂÆöopenglÁ∫πÁêÜÂà∞cuda
 	poxCudaTex.set(refGbuffer.getTexture(0),rasterWidth,rasterHeight,worldPosRef_t);
 	normalCudaTex.set(refGbuffer.getTexture(1),rasterWidth,rasterHeight,worldNormalRef_t);
 	reflectCudaTex.set(reflectionMapTex,rasterWidth,rasterHeight,reflecionRef_t);
@@ -398,7 +398,7 @@ void init_cuda(int argc,char**argv)
 	poxCudaTex.init();
 	normalCudaTex.init();
 	reflectCudaTex.init();
-	//∞Û∂®opengl PBOµΩcuda
+	//ÁªëÂÆöopengl PBOÂà∞cuda
 	
 	vectorCudaArray.set(rasterWidth,rasterHeight,float4_t);
 	lastCudaArray.set(rasterWidth,rasterHeight,float2_t);
@@ -629,7 +629,7 @@ void init_gl()
 	refGbuffer.init();
 
 	MergeEffectFbo.init();
-	//…˙≥…vectorŒ∆¿Ì
+	//ÁîüÊàêvectorÁ∫πÁêÜ
 	glGenTextures(1, &VecorTexture);
 
 	glBindTexture(GL_TEXTURE_2D, VecorTexture);
@@ -653,7 +653,7 @@ void init_gl()
 
 
 
-	//…˙≥…NEWŒ∆¿Ì
+	//ÁîüÊàêNEWÁ∫πÁêÜ
 	glGenTextures(ReflectNum, reflectionMaps);
 	for(int i = 0;i<ReflectNum;i++){
 		glBindTexture(GL_TEXTURE_2D, reflectionMaps[i]);
@@ -666,7 +666,7 @@ void init_gl()
 	}
 
 
-	//…˙≥…À˘–ËµƒreflcetŒ∆¿Ì
+	//ÁîüÊàêÊâÄÈúÄÁöÑreflcetÁ∫πÁêÜ
 	glGenTextures(1, &New_Tex);
 
 	glBindTexture(GL_TEXTURE_2D, New_Tex);
@@ -682,7 +682,7 @@ void init_gl()
 	// cgGLSetTextureParameter(cgCudaTransTexParam, VecorTexture);
 
 
-	//‘ÿ»Îglslshader
+	//ËΩΩÂÖ•glslshader
 	g_transShader.init();
 	g_reprojectShader.init();
 	g_mergeShader.init();
@@ -716,7 +716,7 @@ void init_gl()
 	MergeComputTex = MergeShader.getUniform("ComputeTex");
 	Merge_FrameCount = MergeShader.getUniform("FrameCount");
 	*/
-	//…˙≥…bufferdraw
+	//ÁîüÊàêbufferdraw
 #if SpeedUp
 	IniteMyVBO();
 #endif
@@ -728,7 +728,7 @@ void init_gl()
 
 
 
-	//‘≠¿¥µƒoptix Fbo
+	//ÂéüÊù•ÁöÑoptix Fbo
 	/* worldSpaceNormalFBO = new FramebufferObject();
 
 	GLuint worldSpaceDepthTex;
@@ -806,7 +806,7 @@ void init_gl()
 	glGenRenderbuffersEXT(1,&depthTex);
 	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT,depthTex);
 	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT,GL_DEPTH_COMPONENT, initialWindowHeight, initialWindowWidth);
-	//Ω´…Ó∂»ª∫≥Â”ÎFBO∞Û∂®
+	//Â∞ÜÊ∑±Â∫¶ÁºìÂÜ≤‰∏éFBOÁªëÂÆö
 	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT,GL_DEPTH_ATTACHMENT_EXT,GL_RENDERBUFFER_EXT,depthTex);
 
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
@@ -893,7 +893,7 @@ void init_scene(const char* model_filename)
 	// bathroom scene
 	// 
 
-	//º«µ√ªªªÿ¿¥
+	//ËÆ∞ÂæóÊç¢ÂõûÊù•
 	//g_refCamera.PositionCamera(-2.403542,34.498703,37.004547 ,0.809388,32.024666,27.863651,0,1,0);
 	//g_currentCamera.PositionCamera(-10.403542,34.498703,37.004547 ,0.809388,32.024666,27.863651,0,1,0);
 
@@ -1279,7 +1279,8 @@ void addtionalTracing(int pixelNum)
 	cameraControl(currentTime2,g_currentCamera);
 
 	currentGbuffer.begin();
-	draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
+	//draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
+	t_scene.draw_model(g_gBufferShader,&g_currentCamera);
 	currentGbuffer.end();
 	//currentGbuffer.SaveBMP("worPos.
 	try
@@ -1332,8 +1333,11 @@ void blending()
 	MyGeometry::drawQuad(g_blendShader);
 	MergeEffectFbo.end();
 	cgGLSetTextureParameter(cgReflectionMapParam,MergeEffectFbo.getTexture(0));
+	g_reflectionShader.setReflectMap(MergeEffectFbo.getTexture(0));
 	currentGbuffer.begin();
-	draw_scene(cgTechniqueGlossyReflections,&g_currentCamera);
+	//draw_scene(cgTechniqueGlossyReflections,&g_currentCamera);
+	t_scene.draw_model(g_reflectionShader,&g_currentCamera);
+	currentGbuffer.SaveBMP("./test/blending.bmp",0);
 	currentGbuffer.end();
 
 }
@@ -1523,11 +1527,11 @@ void ComputeVector(){
 
 
 
-	//±ª∑¥…‰ŒÔÃÂ◊¯±Í
+	//Ë¢´ÂèçÂ∞ÑÁâ©‰ΩìÂùêÊ†á
 	float3 TmpRePos = WorldPos + reflectVec * ReflectDis;
 
 
-	//«ÛæµœÒµ„Œª÷√
+	//Ê±ÇÈïúÂÉèÁÇπ‰ΩçÁΩÆ
 	float cosTheta = abs(dot(reflectVec,WorldNormal));
 
 	float3 RefRealPos = ReflectDis * cosTheta * 2 *(-1) * WorldNormal + TmpRePos;
@@ -1588,7 +1592,7 @@ void ComputeVector(){
 	ProPos.x = ProPos.x / ProPos.w;
 	ProPos.y = ProPos.y / ProPos.w;
 
-	//projectŒª÷√
+	//project‰ΩçÁΩÆ
 	ProPos.x = (ProPos.x * 0.5 +0.5) * 1024;
 	ProPos.y = (ProPos.y * 0.5 +0.5) * 1024;
 
@@ -1620,22 +1624,22 @@ void ComputeVector(){
 			TmpUv3.y -= 1;
 		}
 
-		//∏˜∏ˆ≤…—˘µ„∂‘”¶µƒWorPos
+		//ÂêÑ‰∏™ÈááÊ†∑ÁÇπÂØπÂ∫îÁöÑWorPos
 		float3 WorldPos1 = WorldPosFloat[(TmpUv1.y*1024)+TmpUv1.x];
 		float3 WorldPos2 = WorldPosFloat[(TmpUv2.y*1024)+TmpUv2.x];
 		float3 WorldPos3 = WorldPosFloat[(TmpUv3.y * 1024) + TmpUv3.x];
 
-		//«Ûœ‡ª˙”Î≤…—˘µ„◊È≥…∆Ω√Êµƒ∑®œﬂ
+		//Ê±ÇÁõ∏Êú∫‰∏éÈááÊ†∑ÁÇπÁªÑÊàêÂπ≥Èù¢ÁöÑÊ≥ïÁ∫ø
 		float3 CamWorldPlaneNormal = normalize(cross(CamerVec,normalize(CameraPos1- RefRealPos)));
-		//«Ûœ‡ª˙πÏº£À˘‘⁄∆Ω√Êµƒ∑®œﬂ
+		//Ê±ÇÁõ∏Êú∫ËΩ®ËøπÊâÄÂú®Âπ≥Èù¢ÁöÑÊ≥ïÁ∫ø
 		float3 CameraVecPlaneNormal = normalize(cross(CamWorldPlaneNormal,CamerVec));
 
-		//∑÷±«Û¡Ω∏ˆµ„”Î∏√∆Ω√ÊµƒΩªµ„
+		//ÂàÜÂà´Ê±Ç‰∏§‰∏™ÁÇπ‰∏éËØ•Âπ≥Èù¢ÁöÑ‰∫§ÁÇπ
 		float3 InsertPoint1 = abs(dot(CameraVecPlaneNormal,CameraPos1 - RefRealPos)/dot(CameraVecPlaneNormal,normalize(WorldPos1-RefRealPos))) * normalize(WorldPos1-RefRealPos) + RefRealPos;
 		float3 InsertPoint2 = abs(dot(CameraVecPlaneNormal,CameraPos1 - RefRealPos)/dot(CameraVecPlaneNormal,normalize(WorldPos2-RefRealPos))) * normalize(WorldPos2-RefRealPos) + RefRealPos;
 		float3 InsertPoint3 = abs(dot(CameraVecPlaneNormal,CameraPos1 - RefRealPos)/dot(CameraVecPlaneNormal,normalize(WorldPos3-RefRealPos))) * normalize(WorldPos3-RefRealPos) + RefRealPos;
 
-		//«Ûµ„”Î÷±œﬂµƒæ‡¿Î
+		//Ê±ÇÁÇπ‰∏éÁõ¥Á∫øÁöÑË∑ùÁ¶ª
 		float DisPoint2Line1,DisPoint2Line2,DisPoint2Line3;
 		float TmpDis1,TmpDis2;
 		TmpDis1 = dot(InsertPoint1 - CameraPos1,CamerVec);
@@ -1644,7 +1648,7 @@ void ComputeVector(){
 
 		TmpDis1 = dot(InsertPoint2 - CameraPos1,CamerVec);
 		TmpDis2 = dot(InsertPoint2 - CameraPos1,InsertPoint2 - CameraPos1);
-		//æ‡¿ÎΩœ–°µƒ◊˜Œ™œ¬“ª∏ˆ≤…—˘µ„
+		//Ë∑ùÁ¶ªËæÉÂ∞èÁöÑ‰Ωú‰∏∫‰∏ã‰∏Ä‰∏™ÈááÊ†∑ÁÇπ
 		DisPoint2Line2 = TmpDis2 - TmpDis1*TmpDis1 ;
 
 		TmpDis1 = dot(InsertPoint3 - CameraPos1,CamerVec);
@@ -1666,17 +1670,17 @@ void ComputeVector(){
 		TmpUv = TmpUv1;
 		WorldPos = WorldPos1;
 
-		//µ√≥ˆ∏√µ„∑®œﬂ
+		//ÂæóÂá∫ËØ•ÁÇπÊ≥ïÁ∫ø
 		WorldNormal = WorldNormalFloat[TmpUv.y*1024+TmpUv.x];
 
-		//«Û≥ˆ∏√µ„µƒŒª∆Ω√Êµƒ±ª∑¢…‰ŒÔÃÂµƒæµœÒµ„
+		//Ê±ÇÂá∫ËØ•ÁÇπÁöÑ‰ΩçÂπ≥Èù¢ÁöÑË¢´ÂèëÂ∞ÑÁâ©‰ΩìÁöÑÈïúÂÉèÁÇπ
 		RefRealPos = abs(dot(WorldPos - TmpRePos,WorldNormal)) * (-2) * WorldNormal + TmpRePos;
-		//«Û∏√æµœÒµ„”Îœ‡ª˙¡¨œﬂ”Î–¬∆Ω√ÊµƒΩªµ„
+		//Ê±ÇËØ•ÈïúÂÉèÁÇπ‰∏éÁõ∏Êú∫ËøûÁ∫ø‰∏éÊñ∞Âπ≥Èù¢ÁöÑ‰∫§ÁÇπ
 		DisEye2Plane = abs(dot(CameraPos2-WorldPos,WorldNormal));
-		// ”µ„”ÎæµœÒµ„¡¨œﬂ”Î ”µ„µΩ∆Ω√Ê¥πœﬂµƒcos÷µ
+		//ËßÜÁÇπ‰∏éÈïúÂÉèÁÇπËøûÁ∫ø‰∏éËßÜÁÇπÂà∞Âπ≥Èù¢ÂûÇÁ∫øÁöÑcosÂÄº
 		CosTheta2 = abs(dot(normalize(CameraPos2 - RefRealPos),WorldNormal));
 		VecEye2Ref = normalize(RefRealPos - CameraPos2);
-		//«Û≥ˆΩªµ„
+		//Ê±ÇÂá∫‰∫§ÁÇπ
 		FinalPos = CameraPos2 +  VecEye2Ref * (DisEye2Plane/CosTheta2);
 
 
@@ -1687,7 +1691,7 @@ void ComputeVector(){
 		ProPos.x = ProPos.x / ProPos.w;
 		ProPos.y = ProPos.y / ProPos.w;
 
-		//projectŒª÷√
+		//project‰ΩçÁΩÆ
 		ProPos.x = (ProPos.x * 0.5 +0.5) * 1024;
 		ProPos.y = (ProPos.y * 0.5 +0.5) * 1024;
 
@@ -2430,6 +2434,97 @@ void test()
 	temp.x*=1024;
 	temp.y*=1024;
 }
+#define WIDTHBYTES(bits)    (((bits) + 31) / 32 * 4)
+void SaveBMP(char* fileName,BYTE * buf,UINT width,UINT height)
+{
+	short res1=0;
+	short res2=0;
+	long pixoff=54;
+	long compression=0;
+	long cmpsize=0;
+	long colors=0;
+	long impcol=0;
+	char m1='B';
+	char m2='M';
+
+	DWORD widthDW = WIDTHBYTES(width * 24);
+
+	long bmfsize=sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) +
+		widthDW * height;	
+	long byteswritten=0;
+
+	BITMAPINFOHEADER header;
+	header.biSize=40; 						
+	header.biWidth=width;
+	header.biHeight=height;
+	header.biPlanes=1;
+	header.biBitCount=24;					
+	header.biCompression=BI_RGB;			
+	header.biSizeImage=0;
+	header.biXPelsPerMeter=0;
+	header.biYPelsPerMeter=0;
+	header.biClrUsed=0;
+	header.biClrImportant=0;
+
+	FILE *fp;	
+	fp=fopen(fileName,"wb");
+	if (fp==NULL)
+	{
+		//MessageBox("error","Can't open file for writing");
+		return;
+	}
+
+	BYTE *topdown_pixel = (BYTE *) malloc( width*height*3*sizeof(BYTE) );
+	for(int j=0; j<height; j++ )
+		for(int k=0; k<width; k++)
+		{
+			memcpy( &topdown_pixel[(j*width+k)*3], &buf[(j*width+k)*3+2], sizeof(BYTE) );
+			memcpy( &topdown_pixel[(j*width+k)*3+2], &buf[(j*width+k)*3], sizeof(BYTE) );
+			memcpy( &topdown_pixel[(j*width+k)*3+1], &buf[(j*width+k)*3+1], sizeof(BYTE) );
+		}
+		buf = topdown_pixel;
+
+		//ÔøΩÔøΩÔøΩBITMAPFILEHEADER
+		fwrite((BYTE  *)&(m1),1,1,fp); byteswritten+=1;
+		fwrite((BYTE  *)&(m2),1,1,fp); byteswritten+=1;
+		fwrite((long  *)&(bmfsize),4,1,fp);	byteswritten+=4;
+		fwrite((int  *)&(res1),2,1,fp); byteswritten+=2;
+		fwrite((int  *)&(res2),2,1,fp); byteswritten+=2;
+		fwrite((long  *)&(pixoff),4,1,fp); byteswritten+=4;
+
+		//ÔøΩÔøΩÔøΩBITMAPINFOHEADER
+		fwrite((BITMAPINFOHEADER *)&header,sizeof(BITMAPINFOHEADER),1,fp);
+		byteswritten+=sizeof(BITMAPINFOHEADER);
+
+
+		//ÔøΩÔøΩÔøΩŒªÕºÔøΩÔøΩÔøΩÔøΩ
+		long row=0;
+		long rowidx;
+		long row_size;
+		row_size=header.biWidth*3;
+		long rc;
+		for (row=0;row<header.biHeight;row++) {
+			rowidx=(long unsigned)row*row_size;						      
+
+			// –¥“ªÔøΩÔøΩ
+			rc=fwrite((void  *)(buf+rowidx),row_size,1,fp);
+			if (rc!=1) 
+			{
+				break;
+			}
+			byteswritten+=row_size;	
+
+			for (DWORD count=row_size;count<widthDW;count++) {
+				char dummy=0;
+				fwrite(&dummy,1,1,fp);
+				byteswritten++;							  
+			}
+
+		}
+
+		fclose(fp);
+}
+
 void init_RefcletTex()
 {
 
@@ -2453,14 +2548,14 @@ void init_RefcletTex()
 		cameraControl(FrameNums,camera);
 
 		frame.getGbuffer().begin();
-		draw_scene(cgTechniqueWorldPosNormal,&camera);
+		//draw_scene(cgTechniqueWorldPosNormal,&camera);
 
-		 // t_scene.draw_model(g_gBufferShader,&g_refCamera);
-		frame.getGbuffer().end();
+		  t_scene.draw_model(g_gBufferShader,&camera);
+		//frame.getGbuffer().end();
 		
 		currentGbuffer.copyFromBuffer(frame.getGbuffer());
-	//	currentGbuffer.SaveBMP("./test/world234.bmp",0);
-	//	currentGbuffer.SaveBMP("./test/world123.bmp",1);
+		//currentGbuffer.SaveBMP("./test/world234.bmp",0);
+		//currentGbuffer.SaveBMP("./test/world123.bmp",1);
 		/*currentGbuffer.begin();
 		draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
 		currentGbuffer.end();*/
@@ -2484,7 +2579,7 @@ void init_RefcletTex()
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		glPopAttrib();
-	/*	
+		/*
 		glEnable(GL_TEXTURE_2D);
 		BYTE *pTexture = NULL;
 		pTexture = new BYTE[rasterWidth*rasterHeight * 3];
@@ -2512,7 +2607,7 @@ void init_RefcletTex()
 		currentGbuffer.begin();
 		draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
 		currentGbuffer.end();
-		//currentGbuffer.SaveBMP("worPos.bmp",0);
+		currentGbuffer.SaveBMP("worPos.bmp",0);
 
 		rtContext["eye_pos"]->setFloat(g_currentCamera.Position().x, g_currentCamera.Position().y, g_currentCamera.Position().z);
 		try
@@ -2534,7 +2629,7 @@ void init_RefcletTex()
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		glPopAttrib();
-		/*
+		
 		glEnable(GL_TEXTURE_2D);
 	BYTE *pTexture = NULL;
 	pTexture = new BYTE[rasterWidth*rasterHeight * 3];
@@ -2550,7 +2645,7 @@ void init_RefcletTex()
 	sprintf(str,"ref%d.bmp",i);
 	SaveBMP(str, pTexture, w, h);
 	if (pTexture)
-	   delete[] pTexture;*/
+	   delete[] pTexture;
 		/*
 		glEnable(GL_TEXTURE_2D);
 		BYTE *pTexture = NULL;
@@ -2580,8 +2675,8 @@ void init_RefcletTex()
 		// 		SaveBMP(filename,pTexture,rasterWidth,rasterHeight);
 		// 		delete[] pTexture;
 		// 		glBindTexture(GL_TEXTURE_2D,0);
-
-	/*}
+	/*
+	}
 
 	cout<<"reflec ok"<<endl;
 	*/
@@ -2645,9 +2740,9 @@ void CpuTracint(GLuint reflectOptix)
 	nv::vec3f newCameraPos = nv::vec3f(g_currentCamera.Position().x,g_currentCamera.Position().y,g_currentCamera.Position().z);
 
 	nv::vec3f LookVec = normalize(worldPos - refCamera);
-	//º∆À„∑¥…‰π‚œﬂ∑ΩœÚ
+	//ËÆ°ÁÆóÂèçÂ∞ÑÂÖâÁ∫øÊñπÂêë
 	nv::vec3f ReflectVec = normalize(myReflect(LookVec,worldNormal));
-	//º∆À„±ª∑¥…‰ŒÔÃÂ◊¯±Í
+	//ËÆ°ÁÆóË¢´ÂèçÂ∞ÑÁâ©‰ΩìÂùêÊ†á
 	nv::vec3f ReflectPos = worldPos + ReflectVec * ReflectDis;
 	
 
@@ -2655,7 +2750,7 @@ void CpuTracint(GLuint reflectOptix)
 
 
 	float CosReCorner = dot(ReflectVec,worldNormal);
-	//æµœÒµ„µƒ◊¯±Í
+	//ÈïúÂÉèÁÇπÁöÑÂùêÊ†á
 	nv::vec3f ReMirrorPos = ReflectDis * CosReCorner * 2 * (-1) * worldNormal + ReflectPos;
 	printf("ReMirrorPos(%f,%f,%f)\n",ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z);
 
@@ -2667,7 +2762,7 @@ void CpuTracint(GLuint reflectOptix)
 	temp.x  = temp.x*0.5+0.5;
 	temp.y = temp.y*0.5+0.5;
 	printf("cpu coord;%f,%f\n",temp.x*1024,temp.y*1024);
-	//œ‡ª˙µΩ∑¥…‰√Êµƒæ‡¿Î
+	//Áõ∏Êú∫Âà∞ÂèçÂ∞ÑÈù¢ÁöÑË∑ùÁ¶ª
 	}
 	{
 		nv::matrix4f mvpMatr = nv::matrix4f(g_refCamera.getMvpMat());
@@ -2676,7 +2771,7 @@ void CpuTracint(GLuint reflectOptix)
 	temp.x  = temp.x*0.5+0.5;
 	temp.y = temp.y*0.5+0.5;
 	printf("g_refCamera cpu coord;%f,%f\n",temp.x*1024,temp.y*1024);
-	//œ‡ª˙µΩ∑¥…‰√Êµƒæ‡¿Î
+	//Áõ∏Êú∫Âà∞ÂèçÂ∞ÑÈù¢ÁöÑË∑ùÁ¶ª
 	}
 }
 
@@ -2709,7 +2804,7 @@ void tcRendering()
 	
 	refGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);
-    t_scene.draw_model(g_gBufferShader,&g_refCamera);
+   t_scene.draw_model(g_gBufferShader,&g_refCamera);
 	//draw_scene(g_gBufferShader,&g_refCamera);
 	//refGbuffer.SaveBMP("./test/gbuffer.bmp",0);
 	refGbuffer.end();
