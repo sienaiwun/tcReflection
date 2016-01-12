@@ -113,14 +113,14 @@ reflectShader g_reflectionShader;
 BlendShader g_blendShader;
 
 
-#include "toiletScene.h"
-toiletScene t_scene;
+#include "glossyScene.h"
+glossyScene g_scene;
 
 void cameraControl(int,CCamera&);
 
 
 
-
+/*
 posPara posArray[] = 
 {
 	//{make_float3(16.033649,38.942272,15.414365  ),make_float3(22.289124,34.077927,9.314583 )},
@@ -174,28 +174,12 @@ posPara posArray[] =
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
 
-};
+};*/
 
-/*
+
 posPara posArray[] = 
 {
-	//{make_float3(16.033649,38.942272,15.414365  ),make_float3(22.289124,34.077927,9.314583 )},
-	//{make_float3(20.541248,38.556011,16.854353  ),make_float3(24.467501,33.042343,9.493363 )},
-	//{make_float3(18.591887,38.901070,18.539888  ),make_float3(22.336548,34.001892,10.667604 )},
-	//{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},
-
-	//{make_float3(24.898901,45.217281,-10.226630  ),make_float3(25.289194,38.099701,-3.213274 )},
-	//	{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},
-	//{make_float3(19.777601,40.256077,18.724140  ),make_float3(21.469124,33.352386,11.690137 )},
-	//{make_float3(21.208389,43.804527,-13.503925  ),make_float3(24.115210,37.705105,-6.132097 )},
-	//{make_float3(18.743200,38.181194,-3.370136  ),make_float3(23.238724,31.557341,2.622727 )},
-	//{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},
-	//{make_float3(24.302208,48.071339,26.106796  ),make_float3(23.576305,42.725662,17.686817 )},
-	//{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.228128,47.533394,25.267078 )},
-	//{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.231396,47.535080,25.265717 )},
-	//{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )},
-	//{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},
-
+	//glossy scene;
 	//1st
 	//	{make_float3(-2.403542,34.498703,37.004547  ),make_float3(0.809388,32.024666,27.863651 )},//
 	//Burning add
@@ -230,7 +214,7 @@ posPara posArray[] =
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
 
-};*/
+};
 
 
 //float k = 900/25.0;
@@ -735,7 +719,8 @@ void init_gl()
 void init_scene(const char* model_filename)
 {
 	printf("init scence\n");
-	t_scene.init();
+	g_scene.init();
+	g_scene.setTimeMesure(&g_timeMesure);
 	float diag;
 	
 	
@@ -774,7 +759,7 @@ void init_scene(const char* model_filename)
 	//float diag1 = nv::length(modelBBMax - modelBBMin);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
-	gluPerspective(60, 1.0, diag*.01, diag*100);
+	gluPerspective(60, 1.0, 0.1, 1000);
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -820,6 +805,9 @@ void init_optix()
 		rtContext = optix::Context::create();
 		rtContext->setRayTypeCount(2);
 		rtContext->setEntryPointCount(2);
+
+		//rtContext->setPrintEnabled( true );
+		//rtContext->setPrintBufferSize( 4096 *8);
 
 		rtContext["radiance_ray_type"]->setUint(0u);
 		rtContext["shadow_ray_type"]->setUint(1u);
@@ -897,12 +885,12 @@ void init_optix()
 		MyGeometry::ms_rtContext = rtContext;
 		MyMeterial::ms_rtContext = rtContext;
 		//optix::Geometry sofaGemetry = sofa.getOptixGeometry(rtContext);
-		t_scene.setOptix(&rtContext);
-		t_scene.optixInit();
+		g_scene.setOptix(&rtContext);
+		g_scene.optixInit();
 		rtContext["max_depth"]->setUint(2u);
-		rtContext["lightPos"]->set3fv((const float*)&make_float3(t_scene.getLightPos().x,
-			t_scene.getLightPos().y,
-			t_scene.getLightPos().z));
+		rtContext["lightPos"]->set3fv((const float*)&make_float3(g_scene.getLightPos().x,
+			g_scene.getLightPos().y,
+			g_scene.getLightPos().z));
 
 		rtContext->setStackSize(1850);
 		rtContext->validate();
@@ -1063,7 +1051,7 @@ void draw_scene(glslShader& shader,CCamera * pCamera)
 		pCamera->Look();
 	}
 	shader.setCamera(pCamera);
-	t_scene.draw_model(shader);
+	g_scene.draw_model(shader);
 
 
 	CHECK_ERRORS();
@@ -1097,7 +1085,7 @@ void addtionalTracing(int pixelNum)
 
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
-	t_scene.draw_model(g_gBufferShader,&g_currentCamera);
+	g_scene.draw_model(g_gBufferShader,&g_currentCamera);
 	currentGbuffer.end();
 	//currentGbuffer.SaveBMP("worPos.
 	try
@@ -2026,7 +2014,7 @@ void optixRendering()
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);
 	//currentGbuffer.SaveBMP("test/worldPos.bmp",0);
-	t_scene.draw_model(g_gBufferShader,&g_refCamera);
+	g_scene.draw_model(g_gBufferShader,&g_refCamera);
 	currentGbuffer.end();
 
 	rtContext["eye_pos"]->setFloat(g_currentCamera.Position().x, g_currentCamera.Position().y, g_currentCamera.Position().z);
@@ -2154,7 +2142,7 @@ void optixRendering()
 	//New_drawscene(cgTechniqueGlossyReflections);
 	//draw_scene(cgTechniqueGlossyReflections,&g_refCamera);
 	//testRendering();
-     t_scene.draw_model(g_reflectionShader,&g_refCamera);
+     g_scene.draw_model(g_reflectionShader,&g_refCamera);
 	currentGbuffer.end();
 
 	char str[100];
@@ -2224,7 +2212,7 @@ void init_RefcletTex()
 		cameraControl(FrameNums,camera);
 
 		frame.getGbuffer().begin();
-		t_scene.draw_model(g_gBufferShader,&camera);
+		g_scene.draw_model(g_gBufferShader,&camera);
 		frame.getGbuffer().end();
 		currentGbuffer.copyFromBuffer(frame.getGbuffer());
 		/*
@@ -2318,7 +2306,7 @@ void tcRendering()
 	
 	refGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);
-   t_scene.draw_model(g_gBufferShader,&g_refCamera);
+   g_scene.draw_model(g_gBufferShader,&g_refCamera);
 	//draw_scene(g_gBufferShader,&g_refCamera);
 	//refGbuffer.SaveBMP("./test/gbuffer.bmp",0);
 	refGbuffer.end();
@@ -2422,7 +2410,7 @@ void tcRendering()
 		glViewport(0,0, traceWidth, traceHeight);
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
-	t_scene.draw_model(g_gBufferShader,&g_currentCamera);
+	g_scene.draw_model(g_gBufferShader,&g_currentCamera);
 	currentGbuffer.end();
 	
 
@@ -2482,7 +2470,7 @@ void tcRendering()
 	g_reflectionShader.setReflectMap(MergeEffectFbo.getTexture(0));
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueGlossyReflections,&g_currentCamera);
-	t_scene.draw_model(g_reflectionShader,&g_currentCamera);
+	g_scene.draw_model(g_reflectionShader,&g_currentCamera);
 	currentGbuffer.SaveBMP("./test/blending.bmp",0);
 	currentGbuffer.end();
 

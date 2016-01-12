@@ -6,6 +6,7 @@
 #include "MyMeterial .h"
 #ifndef SCENEH
 #define SCENEH
+class TimeMesure;
 class scene
 {
 	
@@ -14,9 +15,9 @@ public:
 	{
 		
 	}
-	 void optixInit() ;
-	 void init() ;
-	 void draw_model(glslShader& shader,CCamera* pCamera = 0);
+	void optixInit() ;
+	void init() ;
+	void draw_model(glslShader& shader,CCamera* pCamera = 0);
 	void draw_model(CGtechnique& tech,CCamera* pCamera = 0);
 	inline void setOptix(optix::Context * p)
 	{
@@ -38,6 +39,10 @@ public:
 	{
 		m_lightPos = pos;
 	}
+	inline void setTimeMesure(TimeMesure * p)
+	{
+		m_ptimeMesure = p;
+	}
 	MyGeometry getObject(int index)
 	{
 		assert(index<m_objectNum);
@@ -52,9 +57,11 @@ public:
 	optix::GeometryGroup m_geometrygroup;
 	optix::Context *pContext;
 	CCamera m_freeCamera;
+
 protected:
 	GeoPara * m_pObjectDis;
 	MyMeterial * m_pMatDis;
 	posPara * m_posArray;
+	TimeMesure * m_ptimeMesure;
 };
 #endif

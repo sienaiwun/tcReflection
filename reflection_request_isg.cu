@@ -160,7 +160,7 @@ RT_PROGRAM void addition_request()
  
   if( !isnan(ray_origin.x) ) 
   {
-    if(1)
+    if(0)
 	{
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, x, y));
@@ -205,13 +205,14 @@ RT_PROGRAM void addition_request()
 			randomArray.y =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
 			glossy_direcion = sample_phong_lobe( randomArray, exponent, xo, yo, ray_direction, bsdf_pdf, bsdf_val );
 			costheta = dot(glossy_direcion, normal);
-			if(costheta<0)
-				continue;
-			ray = optix::make_Ray(ray_origin, glossy_direcion, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
-			rtTrace(reflectors, ray, prdArray);
-			sumColor += prdArray.result*costheta*bsdf_val /bsdf_pdf;;
-			depthSum += prdArray.t_hit*costheta*bsdf_val /bsdf_pdf;
-			usefulSample++;
+			if(bsdf_pdf > 0.0f&&costheta>0)
+			{
+				ray = optix::make_Ray(ray_origin, glossy_direcion, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+				rtTrace(reflectors, ray, prdArray);
+				sumColor += prdArray.result*costheta*bsdf_val /bsdf_pdf;;
+				depthSum += prdArray.t_hit*costheta*bsdf_val /bsdf_pdf;
+				usefulSample++;
+			}
 	}
 	
 	
@@ -225,6 +226,9 @@ RT_PROGRAM void reflection_request()
 {
 	//return;
   float3 ray_origin = make_float3(tex2D(request_texture, launch_index.x, launch_index.y));
+  //if(launch_index.x!=374||launch_index.y!=430)
+//	  return;
+ // rtPrintf("x,y %d,%d\n",launch_index.x, launch_index.y);
   float reflectValue = tex2D(request_texture, launch_index.x, launch_index.y).w;
   PerRayData_radiance prd;
   PerRayData_shadow prd_s;
@@ -242,7 +246,7 @@ RT_PROGRAM void reflection_request()
  
   if( !isnan(ray_origin.x) ) 
   {
-    if(1)
+    if(0)
 	{
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, launch_index.x, launch_index.y));
@@ -292,18 +296,22 @@ RT_PROGRAM void reflection_request()
 			randomArray.y =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
 			glossy_direcion = sample_phong_lobe( randomArray, exponent, xo, yo, ray_direction, bsdf_pdf, bsdf_val );
 			costheta = dot(glossy_direcion, normal);
-			if(costheta<0)
-				continue;
-			ray = optix::make_Ray(ray_origin, glossy_direcion, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
-			rtTrace(reflectors, ray, prdArray);
-			sumColor += prdArray.result*costheta*bsdf_val /bsdf_pdf;;
-			depthSum += prdArray.t_hit*costheta*bsdf_val /bsdf_pdf;
-			usefulSample++;
+			if(bsdf_pdf > 0.0f&&costheta>0)
+			{
+				ray = optix::make_Ray(ray_origin, glossy_direcion, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+				rtTrace(reflectors, ray, prdArray);
+				sumColor += prdArray.result*costheta*bsdf_val /bsdf_pdf;;
+				depthSum += prdArray.t_hit*costheta*bsdf_val /bsdf_pdf;
+				usefulSample++;
+			}
 	}
 	
 	
 	float avgDepth;
 	color = (sumColor)/usefulSample; 
+	//rtPrintf("sumColor:(%f,%f,%f),count:%d\n",sumColor.x,sumColor.y,sumColor.z,usefulSample);
+	
+	//rtPrintf("color:(%f,%f,%f)\n",color.x,color.y,color.z);
 	avgDepth = depthSum/usefulSample;
 	
 
