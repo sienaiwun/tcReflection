@@ -22,8 +22,9 @@ public :
 	virtual void setGeometry(MyGeometry * pGeometry);
 	virtual void setGeomtryIndex(int i);
 	void setReflectMap(GLuint reflectMap);
+	void setWindowSize(int w,int h);
 private:
-	
+	nv::vec2f m_windowSize;
 	GLuint m_vmpBinding;
 	float* m_mvp;
 	GLuint m_objectTexBinding;
@@ -35,6 +36,8 @@ private:
 
 	GLuint m_reflectValueBinding;
 	GLuint m_reflectMapBinding;
-	
+	GLuint m_windowsSizeSlot;
+	GLuint m_reflectionMap;
+
 };
 #endif

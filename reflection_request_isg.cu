@@ -160,7 +160,7 @@ RT_PROGRAM void addition_request()
  
   if( !isnan(ray_origin.x) ) 
   {
-    if(0)
+    if(1)
 	{
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, x, y));
@@ -242,7 +242,7 @@ RT_PROGRAM void reflection_request()
  
   if( !isnan(ray_origin.x) ) 
   {
-    if(0)
+    if(1)
 	{
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, launch_index.x, launch_index.y));

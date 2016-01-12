@@ -90,7 +90,7 @@ CCamera g_refCamera,g_currentCamera;
 //uint *Host_PixelSum;
 //MyGeometry teapot;
 int CountTime = 1000;
-TimeMesure g_timeMesure(tcRenderingType,CountTime);
+TimeMesure g_timeMesure(optixRenderingType,CountTime);
 nv::vec3f viewDependentMissColor = nv::vec3f(255,0,0);
 nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 //cudaGraphicsResource *cudaRes_WorldNormal,*cudaRes_WorldPos,*cudaRes_Reflect;
@@ -691,6 +691,7 @@ void init_gl()
 	g_blendShader.init();
 	g_gBufferShader.init();
 	g_reflectionShader.init();
+	g_reflectionShader.setWindowSize(rasterWidth,rasterHeight);
 	/*
 #if DrawPoint
 	myTransShader.loadShader("Shader/Trans_Point.vert",0,"Shader/Trans_Point.frag");
@@ -2209,8 +2210,9 @@ void optixRendering()
 	cameraControl(currentTime2,g_currentCamera);
 	g_refCamera = g_currentCamera;
 	currentGbuffer.begin();
-	draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);
+	//draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);
 	//currentGbuffer.SaveBMP("test/worldPos.bmp",0);
+	t_scene.draw_model(g_gBufferShader,&g_refCamera);
 	currentGbuffer.end();
 
 	rtContext["eye_pos"]->setFloat(g_currentCamera.Position().x, g_currentCamera.Position().y, g_currentCamera.Position().z);
@@ -2333,11 +2335,13 @@ void optixRendering()
 
 	cgGLSetTextureParameter(cgReflectionMapParam,reflectionMapTex_Now);
 
+	g_reflectionShader.setReflectMap(reflectionMapTex_Now);
 	currentGbuffer.begin();
 
 	//New_drawscene(cgTechniqueGlossyReflections);
-	draw_scene(cgTechniqueGlossyReflections,&g_refCamera);
+	//draw_scene(cgTechniqueGlossyReflections,&g_refCamera);
 	//testRendering();
+     t_scene.draw_model(g_reflectionShader,&g_refCamera);
 	currentGbuffer.end();
 
 	char str[100];
@@ -2450,6 +2454,8 @@ void init_RefcletTex()
 
 		frame.getGbuffer().begin();
 		draw_scene(cgTechniqueWorldPosNormal,&camera);
+
+		 // t_scene.draw_model(g_gBufferShader,&g_refCamera);
 		frame.getGbuffer().end();
 		
 		currentGbuffer.copyFromBuffer(frame.getGbuffer());
@@ -2496,6 +2502,7 @@ void init_RefcletTex()
 		if (pTexture)
 		   delete[] pTexture;*/
 	}
+	/*
 	for(int i = 0;i<ReflectNum;i++)
 	{
 
@@ -2574,10 +2581,10 @@ void init_RefcletTex()
 		// 		delete[] pTexture;
 		// 		glBindTexture(GL_TEXTURE_2D,0);
 
-	}
+	/*}
 
 	cout<<"reflec ok"<<endl;
-
+	*/
 
 
 
@@ -2805,7 +2812,8 @@ void tcRendering()
 	//TransMapFbo.SaveBMP(str,0);
 		glViewport(0,0, traceWidth, traceHeight);
 	currentGbuffer.begin();
-	draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
+	//draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
+	t_scene.draw_model(g_gBufferShader,&g_currentCamera);
 	currentGbuffer.end();
 	
 

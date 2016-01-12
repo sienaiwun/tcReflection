@@ -4,23 +4,24 @@ void reflectShader::init()
 {
 	m_loader.loadShader(m_vertexFileName.c_str(),0,m_fragmentFileName.c_str());
 	m_vmpBinding = m_loader.getUniform("MVP");
-
 	m_cameraPosBinding = m_loader.getUniform("cameraPos");
 	m_lightPosBinding = m_loader.getUniform("lightPos");
-	
 	m_objectDiffuseBinding = m_loader.getUniform("diffuseColor");
-	m_objectTexBinding = m_loader.getUniform("objectDiffuseColor");
+	m_objectTexBinding = m_loader.getUniform("objectTex");
 	m_hasTex = m_loader.getUniform("hasTex");
 	m_objectId = m_loader.getUniform("objectId");
-
-	m_reflectValueBinding = m_loader.getUniform("reflectorValue");
+	m_reflectValueBinding = m_loader.getUniform("reflectBlender");
 	m_reflectMapBinding = m_loader.getUniform("reflectMap");
+
+	m_windowsSizeSlot = m_loader.getUniform("windowsSize");
 }
 
 void reflectShader::bindParemeter()
 {
-	glUniformMatrix4fv(m_vmpBinding,1,GL_FALSE,m_mvp);
-
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D,m_reflectionMap);
+	glUniform1i(m_reflectMapBinding,0);
+	glUniform2f(m_windowsSizeSlot,m_windowSize.x,m_windowSize.y);
 }
 void reflectShader::setScene(scene * pScene)
 {
@@ -29,37 +30,33 @@ void reflectShader::setScene(scene * pScene)
 void reflectShader::setGeomtryIndex(int i)
 {
 	glUniform1i(m_objectId,i);
-
 }
 void reflectShader::setReflectMap(GLuint reflectMap)
 {
-	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D,reflectMap);
-	glUniform1i(m_reflectMapBinding,1);
-	
+	m_reflectionMap = reflectMap;	
+}
+void reflectShader::setWindowSize(int width,int height)
+{
+	m_windowSize = nv::vec2f(width,height);
 }
 void reflectShader::setGeometry(MyGeometry * pGeometry)
 {
-	CHECK_ERRORS();
 	MyMeterial * pMet = pGeometry->getMaterial();
-	
 	CHECK_ERRORS();
 	glUniform1i(m_hasTex,pMet->hasTx());
-	glUniform1f(m_reflectValueBinding,pGeometry->reflectValue);
-	
 	CHECK_ERRORS();
+	glUniform1f(m_reflectValueBinding,pGeometry->reflectValue);
 	if(pGeometry->getMaterial()->hasTx())
 	{	
 		CHECK_ERRORS();
-		glActiveTexture(GL_TEXTURE0);
+		glActiveTexture(GL_TEXTURE1);
 		glBindTexture(GL_TEXTURE_2D,pMet->getTxId());
-		
+		glUniform1i(m_objectTexBinding,1);
 		CHECK_ERRORS();
-		glUniform1i(m_objectTexBinding,0);
-	
 	}
 	else 
 	{
+		CHECK_ERRORS();
 		float3 diffuse = pMet->getDiffuse();
 		glUniform3f(m_objectDiffuseBinding,diffuse.x,diffuse.y,diffuse.z);
 	}
@@ -76,5 +73,5 @@ void reflectShader::end()
 void reflectShader::setCamera(CCamera *pCamera)
 {
 	m_mvp = pCamera->getMvpMat();
-	//glUniform3f(m_cameraPosBinding,pCamera->getCameraPos().x,pCamera->getCameraPos().y,pCamera->getCameraPos().z);
+	glUniformMatrix4fv(m_vmpBinding,1,GL_FALSE,m_mvp);
 }
