@@ -51,6 +51,14 @@ public:
 	MyMeterial* getMaterial()const;
 	nv::Model*  m_model;
 	int actionNumber;
+	inline void setId(int i)
+	{
+		m_objectIndexId = i;
+	}
+	inline int getObjectId()
+	{
+		return  m_objectIndexId ;
+	}
 
 	static void drawQuad(glslShader & shader);
 	static void drawQrad(CgShader& shader);
@@ -63,7 +71,7 @@ public:
 	}
 	float reflectValue;
 private:
-
+	int m_objectIndexId;
 	char * filename;
 	int m_hasTX;
 	float shiness;

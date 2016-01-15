@@ -52,14 +52,14 @@ static GeoPara toiletObj[geoNumber] =
 	{"model/bathroom/floor.obj",15,0,0.0f,0},
 	{"model/aoBathroom/littleWall.obj",14,0,0.0f,0},
 	{"model/aoBathroom/walls.obj",11,0,0.0f,0},
-	{"model/aoBathroom/masic.obj",13,0,0.1,0},//10
+	{"model/aoBathroom/masic.obj",13,0,0.1,0},//10+1
 	{"model/bathroom/metal12.obj",24,0,0.0f,0},//11
 
 	{"model/bathroom/mirror.obj",15,0,1.0f,6},//12
-	{"model/bathroom/mirrorB.3ds",27,0,0.0f,6},//12
-	{"model/bathroom/mirrorFrame.obj",21,0,0.0f,6},//13
+	{"model/bathroom/mirrorB.3ds",27,0,0.0f,6},//13
+	{"model/bathroom/mirrorFrame.obj",21,0,0.0f,6},//14
 	{"model/bathroom/paperRoll.obj",22,0,0.0f,0},//15
-	{"model/bathroom/paperSurpot.obj",23,0,0.0f,0},//15
+	{"model/bathroom/paperSurpot.obj",23,0,0.0f,0},//16
 	{"model/bathroom/newwash.obj",15,0,0.15,4},//16
 	{"model/bathroom/support.3ds",20,0,0.2f,11},//18
 	{"model/bathroom/brushOnBoard.obj",16,0,0.0f,9},//19

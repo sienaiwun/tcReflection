@@ -5,6 +5,7 @@
 using namespace optix;
 
 rtBuffer<float4, 2>         reflection_buffer;
+rtBuffer<float4, 2>         addition_buffer;;
 rtBuffer<uint,1>          Pixels_Buffer;
 //rtBuffer<float4,2>          LastReflection_buffer;
 
@@ -28,8 +29,10 @@ rtDeclareVariable(uint2, launch_index, rtLaunchIndex, );
 
 struct PerRayData_radiance
 {
+ 
   float3 result;
-  float importance;
+  float  importance;
+  int   objectId;
   int depth;
   float t_hit;
 };
@@ -160,7 +163,7 @@ RT_PROGRAM void addition_request()
  
   if( !isnan(ray_origin.x) ) 
   {
-    if(0)
+    if(1)
 	{
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, x, y));
@@ -226,9 +229,13 @@ RT_PROGRAM void reflection_request()
 {
 	//return;
   float3 ray_origin = make_float3(tex2D(request_texture, launch_index.x, launch_index.y));
-  //if(launch_index.x!=374||launch_index.y!=430)
-//	  return;
+  //if(launch_index.x!=91||launch_index.y!=623)
+	//  return;
  // rtPrintf("x,y %d,%d\n",launch_index.x, launch_index.y);
+ /* if(launch_index.x<=91||launch_index.x>=94)
+	  return;
+  if(launch_index.y<=91||launch_index.y>=94)
+	  return;*/
   float reflectValue = tex2D(request_texture, launch_index.x, launch_index.y).w;
   PerRayData_radiance prd;
   PerRayData_shadow prd_s;
@@ -246,8 +253,9 @@ RT_PROGRAM void reflection_request()
  
   if( !isnan(ray_origin.x) ) 
   {
-    if(0)
+    if(1)
 	{
+
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, launch_index.x, launch_index.y));
    
@@ -268,7 +276,12 @@ RT_PROGRAM void reflection_request()
 	//shadow = 0;
 		float r_dis = prd.t_hit;
 		float3 reflectPos = ray_origin+ray_direction*r_dis;
+	/*rtPrintf("eye_pos:(%f,%f£¬%f)\n",eye_pos.x,eye_pos.y,eye_pos.z);
+		rtPrintf("wordldPos:(%f,%f£¬%f)\n",ray_origin.x,ray_origin.y,ray_origin.z);
+		rtPrintf("reflectPos:(%f,%f£¬%f)\n",reflectPos.x,reflectPos.y,reflectPos.z);*/
 		reflection_buffer[launch_index] = make_float4(prd.result,r_dis);
+		addition_buffer[launch_index] = make_float4(prd.objectId,0,0,1);
+		//rtPrintf("object id:%d",prd.objectId);
 		return;	 
 	}
 	float3 V = normalize(ray_origin-eye_pos);

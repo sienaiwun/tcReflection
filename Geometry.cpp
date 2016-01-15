@@ -325,7 +325,7 @@ optix::GeometryInstance MyGeometry::getInstance()
 	optix::Geometry sofaGemetry = getOptixGeometry();
 	optix::GeometryInstance instance = rtContext->createGeometryInstance();
 	instance->setMaterialCount(1);
-	instance->setMaterial(0, mp_met->getMaterial());
+	instance->setMaterial(0, mp_met->getMaterial(this));
 	instance->setGeometry(sofaGemetry);
 	return instance;
 }

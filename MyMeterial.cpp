@@ -1,5 +1,5 @@
 #include "MyMeterial .h"
- 
+#include "Geometry.h"
 optix::Context MyMeterial::ms_rtContext = optix::Context::create();
 
 MyMeterial::MyMeterial(char* filename):m_fileName(filename)
@@ -26,6 +26,30 @@ const float3 MyMeterial::getDiffuse() const
 {
 	return m_diffuseColor;
 }
+
+optix::Material MyMeterial::getMaterial(MyGeometry *  pGeometry)
+{
+   optix::Context    rtContext = MyMeterial::ms_rtContext;
+   if(isTex)
+   {
+	   
+	   optix::Material flat_tex = rtContext->createMaterial();
+	   flat_tex->setClosestHitProgram(0, rtContext->createProgramFromPTXFile( ptxpath("flat_tex_isg.cu"), "closest_hit_radiance"));
+	   flat_tex["diffuse_texture"]->setTextureSampler(getTexture());
+	   flat_tex["id"]->setInt(pGeometry->getObjectId());
+	   return flat_tex;
+   }
+   else
+   {
+	   optix::Material glossy = rtContext->createMaterial();
+	   glossy->setClosestHitProgram(0, rtContext->createProgramFromPTXFile( ptxpath("glossy_isg.cu"), "closest_hit_radiance") );
+	   glossy->setAnyHitProgram(1, rtContext->createProgramFromPTXFile( ptxpath("glossy_isg.cu"), "any_hit_shadow") );
+	   glossy["diffuse_Color"]->setFloat( m_diffuseColor.x,m_diffuseColor.y,m_diffuseColor.z );
+	   glossy["id"]->setInt(pGeometry->getObjectId());
+	   return glossy;
+   }
+}
+
 optix::Material MyMeterial::getMaterial()
 {
    optix::Context    rtContext = MyMeterial::ms_rtContext;

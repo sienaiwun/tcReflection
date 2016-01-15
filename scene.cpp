@@ -33,6 +33,7 @@ void scene::init()
 	m_geometryArray.resize(m_objectNum);
 	for(int i = 0;i<m_objectNum;i++)
 	{
+		m_geometryArray[i].setId(i);
 		m_geometryArray[i].initGeometry(m_pObjectDis[i]);
 	}
 	m_bbMin = MyGeometry::modelBBMin,m_bbMax = MyGeometry::modelBBMax;

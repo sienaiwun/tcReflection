@@ -1,4 +1,4 @@
-//#include<stdio.h>
+ï»¿//#include<stdio.h>
 #include"cuda.h"
 #include "macro.h"
 //#include<cudpp.h>
@@ -84,10 +84,11 @@ __device__ float4 Cude_Mul_Mat4(const float Mat4[16],float TmpVec4[4]){
 
 
 }
-__device__ float2 transFormToNdc(float3 temp)
+__device__ float3 transFormToNdc(float3 temp)
 {
 	float4 ProPos = cuda_Mat_Mut3(Cuda_MvpMat,temp);
-	return toNDC(ProPos);
+	float2 ndcTc=  toNDC(ProPos);
+	return make_float3(ndcTc.x,ndcTc.y,ProPos.z/ProPos.w);
 }
 __device__ float Cuda_Compute_Cos(float2 TmpUV,float3 ReflectPos,int orignId)
 {
@@ -120,7 +121,7 @@ enum planeType
 	validSearchType,
 	invalidType,
 };
-#define PROJECTTHRES 0.002
+#define PROJECTTHRES 0.02
 class Plane
 {
 public:
@@ -147,7 +148,15 @@ public:
 	{
 		return (m_type== invalidType);
 	}
-	// ²éÑ¯ÊÇ·ñÊÇÍ¶Ó°µã ·µ»Ø1 ¿ÉÒÔ
+	__device__ bool isEqual(Plane& anotherPlane)
+	{
+		if(length(m_worldNormal-anotherPlane.m_worldNormal)>0.000000001)
+			return false;
+		if(dot(m_worldPos-anotherPlane.m_worldPos,m_worldNormal)>0.002)
+			return false;
+		return true;
+	}
+	// æŸ¥è¯¢æ˜¯å¦æ˜¯æŠ•å½±ç‚¹ è¿”å›1 å¯ä»¥
 	__device__ int isAbleFastProj(float2 reProjectTc)
 	{
 		 
@@ -163,6 +172,8 @@ public:
 		{
 			return 0;
 		}
+		if(!isEqual(pixelPlane))
+			return 0;
 		pixelPlane.setReflectedPos(*this);
 		float DisPoint2Line;
 		DisPoint2Line = pixelPlane.getDisToPath();
@@ -196,6 +207,11 @@ public:
 	{
 		return m_reflectPos;
 	}
+	__device__ float getMirrorDepth()
+	{
+		float4 ProPos = cuda_Mat_Mut3(Cuda_MvpMat,m_mirrorPos);
+		return ProPos.z/ProPos.w;
+	}
 	__device__ void setReflectedPos(Plane p)
 	{
 		m_reflectPos = p.getReflectedPos();
@@ -212,7 +228,7 @@ public:
 	{
 		float3 inComeDirection = m_worldPos - d_refCameraPos;
 		float3 LookVec = normalize(inComeDirection);
-		//¼ÆËã·´Éä¹âÏß·½Ïò
+		//è®¡ç®—åå°„å…‰çº¿æ–¹å‘
 		float3 ReflectVec = normalize(reflect(LookVec,m_worldNormal));
 		m_type = originType;
 		m_reflectPos = m_worldPos + ReflectVec * m_dis;	
@@ -231,13 +247,13 @@ public:
 
 		float CosReCorner = dot(ReflectVec,m_worldNormal);
 		float3 reflectedPos = m_worldPos + ReflectVec * dis;
-		//¾µÏñµãµÄ×ø±ê
+		//é•œåƒç‚¹çš„åæ ‡
 		float3 ReMirrorPos = dis * CosReCorner * 2 * (-1) * (m_worldNormal) + reflectedPos;
 
-		//Ïà»úµ½·´ÉäÃæµÄ¾àÀë
+		//ç›¸æœºåˆ°åå°„é¢çš„è·ç¦»
 		return ReMirrorPos;
 	}
-	//µÃ³öÒÔ¸ÃµãÎªÆ½ÃæµÄ·´ÉäÎïÌåµÄ¾µÏñµã
+	//å¾—å‡ºä»¥è¯¥ç‚¹ä¸ºå¹³é¢çš„åå°„ç‰©ä½“çš„é•œåƒç‚¹
 	__device__ float3 intersectPos()
 	{
 		getMirrorPos();
@@ -253,7 +269,7 @@ public:
 		//outPut[index] = make_float4(ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z,1.0);
 		//return;
 
-		//Çó³ö¸ÃµãÓëÏà»úÁ¬ÏßºÍÆ½ÃæµÄĞÂ½»µã
+		//æ±‚å‡ºè¯¥ç‚¹ä¸ç›¸æœºè¿çº¿å’Œå¹³é¢çš„æ–°äº¤ç‚¹
 		float DisEye2Plane = abs(dot(d_newCameraPos - m_worldPos,m_worldNormal));
 		float CoseTheta2 = abs(dot(normalize(d_newCameraPos - ReMirrorPos),m_worldNormal));
 		float3 VecEye2Ref = normalize(ReMirrorPos - d_newCameraPos);
@@ -269,24 +285,24 @@ public:
 		{
 			return 3000.0;
 		}
-		//Çó³öĞÂµÄ¾µÏñµã
+		//æ±‚å‡ºæ–°çš„é•œåƒç‚¹
 
 		float3 ReMirrorPos =  getMirrorPos();
 		//printf("!ReMirrorPos: (%f,%f,%f)\n",ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z);
-		//ÇóÏà»úÓë¾µÏñµã×é³ÉµÄÆ½ÃæµÄ·¨Ïß
+		//æ±‚ç›¸æœºä¸é•œåƒç‚¹ç»„æˆçš„å¹³é¢çš„æ³•çº¿
 		 
 		float3 Cam_Mirror_Normal = normalize(cross(d_cameraVec,normalize(d_refCameraPos - ReMirrorPos)));
 		//printf("!Cam_Mirror_Normal: (%f,%f,%f)\n",Cam_Mirror_Normal.x,Cam_Mirror_Normal.y,Cam_Mirror_Normal.z);
 
-		//ÇóÏà»ú¹ì¼£ËùÔÚ·¨Ïß
+		//æ±‚ç›¸æœºè½¨è¿¹æ‰€åœ¨æ³•çº¿
 		float3 Camera_Vec_Normal = normalize(cross(Cam_Mirror_Normal,d_cameraVec));
 		//printf("!Camera_Vec_Normal: (%f,%f,%f)\n",Camera_Vec_Normal.x,Camera_Vec_Normal.y,Camera_Vec_Normal.z);
 
-		//·Ö±ğÇóÈı¸öµãÓë¸ÃÆ½ÃæµÄ½»µã
+		//åˆ†åˆ«æ±‚ä¸‰ä¸ªç‚¹ä¸è¯¥å¹³é¢çš„äº¤ç‚¹
 		float3 InsertPoint = abs(dot(Camera_Vec_Normal,d_refCameraPos - ReMirrorPos)/dot(Camera_Vec_Normal,normalize(m_worldPos-ReMirrorPos))) * normalize(m_worldPos-ReMirrorPos) + ReMirrorPos;
 		//printf("!InsertPoint: (%f,%f,%f)\n",InsertPoint.x,InsertPoint.y,InsertPoint.z);
 
-		//ÇóµãÓëÖ±ÏßµÄ¾àÀë
+		//æ±‚ç‚¹ä¸ç›´çº¿çš„è·ç¦»
 
 		float3 toNewPlace2 = d_newCameraPos-InsertPoint;
 		float DisPoint2Line = length(toNewPlace2);
@@ -318,7 +334,7 @@ __global__ void lineSearchKernel(int width,int height)
 				return;
 	int index = y * width + x;
 
-	//ÌáÈ¡Êı¾İ
+	//æå–æ•°æ®
 	float3 WorldPos,WorldNormal;
 	float ReflectDis;
 	float4 WorldTmp;
@@ -344,25 +360,25 @@ __global__ void lineSearchKernel(int width,int height)
 	RefelctInCameraDepth = ReflectDis /10000.0;
 
 	//RefelctInCameraDepth  = TMpReflecPosInCamera.z / TMpReflecPosInCamera.w;
-	//¾µÏñµãµÄ×ø±ê
+	//é•œåƒç‚¹çš„åæ ‡
 	float3 ReMirrorPos =fittingPlane.mirrorPos();
 
 	//printf("1Class: (%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
-	//Ïà»úµ½·´ÉäÃæµÄ¾àÀë
+	//ç›¸æœºåˆ°åå°„é¢çš„è·ç¦»
 	float DisEye2Plane = abs(dot(d_newCameraPos - WorldPos,WorldNormal));
-	//¾µÏñµãÓëÏà»úµÄÏòÁ¿
+	//é•œåƒç‚¹ä¸ç›¸æœºçš„å‘é‡
 	float3 VecEye2Ref = normalize(ReMirrorPos - d_newCameraPos);
 
 	//camera2_pos = new camera position
 	//camera1_pos = last camera position
-	//¾µÏñµãÓëÏà»úÁ¬ÏßºÍ·´ÉäÆ½ÃæµÄ½»µã
+	//é•œåƒç‚¹ä¸ç›¸æœºè¿çº¿å’Œåå°„å¹³é¢çš„äº¤ç‚¹
 	float3 FinalPos ;//= d_newCameraPos + DisEye2Plane/abs(dot(VecEye2Ref,WorldNormal))* VecEye2Ref;
 
 	FinalPos = fittingPlane.intersectPos();
 
 	float4 ProPos = cuda_Mat_Mut3(Cuda_MvpMat,FinalPos);
 
-	//Pro Î»ÖÃ
+	//Pro ä½ç½®
 	float2 ProPosUv;
 
 	float2 TmpUv;
@@ -435,7 +451,7 @@ __global__ void lineSearchKernel(int width,int height)
 			//outPut[index] = make_float4((TmpUvs[0].x+50)/1024.0,(TmpUvs[7].y+50)/1024.0,Origin_Id,RefelctInCameraDepth);
 			//return;
 
-			//È¡³öÃ¿¸ö²ÉÑùµã¶ÔÓ¦µÄÊÀ½ç×ø±ê
+			//å–å‡ºæ¯ä¸ªé‡‡æ ·ç‚¹å¯¹åº”çš„ä¸–ç•Œåæ ‡
 			float3 WorldPosEs[8],WorldNormals[8];
 			float4 TmpFloat;
 			int ModelIds[8];
@@ -470,7 +486,7 @@ __global__ void lineSearchKernel(int width,int height)
 			TmpUv2.y -= 1.0;
 			TmpUv3.y -= 1.0;
 		}
-		//È¡³öÃ¿¸ö²ÉÑùµã¶ÔÓ¦µÄÊÀ½ç×ø±ê
+		//å–å‡ºæ¯ä¸ªé‡‡æ ·ç‚¹å¯¹åº”çš„ä¸–ç•Œåæ ‡
 		float4 TmpFloat4;
 		float3 WorldPos1,WorldPos2,WorldPos3;
 		float3 WorldNormal1,WorldNormal2,WorldNormal3;
@@ -501,7 +517,7 @@ __global__ void lineSearchKernel(int width,int height)
 
 
 
-		//Çó³öĞÂµÄ¾µÏñµã
+		//æ±‚å‡ºæ–°çš„é•œåƒç‚¹
 		float DisPoint2Line1,DisPoint2Line2,DisPoint2Line3;
 		DisPoint2Line1 = fittingPlane.getDisToPath(WorldPos1,WorldNormal1);
 		DisPoint2Line2 = fittingPlane.getDisToPath(WorldPos2,WorldNormal2);
@@ -596,7 +612,7 @@ __global__ void lineSearchKernel(int width,int height)
 
 
 
-		//µÃ³ö¸Ãµã·¨Ïß
+		//å¾—å‡ºè¯¥ç‚¹æ³•çº¿
 
 		float4 TmpFloat41= tex2D(cuda_WorlNormal_Tex,TmpUv.x,TmpUv.y);
 		WorldNormal  = make_float3(TmpFloat41.x,TmpFloat41.y,TmpFloat41.z);
@@ -734,21 +750,41 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	int y =Floor2Int(currentPlace.y-0.5);
 	int index = y * 1024 + x;
 	float2 currentUv = make_float2(currentPlace.x,currentPlace.y);
+
 	Plane fittingPlane(currentUv);
-	
-	
+	/*if(x!=91||y!=611)
+	     return;
+	*/
+	//printf("1Class: (%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
+	//ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¾ï¿½ï¿½ï¿½
+	//= d_newCameraPos + DisEye2Plane/abs(dot(VecEye2Ref,WorldNormal))* VecEye2Ref;
 	fittingPlane.setReflectedPos();
 	float3 FinalPos  = fittingPlane.intersectPos();
-
-	float2 ProPosUv = transFormToNdc(FinalPos);
-	if(fittingPlane.isAbleFastProj(ProPosUv))
-	{
-		d_cudaPboBuffer[index] =   make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,FASTPROJT,-0.1);
-		return FASTPROJT;
-	}
+	float3 ndcPos =  transFormToNdc(FinalPos);
+	float2 ProPosUv =make_float2(ndcPos.x,ndcPos.y);
+	float rejectDepth = fittingPlane.getMirrorDepth();
 	float2 MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
 	float formerDis = fittingPlane.getDisToPath();
 	int IterTime = 0;
+	
+	float3 worldPos = fittingPlane.m_worldPos;
+	float3 worldNormal = fittingPlane.m_worldNormal;
+	
+	/*printf("x,y:%d,%d\n",x,y);
+	printf("pos:(%f,%f,%f)\n",worldPos.x,worldPos.y,worldPos.z);
+	printf("normal:(%f,%f,%f)\n",worldNormal.x,worldNormal.y,worldNormal.z);
+	printf("reflected pos:(%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
+	printf("intersect pos:(%f,%f,%f)\n",FinalPos.x,FinalPos.y,FinalPos.z);
+	printf("refCamera:(%f,%f,%f)\n",d_refCameraPos.x,d_refCameraPos.y,d_refCameraPos.z);
+	printf("newCameraPos:(%f,%f,%f)\n",d_newCameraPos.x,d_newCameraPos.y,d_newCameraPos.z);
+	
+	printf("reject Pos:(%f,%f),depth:%f\n",ProPosUv.x,ProPosUv.y,rejectDepth);*/
+	//if(fittingPlane.isAbleFastProj(ProPosUv))
+	{
+		d_cudaPboBuffer[index] =   make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,FASTPROJT,rejectDepth);
+		return FASTPROJT;
+	}
+	return;
 	while(IterTime<25)
 	{
 		//printf("Item:%d currentUv:(%f,%f)\n",IterTime,currentUv.x,currentUv.y);
@@ -781,7 +817,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 			TmpUv2.y -= 1.0;
 			TmpUv3.y -= 1.0;
 		}
-		//È¡³öÃ¿¸ö²ÉÑùµã¶ÔÓ¦µÄÊÀ½ç×ø±ê
+		//å–å‡ºæ¯ä¸ªé‡‡æ ·ç‚¹å¯¹åº”çš„ä¸–ç•Œåæ ‡
 		//nextThreeStep(MoveVec,&TmpUv1,&TmpUv2,&TmpUv3);
 		/*TmpUv1+=currentUv;
 		TmpUv2+=currentUv;
@@ -807,7 +843,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		{	
 			//printf("invalid\n");
 			
-			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,OUTOBJECT,-0.1);
+			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,OUTOBJECT,ndcPos.z);
 		    // printf("@x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
 			return OUTOBJECT;
@@ -859,15 +895,16 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		fittingPlane = minPlane;
 
 		FinalPos  = fittingPlane.intersectPos();
-		ProPosUv = transFormToNdc(FinalPos);
+		ndcPos =  transFormToNdc(FinalPos);
+	    ProPosUv =make_float2(ndcPos.x,ndcPos.y);
 		MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
 		
 		//printf("ProUV(%f,%f)\n",ProPosUv.x,ProPosUv.y);
 		//printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);
 		IterTime++;
 	}
-	d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,OUTRANGE,-0.1);
-	//printf("£¡x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
+	d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,OUTRANGE,ndcPos.z);
+	printf("ï¼x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
 	
 	return OUTRANGE;
@@ -879,8 +916,10 @@ __global__ void MyNewKernel(int width,int height)
 	int y = __umul24(blockIdx.y,blockDim.y) + threadIdx.y;
 	if( x >width || y> height)
 			return;
-	//if(x==1023||y==1024)
-	//	printf("x:%d,y:%d\n",x,y);
+	//if(x!=91||y!=623)
+	//	return;
+	
+	//printf("x:%d,y:%d\n",x,y);
 	/*if(x==1024)
 	{
 		printf("x:%d,y:%d\n",x,y);
@@ -929,7 +968,7 @@ __global__ void MyKernel(int width,int height)
 
 
 	//printf("%d,%d\n",x,y);
-	//ÌáÈ¡Êı¾İ
+	//æå–æ•°æ®
 	
 	float3 WorldPos,WorldNormal;
 	float ReflectDis;
@@ -947,9 +986,9 @@ __global__ void MyKernel(int width,int height)
 
 
 	float3 LookVec = normalize(WorldPos - d_refCameraPos);
-	//¼ÆËã·´Éä¹âÏß·½Ïò
+	//è®¡ç®—åå°„å…‰çº¿æ–¹å‘
 	float3 ReflectVec = normalize(reflect(LookVec,WorldNormal));
-	//¼ÆËã±»·´ÉäÎïÌå×ø±ê
+	//è®¡ç®—è¢«åå°„ç‰©ä½“åæ ‡
 	float3 ReflectPos = WorldPos + ReflectVec * ReflectDis;
 	float RefelctInCameraDepth;
 
@@ -960,16 +999,16 @@ __global__ void MyKernel(int width,int height)
 
 
 	float CosReCorner = dot(ReflectVec,WorldNormal);
-	//¾µÏñµãµÄ×ø±ê
+	//é•œåƒç‚¹çš„åæ ‡
 	float3 ReMirrorPos = ReflectDis * CosReCorner * 2 * (-1) * WorldNormal + ReflectPos;
 
 
-	//Ïà»úµ½·´ÉäÃæµÄ¾àÀë
+	//ç›¸æœºåˆ°åå°„é¢çš„è·ç¦»
 	float DisEye2Plane = abs(dot(d_newCameraPos- WorldPos,WorldNormal));
-	//¾µÏñµãÓëÏà»úµÄÏòÁ¿
+	//é•œåƒç‚¹ä¸ç›¸æœºçš„å‘é‡
 	float3 VecEye2Ref = normalize(ReMirrorPos - d_newCameraPos);
 
-	//¾µÏñµãÓëÏà»úÁ¬ÏßºÍ·´ÉäÆ½ÃæµÄ½»µã
+	//é•œåƒç‚¹ä¸ç›¸æœºè¿çº¿å’Œåå°„å¹³é¢çš„äº¤ç‚¹
 	float3 FinalPos ;//= d_newCameraPos + DisEye2Plane/abs(dot(VecEye2Ref,WorldNormal))* VecEye2Ref;
 
 	FinalPos = dot(WorldPos -d_newCameraPos ,WorldNormal)/ dot(VecEye2Ref,WorldNormal) * VecEye2Ref + d_newCameraPos;
@@ -984,7 +1023,7 @@ __global__ void MyKernel(int width,int height)
 	//printf("^^^^^^^^VecEye2Ref^^^:%f,%f,%f\n",VecEye2Ref.x,VecEye2Ref.y,VecEye2Ref.z);
 
 	//printf("^^^^^^^^FinalPos_F^^^:%f,%f,%f\n",FinalPos.x,FinalPos.y,FinalPos.z);
-	//printf("^^^^^^^^MirrorPos£º%f,%f,%f\n",ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z);
+	//printf("^^^^^^^^MirrorPosï¼š%f,%f,%f\n",ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z);
 	
 	//FinalPos = abs(dot(Camera_Vec_Normal3,d_refCameraPos - ReMirrorPos3)/dot(Camera_Vec_Normal3,normalize(WorldPos3-ReMirrorPos3))) * normalize(WorldPos3-ReMirrorPos3) + d_newCameraPos;
 
@@ -1002,7 +1041,7 @@ __global__ void MyKernel(int width,int height)
 
 	//outPut[index] = WorldTmp;
 	//return ;
-	//Pro Î»ÖÃ
+	//Pro ä½ç½®
 	ProPos.x = ProPos.x / ProPos.w;
 	ProPos.y = ProPos.y / ProPos.w;
 
@@ -1110,7 +1149,7 @@ __global__ void MyKernel(int width,int height)
 			TheComputVU.y =1;
 		//TheComputVU = TheComputVU + cuurrentUv;
 		//printf("^^^^^^^^^^^^^^^^formerDis:%f^^^^^^^^^^\n",formerDis);
-		printf("IterTime:%d ^^^^^^^^cuurrentUv^^^:%f,%f\n",IterTime,cuurrentUv.x,cuurrentUv.y);
+		//printf("IterTime:%d ^^^^^^^^cuurrentUv^^^:%f,%f\n",IterTime,cuurrentUv.x,cuurrentUv.y);
 		
 		/*if(1==nextStep(MoveVec,&TheComputVU))
 		{
@@ -1127,7 +1166,7 @@ __global__ void MyKernel(int width,int height)
 
 			//outPut[index] = make_float4(WorldNormal.x,WorldNormal.y,WorldNormal.z,1.0);
 			//return;
-			//µÃ³öÒÔ¸ÃµãÎªÆ½ÃæµÄ·´ÉäÎïÌåµÄ¾µÏñµã
+			//å¾—å‡ºä»¥è¯¥ç‚¹ä¸ºå¹³é¢çš„åå°„ç‰©ä½“çš„é•œåƒç‚¹
 			ReMirrorPos =  abs(dot(WorldPos - ReflectPos,WorldNormal)) * (-2) * WorldNormal + ReflectPos;
 
 
@@ -1135,7 +1174,7 @@ __global__ void MyKernel(int width,int height)
 			//outPut[index] = make_float4(ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z,1.0);
 			//return;
 
-			//Çó³ö¸ÃµãÓëÏà»úÁ¬ÏßºÍÆ½ÃæµÄĞÂ½»µã
+			//æ±‚å‡ºè¯¥ç‚¹ä¸ç›¸æœºè¿çº¿å’Œå¹³é¢çš„æ–°äº¤ç‚¹
 			DisEye2Plane = abs(dot(d_newCameraPos - WorldPos,WorldNormal));
 			float CoseTheta2 = abs(dot(normalize(d_newCameraPos - ReMirrorPos),WorldNormal));
 			VecEye2Ref = normalize(ReMirrorPos - d_newCameraPos);
@@ -1221,7 +1260,7 @@ __global__ void MyKernel(int width,int height)
 		//printf("TmpUv3 :%f,%f\n",TmpUv3.x,TmpUv3.y);
 		//printf("TmpUv4 :%f,%f\n",TmpUv4.x,TmpUv4.y);
 
-		//È¡³öÃ¿¸ö²ÉÑùµã¶ÔÓ¦µÄÊÀ½ç×ø±ê
+		//å–å‡ºæ¯ä¸ªé‡‡æ ·ç‚¹å¯¹åº”çš„ä¸–ç•Œåæ ‡
 		float4 TmpFloat4;
 		float3 WorldPos1,WorldPos2,WorldPos3;
 		float3 WorldNormal1,WorldNormal2,WorldNormal3;
@@ -1266,7 +1305,7 @@ __global__ void MyKernel(int width,int height)
 		//return;
 
 
-		//Çó³öĞÂµÄ¾µÏñµã
+		//æ±‚å‡ºæ–°çš„é•œåƒç‚¹
 		float3 ReMirrorPos1,ReMirrorPos2,ReMirrorPos3;
 
 		ReMirrorPos1 =  abs(dot(WorldPos1 - ReflectPos,WorldNormal1)) * (-2) * WorldNormal1 + ReflectPos;
@@ -1279,13 +1318,13 @@ __global__ void MyKernel(int width,int height)
 		//printf("ReMirrorPos2(%f,%f,%f)\n",ReMirrorPos2.x,ReMirrorPos2.y,ReMirrorPos2.z);
 		//printf("ReMirrorPos3(%f,%f,%f)\n",ReMirrorPos3.x,ReMirrorPos3.y,ReMirrorPos3.z);
 
-		//ÇóÏà»úÓë¾µÏñµã×é³ÉµÄÆ½ÃæµÄ·¨Ïß
+		//æ±‚ç›¸æœºä¸é•œåƒç‚¹ç»„æˆçš„å¹³é¢çš„æ³•çº¿
 		float3 Cam_Mirror_Normal1,Cam_Mirror_Normal2,Cam_Mirror_Normal3;
 		Cam_Mirror_Normal1 = normalize(cross(d_cameraVec,normalize(d_refCameraPos - ReMirrorPos1)));
 		Cam_Mirror_Normal2 = normalize(cross(d_cameraVec,normalize(d_refCameraPos - ReMirrorPos2)));
 		Cam_Mirror_Normal3 = normalize(cross(d_cameraVec,normalize(d_refCameraPos - ReMirrorPos3)));
 
-		//ÇóÏà»ú¹ì¼£ËùÔÚ·¨Ïß
+		//æ±‚ç›¸æœºè½¨è¿¹æ‰€åœ¨æ³•çº¿
 		float3 Camera_Vec_Normal1,Camera_Vec_Normal2,Camera_Vec_Normal3;
 		Camera_Vec_Normal1 = normalize(cross(Cam_Mirror_Normal1,d_cameraVec));
 		Camera_Vec_Normal2 = normalize(cross(Cam_Mirror_Normal2,d_cameraVec));
@@ -1296,13 +1335,13 @@ __global__ void MyKernel(int width,int height)
 		//printf("Camera_Vec_Normal2(%f,%f,%f)\n",Camera_Vec_Normal2.x,Camera_Vec_Normal2.y,Camera_Vec_Normal2.z);
 		//printf("Camera_Vec_Normal3(%f,%f,%f)\n",Camera_Vec_Normal3.x,Camera_Vec_Normal3.y,Camera_Vec_Normal3.z);
 
-		//·Ö±ğÇóÈı¸öµãÓë¸ÃÆ½ÃæµÄ½»µã
+		//åˆ†åˆ«æ±‚ä¸‰ä¸ªç‚¹ä¸è¯¥å¹³é¢çš„äº¤ç‚¹
 		float3 InsertPoint1 = abs(dot(Camera_Vec_Normal1,d_refCameraPos - ReMirrorPos1)/dot(Camera_Vec_Normal1,normalize(WorldPos1-ReMirrorPos1))) * normalize(WorldPos1-ReMirrorPos1) + ReMirrorPos1;
 		float3 InsertPoint2 = abs(dot(Camera_Vec_Normal2,d_refCameraPos - ReMirrorPos2)/dot(Camera_Vec_Normal2,normalize(WorldPos2-ReMirrorPos2))) * normalize(WorldPos2-ReMirrorPos2) + ReMirrorPos2;
 		float3 InsertPoint3 = abs(dot(Camera_Vec_Normal3,d_refCameraPos - ReMirrorPos3)/dot(Camera_Vec_Normal3,normalize(WorldPos3-ReMirrorPos3))) * normalize(WorldPos3-ReMirrorPos3) + ReMirrorPos3;
 
 		//printf("dis:(%f,%f,%f)\n",length(InsertPoint1-d_newCameraPos),length(InsertPoint2-d_newCameraPos),length(InsertPoint3-d_newCameraPos));
-		//ÇóµãÓëÖ±ÏßµÄ¾àÀë
+		//æ±‚ç‚¹ä¸ç›´çº¿çš„è·ç¦»
 
 
 		float3 toNewPlace1 = d_newCameraPos-InsertPoint1;
@@ -1323,8 +1362,8 @@ __global__ void MyKernel(int width,int height)
 		//
 		if(formerDis<currentMaxDis)
 		{
-			printf("$$$$$$$$$$$$$$$$$$$$$$search converge (%f,%f)\n",cuurrentUv.x,cuurrentUv.y);
-			//d_cudaPboBuffer[index] =  make_float4(cuurrentUv.x/(float)width,cuurrentUv.y/(float)height,1,-0.1);
+			//printf("$$$$$$$$$$$$$$$$$$$$$$search converge (%f,%f)\n",cuurrentUv.x,cuurrentUv.y);
+			d_cudaPboBuffer[index] =  make_float4(cuurrentUv.x/(float)width,cuurrentUv.y/(float)height,1,-0.1);
 	
 			return;
 		}
@@ -1434,7 +1473,7 @@ __global__ void MyKernel(int width,int height)
 
 
 
-		//µÃ³ö¸Ãµã·¨Ïß
+		//å¾—å‡ºè¯¥ç‚¹æ³•çº¿
 		float4 TmpFloat41= tex2D(cuda_WorlNormal_Tex,cuurrentUv.x,cuurrentUv.y);
 		WorldNormal  = make_float3(TmpFloat41.x,TmpFloat41.y,TmpFloat41.z);
 
@@ -1444,7 +1483,7 @@ __global__ void MyKernel(int width,int height)
 
 		//outPut[index] = make_float4(WorldNormal.x,WorldNormal.y,WorldNormal.z,1.0);
 		//return;
-		//µÃ³öÒÔ¸ÃµãÎªÆ½ÃæµÄ·´ÉäÎïÌåµÄ¾µÏñµã
+		//å¾—å‡ºä»¥è¯¥ç‚¹ä¸ºå¹³é¢çš„åå°„ç‰©ä½“çš„é•œåƒç‚¹
 		ReMirrorPos =  abs(dot(WorldPos - ReflectPos,WorldNormal)) * (-2) * WorldNormal + ReflectPos;
 
 
@@ -1452,7 +1491,7 @@ __global__ void MyKernel(int width,int height)
 		//outPut[index] = make_float4(ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z,1.0);
 		//return;
 
-		//Çó³ö¸ÃµãÓëÏà»úÁ¬ÏßºÍÆ½ÃæµÄĞÂ½»µã
+		//æ±‚å‡ºè¯¥ç‚¹ä¸ç›¸æœºè¿çº¿å’Œå¹³é¢çš„æ–°äº¤ç‚¹
 		DisEye2Plane = abs(dot(d_newCameraPos - WorldPos,WorldNormal));
 		float CoseTheta2 = abs(dot(normalize(d_newCameraPos - ReMirrorPos),WorldNormal));
 		VecEye2Ref = normalize(ReMirrorPos - d_newCameraPos);
@@ -1507,7 +1546,7 @@ __global__ void MyKernel(int width,int height)
 	//outPut[index] = make_float4((cuurrentUv.x - x)/1024.0,(cuurrentUv.y - y)/1024.0,Origin_Id,RefelctInCameraDepth);
 
 	d_cudaPboBuffer[index] =  make_float4(cuurrentUv.x/(float)width,cuurrentUv.y/(float)height,1,-0.1);
-	//printf("£¡x:%d y:%d: %f,%f,%f,%f\n",x,y,1024*d_cudaPboBuffer[index] .x,1024*d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
+	//printf("ï¼x:%d y:%d: %f,%f,%f,%f\n",x,y,1024*d_cudaPboBuffer[index] .x,1024*d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
 
 	//float4 test = tex2D(cuda_Reflect_Tex,TmpUv.x,TmpUv.y);
@@ -1674,7 +1713,7 @@ extern "C" void RunThridPass(dim3 BlockSize ,dim3 GridSize,int totalNum)
 		int value = h_pos[i];
 		int	y	 =  value/1024;
  		int x  = value%1024;
-		printf("(%d,%d,pos:%d£¬index:%d)\n",x,y,h_pos[i],i);
+		printf("(%d,%d,pos:%dï¼Œindex:%d)\n",x,y,h_pos[i],i);
 	}*/
 
 	

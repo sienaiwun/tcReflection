@@ -113,14 +113,14 @@ reflectShader g_reflectionShader;
 BlendShader g_blendShader;
 
 
-#include "glossyScene.h"
-glossyScene g_scene;
+#include "toiletScene.h"
+toiletScene g_scene;
 
 void cameraControl(int,CCamera&);
 
 
 
-/*
+
 posPara posArray[] = 
 {
 	//{make_float3(16.033649,38.942272,15.414365  ),make_float3(22.289124,34.077927,9.314583 )},
@@ -174,9 +174,10 @@ posPara posArray[] =
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
 
-};*/
+};
 
 
+/*
 posPara posArray[] = 
 {
 	//glossy scene;
@@ -214,14 +215,14 @@ posPara posArray[] =
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
 
-};
+};*/
 
 
 //float k = 900/25.0;
 float k = 1800/25.0;
 float kk[13]={2*k,4*k,5*k,7*k,10*k,13*k,15*k,19*k,21*k,23*k,25*k,25*k,25*k};
 //float kk[12]={2*k,3*k,5*k,8*k,11*k,13*k,17*k,19*k,21*k,23*k,23*k,23*k};//,25*k,25*k,25*k};
-int currentTime  = 9;
+int currentTime  = 0;
 int currentTime2 = 9;
 int OptixFrame;
 FPS fcount(CountTime);
@@ -238,6 +239,7 @@ unsigned int initialWindowHeight = 1024;
 int logReflectionSamplingRate = 0;
 
 GLuint reflectionMapPBO;
+GLuint addtionalMapPBO;
 GLuint VectorPBO;
 GLuint LastVecPBO;
 GLuint testPBO;
@@ -284,7 +286,7 @@ unsigned int traceWidth, traceHeight;
 optix::Context        rtContext;
 optix::Buffer         rtReflectionBuffer;
 optix::Buffer         rtLights;
-
+optix::Buffer         rtAdditionalBuffer;
 //Buffer
 optix::Buffer PixelBuffer;
 
@@ -388,10 +390,10 @@ void IniteMyVBO(){
 	float2 *Vertices;
 	Vertices = new float2[rasterWidth *rasterHeight * 6];
 	int PointId = 0;
-	for(int x = 0;x<rasterWidth-1;x++)
-		for(int y = 0;y<rasterHeight-1;y++)
+	for(int x = 0;x<rasterWidth;x++)
+		for(int y = 0;y<rasterHeight;y++)
 		{
-			/*if(x==1022||y==1022)
+		/*	if(x==128&&y==245)
 				;
 			else
 				continue;*/
@@ -466,6 +468,11 @@ void init_gl()
 	// create PBO's
 	glGenBuffers(1, &reflectionMapPBO);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, reflectionMapPBO);
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, rasterHeight*rasterWidth*sizeof(float4), 0, GL_STREAM_READ);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+
+	glGenBuffers(1, &addtionalMapPBO);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, addtionalMapPBO);
 	glBufferData(GL_PIXEL_UNPACK_BUFFER, rasterHeight*rasterWidth*sizeof(float4), 0, GL_STREAM_READ);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
@@ -806,8 +813,8 @@ void init_optix()
 		rtContext->setRayTypeCount(2);
 		rtContext->setEntryPointCount(2);
 
-		//rtContext->setPrintEnabled( true );
-		//rtContext->setPrintBufferSize( 4096 *8);
+		rtContext->setPrintEnabled( true );
+		rtContext->setPrintBufferSize( 4096 *8);
 
 		rtContext["radiance_ray_type"]->setUint(0u);
 		rtContext["shadow_ray_type"]->setUint(1u);
@@ -865,7 +872,15 @@ void init_optix()
 		rtReflectionBuffer = rtContext->createBufferFromGLBO(RT_BUFFER_OUTPUT, reflectionMapPBO);
 		rtReflectionBuffer->setSize(rasterWidth,rasterHeight);
 		rtReflectionBuffer->setFormat(RT_FORMAT_FLOAT4);
+	
 		rtContext["reflection_buffer"]->setBuffer(rtReflectionBuffer);
+
+
+		rtAdditionalBuffer = rtContext->createBufferFromGLBO(RT_BUFFER_OUTPUT, addtionalMapPBO);
+		rtAdditionalBuffer->setSize(rasterWidth,rasterHeight);
+		rtAdditionalBuffer->setFormat(RT_FORMAT_FLOAT4);
+		rtContext["addition_buffer"]->setBuffer(rtAdditionalBuffer);
+
 
 		rtLights = rtContext->createBuffer(RT_BUFFER_INPUT);
 		rtLights->setSize(1);
@@ -1059,11 +1074,31 @@ void draw_scene(glslShader& shader,CCamera * pCamera)
 extern unsigned int  *g_PixelPos;
 void addtionalTracing(int pixelNum)
 {
+	
+	nv::vec4f* pixelBuffer = (nv::vec4f*)rtReflectionBuffer->map();
+			RTsize numVertices;
+			rtReflectionBuffer->getSize( numVertices );
+			for(int i=0;i<numVertices*numVertices;i++)
+			{
+				pixelBuffer[i] = nv::vec4f(1,1,1,1);
+			}
+	rtReflectionBuffer->unmap();
 
-	/*  glBindBuffer(GL_PIXEL_UNPACK_BUFFER, reflectionMapPBO);
-	glBufferData(GL_PIXEL_UNPACK_BUFFER, traceWidth*traceHeight*sizeof(float4), 0, GL_STREAM_READ);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-	*/
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, reflectionMapPBO);
+	glBufferDataARB(GL_PIXEL_UNPACK_BUFFER, rasterHeight*rasterWidth*sizeof(float4), 0, GL_STREAM_DRAW_ARB);
+
+	pixelBuffer = (nv::vec4f*)glMapBufferARB(GL_PIXEL_UNPACK_BUFFER,
+												GL_WRITE_ONLY_ARB);
+	if(pixelBuffer	)
+	{
+		// update data directly on the mapped buffer
+		for(int i=0;i<numVertices*numVertices;i++)
+			{
+				pixelBuffer[i] = nv::vec4f(1,1,1,1);
+			}
+		glUnmapBufferARB(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
+	}
+	glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
 
 	float temp = sqrt((float) pixelNum);
 	int length = ceil(temp);
@@ -1110,7 +1145,7 @@ void addtionalTracing(int pixelNum)
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 	glPopAttrib();
 
-	/*
+	
 	glEnable(GL_TEXTURE_2D);
 	BYTE *pTexture = NULL;
 	pTexture = new BYTE[rasterWidth*  rasterHeight * 3];
@@ -1122,11 +1157,11 @@ void addtionalTracing(int pixelNum)
 
 	int w = rasterWidth;
 	int h = rasterHeight;
-	SaveBMP("./test/newtrace.bmp", pTexture, w, h);
+	Fbo::SaveBMP("./test/newtrace.bmp", pTexture, w, h);
 	if (pTexture)
 	delete[] pTexture;
 	glBindTexture(GL_TEXTURE_2D, 0);
-	*/
+	
 
 }
 void blending()
@@ -1606,6 +1641,7 @@ void drawTransMap(int  optixId)
 	RefFrame & frame = RefFrame::getFrameByIndex(OptixFrame);
 
 	g_transShader.setParemeter(frame.getOptixTex(),VecorTexture,frame.getGbuffer().getTexture(0),0);
+	g_transShader.setAdditionalTex(frame.getAdditionalTex());
 	g_transShader.setRes(nv::vec2f(rasterWidth,rasterHeight));
 	g_transShader.begin();
 	// 
@@ -2008,9 +2044,9 @@ void optixRendering()
 		g_timeMesure.setBeginTime(display_start);
 	}
 	CVector3& pos =g_refCamera.Position();
-	//cameraControl(currentTime,g_refCamera);
+	cameraControl(currentTime,g_refCamera);
 	cameraControl(currentTime2,g_currentCamera);
-	g_refCamera = g_currentCamera;
+	//g_refCamera = g_currentCamera;
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);
 	//currentGbuffer.SaveBMP("test/worldPos.bmp",0);
@@ -2247,13 +2283,26 @@ void init_RefcletTex()
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		glPopAttrib();
+
+
+		glPushAttrib(GL_PIXEL_MODE_BIT);
+		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, addtionalMapPBO);
+		glBindTexture(GL_TEXTURE_2D,frame.getAdditionalTex());
+		glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rasterWidth, rasterHeight,
+			GL_RGBA, GL_FLOAT, 0);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+		glPopAttrib();
+
 		/*
 		glEnable(GL_TEXTURE_2D);
+		
 		BYTE *pTexture = NULL;
 		pTexture = new BYTE[rasterWidth*rasterHeight * 3];
 		memset(pTexture, 0, rasterWidth*rasterHeight * 3 * sizeof(BYTE));
 		//glBindTexture(GL_TEXTURE_2D,reflectionMaps[i]);//TexPosId   PboTex
-		glBindTexture(GL_TEXTURE_2D, (RefFrame::getFrameByIndex(0).getOptixTex()));//TexPosId   PboTex
+		glBindTexture(GL_TEXTURE_2D, (RefFrame::getFrameByIndex(0).getAdditionalTex()));//TexPosId   PboTex
 
 		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
 
@@ -2262,8 +2311,27 @@ void init_RefcletTex()
 		char str [32];
 		sprintf(str,"./test/ref%d.bmp",0);
 		Fbo::SaveBMP(str, pTexture, w, h);
+		*/
+		/*
+		glEnable(GL_TEXTURE_2D);
+		int x= 67,y =572;  
+		int xlenght = 1024,ylength = 1024;
+		float* pTexture = new float[rasterWidth*rasterHeight * 4];
+		memset(pTexture, 0, rasterWidth*rasterHeight * 4 * sizeof(float));
+
+		glBindTexture(GL_TEXTURE_2D, (RefFrame::getFrameByIndex(0).getAdditionalTex()));//TexPosId   PboTex
+
+		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pTexture);
+
+		int w = rasterWidth;
+		int h = rasterHeight;
+		nv::vec4f pixel = nv::vec4f(&pTexture[4*(y*ylength+x)]);
+		nv::vec3f truePos = nv::vec3f(pixel.x,pixel.y,pixel.z);
+		float id = pixel.x;
+
 		if (pTexture)
-		   delete[] pTexture;*/
+		  delete[] pTexture;
+		*/
 	}
 	
 
@@ -2392,10 +2460,11 @@ void tcRendering()
 
 	TransMapFbo.BindForWrite(0); 
 	drawTransMap(OptixFrame);
+	TransMapFbo.debugPixel(0,97,617);
 	TransMapFbo.end();
 	char str[100];
 	sprintf(str,"test/tttransMap%d.bmp",currentTime2);
-	//TransMapFbo.debugPixel(0,0,1023,1024);
+	
 	TransMapFbo.SaveBMP(str,0);
 	if(stat_breakdown)
 	{
@@ -2471,7 +2540,7 @@ void tcRendering()
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueGlossyReflections,&g_currentCamera);
 	g_scene.draw_model(g_reflectionShader,&g_currentCamera);
-	currentGbuffer.SaveBMP("./test/blending.bmp",0);
+	//currentGbuffer.SaveBMP("./test/blending.bmp",0);
 	currentGbuffer.end();
 
 	// currentGbuffer.SaveBMP("asd.bmp",0);

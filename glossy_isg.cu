@@ -19,8 +19,10 @@ rtDeclareVariable(float, t_hit, rtIntersectionDistance, );
 
 struct PerRayData_radiance
 {
+  
   float3 result;
-  float importance;
+  float  importance;
+  int    objectId;
   int depth;
   float t_hit;
 };
@@ -35,6 +37,7 @@ rtDeclareVariable(PerRayData_shadow,   prd_shadow,   rtPayload, );
 rtDeclareVariable(float3,   lightPos, , );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
 rtDeclareVariable(float3,diffuse_Color,,);
+rtDeclareVariable(int, id, ,);
 RT_PROGRAM void closest_hit_radiance()
 {
   prd_radiance.t_hit = t_hit;
@@ -52,7 +55,7 @@ RT_PROGRAM void closest_hit_radiance()
   PerRayData_radiance refl_prd;
   refl_prd.importance = prd_radiance.importance * fresnel * optix::luminance(color);
   refl_prd.depth = prd_radiance.depth + 1;
-
+  refl_prd.objectId = id+1;
   float3 result;
   if(fabs(diffuse_Color.z- 0.66)<0.001)
   {
@@ -72,6 +75,7 @@ RT_PROGRAM void closest_hit_radiance()
     result = color;
   }
   prd_radiance.t_hit = t_hit;
+   prd_radiance.objectId = id;
   prd_radiance.result = color;
 }
 

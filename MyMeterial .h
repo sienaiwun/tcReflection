@@ -15,7 +15,8 @@
 #include <crtdbg.h>
 
 #include <olectl.h>              
-#include <math.h>     
+#include <math.h>  
+class MyGeometry;
 class MyMeterial
 {
 public :
@@ -25,6 +26,7 @@ public :
 	MyMeterial(float3 diffuse);
 	optix::TextureSampler getTexture();
 	optix::Material getMaterial(); 
+	optix::Material getMaterial(MyGeometry * pGeomtry); 
 	const int hasTx() const;
 	const GLuint getTxId() const;
 	const float3 getDiffuse() const;

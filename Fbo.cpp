@@ -242,7 +242,7 @@ void Fbo::debugPixel(int id, int x,int y,int scale)
 	int h = texDescript.getHeight();
 
 	int index = y*w+x;
-	float r = pTexture[4*index]*scale;
+	float  r = pTexture[4*index]*scale;
 	float g = pTexture[4*index+1]*scale;
 	float b = pTexture[4*index+2]*scale;
 	float a = pTexture[4*index+3]*scale;
@@ -389,7 +389,21 @@ void Fbo::SaveBMP(const char *fileName, BYTE *buf, UINT width, UINT height){
 
 	fclose(fp);
 }
+void Fbo::SaveBMP(GLuint tex, const char * fileName,UINT w,UINT h)
+{
+	glEnable(GL_TEXTURE_2D);
+	BYTE *pTexture = NULL;
+	pTexture = new BYTE[w*h * 3];
+	memset(pTexture, 0, w*h * 3 * sizeof(BYTE));
 
+	glBindTexture(GL_TEXTURE_2D, tex);//TexPosId   PboTex
+
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
+	SaveBMP(fileName,pTexture,w,h);
+	if (pTexture)
+	   delete[] pTexture;
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
 
 void Fbo::SaveFloat(const char *fileName, int id)
 {

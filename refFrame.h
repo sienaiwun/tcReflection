@@ -7,7 +7,7 @@
 class RefFrame
 {
 public:
-	GLuint m_reflectIndex;
+	GLuint m_reflectIndex,m_additionalTex;
 	Fbo m_refGbuffer;
 	GLuint m_frame;
 	CCamera m_camera;
@@ -18,6 +18,10 @@ public:
 	inline GLuint& getOptixTex()
 	{
 		return m_reflectIndex;
+	}
+	inline GLuint& getAdditionalTex()
+	{
+		return m_additionalTex;
 	}
 	inline void setFrame(int slot)
 	{
@@ -42,6 +46,17 @@ public:
 			glBindTexture(GL_TEXTURE_2D, 0);
 			m_refGbuffer.set(2,rasterWidth, rasterHeight);
 			m_refGbuffer.init();
+
+
+
+			glGenTextures(1, &m_additionalTex);
+			glBindTexture(GL_TEXTURE_2D,m_additionalTex);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, rasterWidth, rasterHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+			glBindTexture(GL_TEXTURE_2D, 0);
 	}
 	inline Fbo& getGbuffer()
 	{

@@ -1,6 +1,6 @@
 #include"main.h"
 #include "cuda.h"
-
+#include "Fbo.h"
 void CudaTexResourse::init()
 {
 	if(m_texture)
@@ -9,7 +9,7 @@ void CudaTexResourse::init()
 }
 void CudaTexResourse::setEveryTex(int texId)
 {
-
+	//Fbo::SaveBMP(texId,"./test/passReflection.bmp",1024,1024);
 	checkCudaErrors(cudaGraphicsUnregisterResource(m_CudaReourse));
 	m_tempTex = texId;
 	checkCudaErrors(cudaGraphicsGLRegisterImage(&m_CudaReourse,m_tempTex,GL_TEXTURE_2D,cudaGraphicsMapFlagsReadOnly));

@@ -30,6 +30,10 @@ public :
 	{
 		m_res = r;
 	}
+	inline void setAdditionalTex(int tex)
+	{
+		m_additionalTex = tex;
+	}
 	
 private:
 
@@ -43,7 +47,9 @@ private:
 	GLuint m_tranRePosTexUniform;
 	GLuint m_clearColor;
 	GLuint m_bindingReflectTex,m_bindingTransTex,m_bindingTransPosTex,m_bindingTransReposTex;
+	GLuint m_additionalTexSlot;
 	nv::vec3f m_bindingClearColor;
+	GLuint m_additionalTex;
 	/*
 	glUniform1i(m_refelctTexUniform,0);
 	glUniform1i(m_transVecTexUniform,1);

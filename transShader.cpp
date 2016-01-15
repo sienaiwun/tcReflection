@@ -9,8 +9,10 @@ void TranShader::init()
 	m_tranRePosTexUniform = m_loader.getUniform("RePosTex");
 	m_resUniform = m_loader.getUniform("resolution");
 	m_clearColor = m_loader.getUniform("ClearColor");
+	m_additionalTexSlot = m_loader.getUniform("IdMap");
 
 }
+
 void TranShader::bindParemeter()
 {
 	//m_bindingReflectTex,m_bindingTransTex,m_bindingTransPosTex,m_bindingTransReposTex
@@ -27,6 +29,10 @@ void TranShader::bindParemeter()
 
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D,m_bindingTransReposTex);
+
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D,m_additionalTex);
+	glUniform1i(m_additionalTexSlot,4);
 
 	glUniform1i(m_refelctTexUniform,0);
 	glUniform1i(m_transVecTexUniform,1);
