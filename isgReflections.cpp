@@ -1171,6 +1171,7 @@ void blending()
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	g_blendShader.setParemeter(FinalEffectFbo.getTexture(0),reflectionMapTex_Now);
 	MyGeometry::drawQuad(g_blendShader);
+	MergeEffectFbo.SaveBMP("./test/realBlending.bmp",0);
 	MergeEffectFbo.end();
 	
 
@@ -2250,6 +2251,7 @@ void init_RefcletTex()
 		frame.getGbuffer().begin();
 		g_scene.draw_model(g_gBufferShader,&camera);
 		frame.getGbuffer().end();
+		//frame.getGbuffer().SaveBMP("./test/ref0.bmp",0);
 		currentGbuffer.copyFromBuffer(frame.getGbuffer());
 		/*
 		rtWorldSpaceTexture->unregisterGLTexture();
@@ -2460,7 +2462,7 @@ void tcRendering()
 
 	TransMapFbo.BindForWrite(0); 
 	drawTransMap(OptixFrame);
-	TransMapFbo.debugPixel(0,97,617);
+	TransMapFbo.debugPixel(0,682,577);
 	TransMapFbo.end();
 	char str[100];
 	sprintf(str,"test/tttransMap%d.bmp",currentTime2);
@@ -2480,6 +2482,7 @@ void tcRendering()
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
 	g_scene.draw_model(g_gBufferShader,&g_currentCamera);
+	currentGbuffer.SaveBMP("./test/debugPic.bmp",0);
 	currentGbuffer.end();
 	
 
@@ -2540,7 +2543,7 @@ void tcRendering()
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueGlossyReflections,&g_currentCamera);
 	g_scene.draw_model(g_reflectionShader,&g_currentCamera);
-	//currentGbuffer.SaveBMP("./test/blending.bmp",0);
+	currentGbuffer.SaveBMP("./test/blending.bmp",0);
 	currentGbuffer.end();
 
 	// currentGbuffer.SaveBMP("asd.bmp",0);

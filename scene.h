@@ -63,5 +63,8 @@ protected:
 	MyMeterial * m_pMatDis;
 	posPara * m_posArray;
 	TimeMesure * m_ptimeMesure;
+
+	CCamera m_refCamera;
+	CCamera m_curCamera;
 };
 #endif
