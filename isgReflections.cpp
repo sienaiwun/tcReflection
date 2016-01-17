@@ -86,11 +86,10 @@ char blendFactorPath[] = "./model/blendFactor0.15.bmp";
 GLenum buffers[] = {GL_COLOR_ATTACHMENT0_EXT,GL_COLOR_ATTACHMENT1_EXT,GL_COLOR_ATTACHMENT2_EXT,GL_COLOR_ATTACHMENT3_EXT,GL_COLOR_ATTACHMENT4_EXT,GL_COLOR_ATTACHMENT5_EXT,GL_COLOR_ATTACHMENT6_EXT};
 optix::GeometryGroup geometrygroup;
 
-CCamera g_refCamera,g_currentCamera;
 //uint *Host_PixelSum;
 //MyGeometry teapot;
 int CountTime = 1000;
-TimeMesure g_timeMesure(tcRenderingType,CountTime);
+TimeMesure g_timeMesure(optixRenderingType,CountTime);
 nv::vec3f viewDependentMissColor = nv::vec3f(255,0,0);
 nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 //cudaGraphicsResource *cudaRes_WorldNormal,*cudaRes_WorldPos,*cudaRes_Reflect;
@@ -113,115 +112,10 @@ reflectShader g_reflectionShader;
 BlendShader g_blendShader;
 
 
-#include "toiletScene.h"
-toiletScene g_scene;
-
-void cameraControl(int,CCamera&);
+#include "livingRoom.h"
+livingRoom g_scene;
 
 
-
-
-posPara posArray[] = 
-{
-	//{make_float3(16.033649,38.942272,15.414365  ),make_float3(22.289124,34.077927,9.314583 )},
-	//{make_float3(20.541248,38.556011,16.854353  ),make_float3(24.467501,33.042343,9.493363 )},
-	//{make_float3(18.591887,38.901070,18.539888  ),make_float3(22.336548,34.001892,10.667604 )},
-	//{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},
-
-	//{make_float3(24.898901,45.217281,-10.226630  ),make_float3(25.289194,38.099701,-3.213274 )},
-	//	{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},
-	//{make_float3(19.777601,40.256077,18.724140  ),make_float3(21.469124,33.352386,11.690137 )},
-	//{make_float3(21.208389,43.804527,-13.503925  ),make_float3(24.115210,37.705105,-6.132097 )},
-	//{make_float3(18.743200,38.181194,-3.370136  ),make_float3(23.238724,31.557341,2.622727 )},
-	//{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},
-	//{make_float3(24.302208,48.071339,26.106796  ),make_float3(23.576305,42.725662,17.686817 )},
-	//{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.228128,47.533394,25.267078 )},
-	//{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.231396,47.535080,25.265717 )},
-	//{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )},
-	//{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},
-
-	//1st
-	//	{make_float3(-2.403542,34.498703,37.004547  ),make_float3(0.809388,32.024666,27.863651 )},//
-	//Burning add
-	//{make_float3(12.813933,30.045429,23.866928),make_float3(16.026863,27.571392,14.726033)},
-	{make_float3(-2.403542,34.498703,37.004547  ),make_float3(3.482440,31.107332,29.666050 )},//2
-	{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},//4
-	{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},//5
-
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
-	//10
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
-
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
-
-	{make_float3(13.948970,43.934372,17.002832  ),make_float3(18.528547,37.866623,10.505962 )},//14
-	//{make_float3(4.111155,44.597073,8.203527  ),make_float3(12.948935,40.556053,5.844954 )},
-	//{make_float3(3.722486,49.674381,28.524050  ),make_float3(10.202328,45.074345,22.453533 )},//7
-	{make_float3(6.768429,44.201805,11.434514  ),make_float3(7.580947,43.711884,11.118615 )},
-	{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )}, //16
-	{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )},  //18
-	//{make_float3(21.208389,43.804527,-13.503925  ),make_float3(24.115210,37.705105,-6.132097 )},  //14
-
-	//{make_float3(8.996864,46.504173,-18.891628  ),make_float3(14.546986,39.261303,-14.800542 )},//16
-	//{make_float3(-0.140227,33.588104,3.662050  ),make_float3(8.603185,30.805325,-0.314001 )},  //18
-	//{make_float3(-0.140227,33.588104,3.662050  ),make_float3(1.301753,30.177917,-5.627264 )},    //1000
-	//{make_float3(-0.140227,33.588104,3.662050  ),make_float3(1.301753,30.177917,-5.627264 )},    //1000
-
-	//{make_float3(-19.653139,33.588104,-3.880467  ),make_float3(-14.104563,29.767727,-11.270871 )},   //800
-	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
-	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
-
-};
-
-
-/*
-posPara posArray[] = 
-{
-	//glossy scene;
-	//1st
-	//	{make_float3(-2.403542,34.498703,37.004547  ),make_float3(0.809388,32.024666,27.863651 )},//
-	//Burning add
-	//{make_float3(12.813933,30.045429,23.866928),make_float3(16.026863,27.571392,14.726033)},
-	{make_float3(-23.214741,132.878403,104.965492  ),make_float3(-23.922035,132.399780,105.471191 )},
-	{make_float3(-64.204552,128.025604,54.879829  ),make_float3(-64.709442,127.616676,55.533115 )},
-	{make_float3(18.045897,55.233578,45.419922  ),make_float3(19.309855,50.282154,36.824249 )},//5
-
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
-	//10
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
-
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
-
-	{make_float3(13.948970,43.934372,17.002832  ),make_float3(18.528547,37.866623,10.505962 )},//14
-	//{make_float3(4.111155,44.597073,8.203527  ),make_float3(12.948935,40.556053,5.844954 )},
-	//{make_float3(3.722486,49.674381,28.524050  ),make_float3(10.202328,45.074345,22.453533 )},//7
-	{make_float3(6.768429,44.201805,11.434514  ),make_float3(7.580947,43.711884,11.118615 )},
-	{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )}, //16
-	{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )},  //18
-	//{make_float3(21.208389,43.804527,-13.503925  ),make_float3(24.115210,37.705105,-6.132097 )},  //14
-
-	//{make_float3(8.996864,46.504173,-18.891628  ),make_float3(14.546986,39.261303,-14.800542 )},//16
-	//{make_float3(-0.140227,33.588104,3.662050  ),make_float3(8.603185,30.805325,-0.314001 )},  //18
-	//{make_float3(-0.140227,33.588104,3.662050  ),make_float3(1.301753,30.177917,-5.627264 )},    //1000
-	//{make_float3(-0.140227,33.588104,3.662050  ),make_float3(1.301753,30.177917,-5.627264 )},    //1000
-
-	//{make_float3(-19.653139,33.588104,-3.880467  ),make_float3(-14.104563,29.767727,-11.270871 )},   //800
-	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
-	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
-
-};*/
-
-
-//float k = 900/25.0;
-float k = 1800/25.0;
-float kk[13]={2*k,4*k,5*k,7*k,10*k,13*k,15*k,19*k,21*k,23*k,25*k,25*k,25*k};
-//float kk[12]={2*k,3*k,5*k,8*k,11*k,13*k,17*k,19*k,21*k,23*k,23*k,23*k};//,25*k,25*k,25*k};
 int currentTime  = 0;
 int currentTime2 = 9;
 int OptixFrame;
@@ -257,11 +151,6 @@ bool stat_breakdown = true;
 // CG
 CGcontext cgContext;
 CGeffect  cgEffect;
-CGtechnique cgTechniqueWorldPosNormal;
-CGtechnique cgTechniqueGlossyReflections;
-//My Technique
-CGtechnique cgReProjectTechnique;
-CGtechnique cgTechniqueTranMap;
 
 //glsl]
 //uniform
@@ -526,6 +415,7 @@ void init_gl()
 
 
 	//生成NEW纹理
+	/*
 	glGenTextures(ReflectNum, reflectionMaps);
 	for(int i = 0;i<ReflectNum;i++){
 		glBindTexture(GL_TEXTURE_2D, reflectionMaps[i]);
@@ -536,7 +426,7 @@ void init_gl()
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, rasterWidth, rasterHeight, 0, GL_RGBA, GL_FLOAT, NULL);
 		glBindTexture(GL_TEXTURE_2D, 0);
 	}
-
+	*/
 
 	//生成所需的reflcet纹理
 	glGenTextures(1, &New_Tex);
@@ -728,50 +618,7 @@ void init_scene(const char* model_filename)
 	printf("init scence\n");
 	g_scene.init();
 	g_scene.setTimeMesure(&g_timeMesure);
-	float diag;
-	
-	
-	// g_currentCamera.PositionCamera(-40, 54, -151,    -22.8827, 42.5, -180.212,     0, 1, 0);
-	// g_currentCamera.navigate(posArray[0],posArray[1],currentTime,0,kk[0]);
-	// bathroom scene
-	// 
-
-	//记得换回来
-	//g_refCamera.PositionCamera(-2.403542,34.498703,37.004547 ,0.809388,32.024666,27.863651,0,1,0);
-	//g_currentCamera.PositionCamera(-10.403542,34.498703,37.004547 ,0.809388,32.024666,27.863651,0,1,0);
-
-
-	cameraControl(currentTime2,g_currentCamera);
-	//g_currentCamera.PositionCamera(-2.403542,34.498703,37.004547 ,0.809388,32.024666,27.863651,0,1,0);
-	//g_refCamera.PositionCamera(-10.403542,34.498703,37.004547 ,0.809388,32.024666,27.863651,0,1,0);
-	// simple scene
-	//g_currentCamera.PositionCamera(27.2195,52.8272,141.653, 0, 0, 0, 0, 1, 0);
-	// g_currentCamera.PositionCamera(-2.403542,34.498703,37.004547,3.482440,31.107332,29.666050,0,1,0);
-	//
-	//Optix_Camare.PositionCamera( -1.5515 ,35.3627 ,37.3552 ,1.5802 ,32.7854 ,28.2370,0,1,0);
-	/****************** bath room scene*****************************/
-	//Optix_Camare.navigate(posArray[1],posArray[2],1,0,36);
-
-
-	/*********************simple scene**************************/
-	//Optix_Camare.PositionCamera(29.2195,53.8272,140.653,0, 0, 0, 0, 1, 0);
-	//Optix_Camare.PositionCamera(28.2195,51.8272,141.653, 0, 0.1, 0, 0, 1, 0);
-	//Optix_Camare.PositionCamera(12.813933,30.045429,23.866928 ,16.026863,27.571392,14.726033,0,1,0);
-
-	//Optix_Camare.CoutCamera();
-	//Optix_Camare.navigate(posArray[0],posArray[1],currentTime,0,kk[0]);
-
-
-
-	//float diag1 = nv::length(modelBBMax - modelBBMin);
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	gluPerspective(60, 1.0, 0.1, 1000);
-
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-
-	CHECK_ERRORS();
+	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 }
 
 std::string ptxpath( const std::string& base )
@@ -903,10 +750,6 @@ void init_optix()
 		g_scene.setOptix(&rtContext);
 		g_scene.optixInit();
 		rtContext["max_depth"]->setUint(2u);
-		rtContext["lightPos"]->set3fv((const float*)&make_float3(g_scene.getLightPos().x,
-			g_scene.getLightPos().y,
-			g_scene.getLightPos().z));
-
 		rtContext->setStackSize(1850);
 		rtContext->validate();
 		printf("4444");
@@ -928,7 +771,7 @@ void drawFinalEffect()
 {
 	glClearColor(viewIndepentdentMissColor.x,viewIndepentdentMissColor.y,viewIndepentdentMissColor.z,1);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-	g_reprojectShader.setParemeter(TransMapFbo.getTexture(0),currentGbuffer.getTexture(0),refGbuffer.getTexture(0), g_refCamera.getMvpMat());
+	g_reprojectShader.setParemeter(TransMapFbo.getTexture(0),currentGbuffer.getTexture(0),refGbuffer.getTexture(0), g_scene.m_refCamera.getMvpMat());
 	MyGeometry::drawQuad(g_reprojectShader);
 }
 
@@ -942,7 +785,7 @@ void New_drawscene(CGtechnique& current_technique){
 		// manipulator.applyTransform();
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-		g_currentCamera.Look();
+		g_scene.m_curCamera.Look();
 	}
 
 
@@ -963,7 +806,7 @@ void New_drawscene(CGtechnique& current_technique){
 	cgSetParameter1i(cgIsWallParam, 0);
 	cgSetParameter1i(cgIsModelParam, 1);
 	cgSetParameter3f(cgDiffuseColor,0.0f,0.0f,0.0f);
-	cgSetParameter3f(cgCameraPosition,g_currentCamera.Position().x,g_currentCamera.Position().y,g_currentCamera.Position().z);
+	cgSetParameter3f(cgCameraPosition,g_scene.m_curCamera.Position().x,g_scene.m_curCamera.Position().y,g_scene.m_curCamera.Position().z);
 	cgGLSetTextureParameter(cgDiffuseTexParam, woodTex);
 	draw_model(current_technique);
 
@@ -1005,7 +848,7 @@ void draw_scene(CGtechnique& current_technique)
 		// manipulator.applyTransform();
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
-		g_refCamera.Look();
+		g_scene.m_refCamera.Look();
 	}
 
 	cgGLSetStateMatrixParameter(
@@ -1025,7 +868,7 @@ void draw_scene(CGtechnique& current_technique)
 	cgSetParameter1i(cgIsWallParam, 0);
 	cgSetParameter1i(cgIsModelParam, 1);
 	cgSetParameter3f(cgDiffuseColor,0.0f,0.0f,0.0f);
-	cgSetParameter3f(cgCameraPosition,g_refCamera.Position().x,g_refCamera.Position().y,g_refCamera.Position().z);
+	cgSetParameter3f(cgCameraPosition,g_scene.m_refCamera.Position().x,g_scene.m_refCamera.Position().y,g_scene.m_refCamera.Position().z);
 	cgGLSetTextureParameter(cgDiffuseTexParam, woodTex);
 	draw_model(current_technique);
 
@@ -1106,7 +949,7 @@ void addtionalTracing(int pixelNum)
 	PixelBuffer->setDevicePointer(0, (CUdeviceptr)g_PixelPos);
 	rtContext["PixelNum"]->setInt(pixelNum);
 	rtContext["PixelWidth"]->setInt(length);
-	rtContext["eye_pos"]->setFloat(g_currentCamera.Position().x, g_currentCamera.Position().y, g_currentCamera.Position().z);
+	rtContext["eye_pos"]->setFloat(g_scene.m_curCamera.Position().x, g_scene.m_curCamera.Position().y, g_scene.m_curCamera.Position().z);
 	BasicLight* lightData = static_cast<BasicLight*>(rtLights->map());
 	lightData[0].pos = make_float3(lightPos.x, lightPos.y, lightPos.z);
 	lightData[0].color.x = 1;
@@ -1116,11 +959,11 @@ void addtionalTracing(int pixelNum)
 	rtLights->unmap();
 
 
-	cameraControl(currentTime2,g_currentCamera);
+	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 
 	currentGbuffer.begin();
-	//draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
-	g_scene.draw_model(g_gBufferShader,&g_currentCamera);
+	//draw_scene(cgTechniqueWorldPosNormal,&g_scene.m_curCamera);
+	g_scene.draw_model(g_gBufferShader,&g_scene.m_curCamera);
 	currentGbuffer.end();
 	//currentGbuffer.SaveBMP("worPos.
 	try
@@ -1196,14 +1039,14 @@ void ComputeVecInCuda()
 	glLoadIdentity();
 
 	//Optix_Camare.Look();
-	//g_currentCamera.Look();
-	g_refCamera.Look();
+	//g_scene.m_curCamera.Look();
+	g_scene.m_refCamera.Look();
 
 
 	//cout<<"Last Camera:"<<endl;
-	//g_refCamera.CoutCamera();
+	//g_scene.m_refCamera.CoutCamera();
 	//cout<<"now Camera:"<<endl;
-	//g_currentCamera.CoutCamera();
+	//g_scene.m_curCamera.CoutCamera();
 
 
 
@@ -1235,16 +1078,16 @@ void ComputeVecInCuda()
 	const float *MVPMatf = TMVPMat.get_value();
 
 
-	float3 CameraPos1 = make_float3(g_refCamera.Position().x,g_refCamera.Position().y,g_refCamera.Position().z);
+	float3 CameraPos1 = make_float3(g_scene.m_refCamera.Position().x,g_scene.m_refCamera.Position().y,g_scene.m_refCamera.Position().z);
 
 	//float3 CameraPos2 = make_float3(-2.403542,34.498703,37.004547);
-	float3 CameraPos2 = make_float3(g_currentCamera.Position().x,g_currentCamera.Position().y,g_currentCamera.Position().z);
+	float3 CameraPos2 = make_float3(g_scene.m_curCamera.Position().x,g_scene.m_curCamera.Position().y,g_scene.m_curCamera.Position().z);
 
 
 
 
 
-	TransConstData(g_refCamera.getMvpMat(),g_refCamera.getModelViewMat(),&CameraPos1,&CameraPos2);
+	TransConstData(g_scene.m_refCamera.getMvpMat(),g_scene.m_refCamera.getModelViewMat(),&CameraPos1,&CameraPos2);
 
 
 
@@ -1352,7 +1195,7 @@ void ComputeVector(){
 
 	float3 CameraPos1 = make_float3(-2.403542,34.498703,37.004547);
 
-	float3 CameraPos2 = make_float3(g_currentCamera.Position().x,g_currentCamera.Position().y,g_currentCamera.Position().z);
+	float3 CameraPos2 = make_float3(g_scene.m_curCamera.Position().x,g_scene.m_curCamera.Position().y,g_scene.m_curCamera.Position().z);
 
 	float3 CamerVec = normalize(CameraPos2 - CameraPos1);
 
@@ -1393,7 +1236,7 @@ void ComputeVector(){
 	glLoadIdentity();
 
 	//Optix_Camare.Look();
-	g_currentCamera.Look();
+	g_scene.m_curCamera.Look();
 
 	glGetFloatv(GL_MODELVIEW_MATRIX,modelViewF);
 
@@ -1803,203 +1646,6 @@ void cupRound(int beginTime,int endTime)
 }
 
 
-void cameraControl(int currentTime,CCamera& NowCamera)
-{
-	// cupRound(0,300);
-	// updateGeometry();
-	// if(currentTime==0)
-	// 			g_currentCamera.navigate(posArray[0],posArray[0],currentTime,0,10000);
-	// 	 currentTime++;
-	/*
-	if(currentTime<=300)
-	{
-	//	  g_currentCamera.navigate(posArray[7],posArray[7],currentTime,0,300);
-	}
-	if(currentTime>300)
-	exit(0);
-	currentTime++;
-	// cupRound*/
-	//	cupRound(10*k,12*k);
-	// updateGeometry();
-	//if(once ==0)
-	{
-	if(currentTime<=kk[0])
-	{
-		NowCamera.navigate(posArray[0],posArray[1],currentTime,0,kk[0]);
-	}
-	else if(currentTime<=kk[1])
-	{
-		NowCamera.navigate(posArray[1],posArray[2],currentTime,kk[0],kk[1]);
-	}
-	else if(currentTime<=kk[2])
-	{
-		NowCamera.navigate(posArray[2],posArray[3],currentTime,kk[1],kk[2]);
-	}
-	else if(currentTime<=kk[3])
-	{
-		NowCamera.navigate(posArray[3],posArray[4],currentTime,kk[2],kk[3]);
-	}
-	else if(currentTime<=kk[4])
-	{
-		NowCamera.navigate(posArray[4],posArray[5],currentTime,kk[3],kk[4]);
-	}
-	else if(currentTime<=kk[5])
-	{
-		NowCamera.navigate(posArray[5],posArray[6],currentTime,kk[4],kk[5]);
-	}
-	else if(currentTime<=kk[6])
-	{
-		NowCamera.navigate(posArray[6],posArray[7],currentTime,kk[5],kk[6]);
-	}
-	else if(currentTime<=kk[7])
-	{
-		NowCamera.navigate(posArray[7],posArray[8],currentTime,kk[6],kk[7]);
-	}
-	else if(currentTime<=kk[8])
-	{
-		NowCamera.navigate(posArray[8],posArray[9],currentTime,kk[7],kk[8]);
-	}
-	else if(currentTime<=kk[9])
-	{
-		NowCamera.navigate(posArray[9],posArray[10],currentTime,kk[8],kk[9]);
-	}
-	else if(currentTime<=kk[10])
-	{
-		NowCamera.navigate(posArray[10],posArray[11],currentTime,kk[9],kk[10]);
-	}
-	else if(currentTime<=kk[11])
-	{
-		NowCamera.navigate(posArray[11],posArray[12],currentTime,kk[10],kk[11]);
-	}
-	else if(currentTime<=kk[12])
-	{
-		NowCamera.navigate(posArray[12],posArray[13],currentTime,kk[11],kk[12]);
-	}
-	else if(currentTime<=kk[13])
-	{
-		NowCamera.navigate(posArray[13],posArray[14],currentTime,kk[12],kk[13]);
-	}
-	NowCamera.Look();
-	//once = 1;
-	}
-	//currentTime++;
-
-
-
-	//new paht
-
-
-	// 	 if(currentTime<=kk[0])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[1],posArray[2],currentTime,0,kk[0]);
-	// 	 }
-	// 	 else if(currentTime<=kk[1])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[2],posArray[3],currentTime,kk[0],kk[1]);
-	// 	 }
-	// 	 else if(currentTime<=kk[2])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[3],posArray[4],currentTime,kk[1],kk[2]);
-	// 	 }
-	// 	 else if(currentTime<=kk[3])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[4],posArray[5],currentTime,kk[2],kk[3]);
-	// 	 }
-	// 	 else if(currentTime<=kk[4])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[5],posArray[6],currentTime,kk[3],kk[4]);
-	// 	 }
-	// 	 else if(currentTime<=kk[5])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[6],posArray[7],currentTime,kk[4],kk[5]);
-	// 	 }
-	// 	 else if(currentTime<=kk[6])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[7],posArray[8],currentTime,kk[5],kk[6]);
-	// 	 }
-	// 	 else if(currentTime<=kk[7])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[8],posArray[9],currentTime,kk[6],kk[7]);
-	// 	 }
-	// 	 else if(currentTime<=kk[8])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[9],posArray[10],currentTime,kk[7],kk[8]);
-	// 	 }
-	// 	 else if(currentTime<=kk[9])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[10],posArray[11],currentTime,kk[8],kk[9]);
-	// 	 }
-	// 	 else if(currentTime<=kk[10])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[11],posArray[12],currentTime,kk[9],kk[10]);
-	// 	 }
-	// 	 else if(currentTime<=kk[11])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[12],posArray[13],currentTime,kk[10],kk[11]);
-	// 	 }
-	// 	 else if(currentTime<=kk[12])
-	// 	 {
-	// 		 g_currentCamera.navigate(posArray[13],posArray[14],currentTime,kk[11],kk[12]);
-	// 	 }
-	//else if(currentTime<=kk[13])
-	//{
-	//g_currentCamera.navigate(posArray[13],posArray[14],currentTime,kk[12],kk[13]);
-	// }
-
-}
-# if MerGe
-void GetTracingPixels(){
-
-	dim3 blockSize(32,32,1);
-	dim3 GridSize(rasterWidth/32,rasterHeight/32,1);
-	checkCudaErrors(cudaGraphicsMapResources(1,&cudaRes_ProPixels,0));
-
-	TransProPixel2Cuda(&cudaRes_ProPixels);
-
-	RunFirstPass(blockSize,GridSize,rasterWidth,rasterHeight);
-
-	checkCudaErrors(cudaGraphicsUnmapResources(1, &cudaRes_ProPixels, 0));
-
-	RunCudpp(Host_PixelState,Host_PixelSum);
-
-	PixelsSum = Host_PixelSum[rasterWidth * rasterHeight - 1] + Host_PixelState[rasterWidth * rasterHeight - 1];
-	//cout<<PixelsSum<<endl;
-	checkCudaErrors(cudaMalloc((void**)&Dev_PixelPos,PixelsSum*sizeof(unsigned int)));
-
-	RunThridPass(blockSize,GridSize,Dev_PixelPos);
-
-	//if(currentTime2 >0){
-	if(0){
-		unsigned *Host_PixPos;
-		Host_PixPos = (unsigned*)malloc(PixelsSum*sizeof(unsigned int));
-		checkCudaErrors(cudaMemcpy(Host_PixPos,Dev_PixelPos,PixelsSum*sizeof(unsigned),cudaMemcpyDeviceToHost));
-
-		cout<<"Pixel states:"<<endl;
-		for(int i = 0;i< rasterHeight* rasterWidth;i++)
-			cout<<Host_PixelState[i]<<endl;
-		cout<<endl<<"Pixel Sums:"<<endl;
-		for(int i = 0;i< rasterHeight* rasterWidth;i++)
-			cout<<Host_PixelSum[i]<<endl;
-
-		cout<<endl<<"Pixel Pos"<<endl;
-		for(int i = 0;i<PixelsSum;i++)
-			cout<<Host_PixPos[i]%rasterWidth<<" "<<Host_PixPos[i]/rasterWidth<<endl;
-		free(Host_PixPos);
-	}
-	cout<<"tracing num: "<<PixelsSum<<"rate: "<<PixelsSum/(1024*1024*1.0)<<endl;
-
-
-
-
-
-
-
-
-
-
-}
-#endif
-
 
 void DrawQuad(){
 
@@ -2044,17 +1690,18 @@ void optixRendering()
 		// sutilCurrentTime(&display_start);
 		g_timeMesure.setBeginTime(display_start);
 	}
-	CVector3& pos =g_refCamera.Position();
-	cameraControl(currentTime,g_refCamera);
-	cameraControl(currentTime2,g_currentCamera);
-	//g_refCamera = g_currentCamera;
+	CVector3& pos =g_scene.m_refCamera.Position();
+	g_scene.cameraControl(currentTime,g_scene.m_refCamera);
+	//g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
+	
+	g_scene.m_refCamera = g_scene.m_curCamera;
 	currentGbuffer.begin();
-	//draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);
+	//draw_scene(cgTechniqueWorldPosNormal,&g_scene.m_refCamera);
 	//currentGbuffer.SaveBMP("test/worldPos.bmp",0);
-	g_scene.draw_model(g_gBufferShader,&g_refCamera);
+	g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
 	currentGbuffer.end();
 
-	rtContext["eye_pos"]->setFloat(g_currentCamera.Position().x, g_currentCamera.Position().y, g_currentCamera.Position().z);
+	rtContext["eye_pos"]->setFloat(g_scene.m_curCamera.Position().x, g_scene.m_curCamera.Position().y, g_scene.m_curCamera.Position().z);
 	try
 	{
 		if (stat_breakdown) 
@@ -2127,10 +1774,10 @@ void optixRendering()
 	if (pTexture)
 	   delete[] pTexture;
 	nv::vec3f floorPos = nv::vec3f(worldPos.x,worldPos.y,worldPos.z);
-	nv::vec3f lateCameraPos = g_refCamera.getCameraPos();
-	nv::vec3f cameraPos = g_currentCamera.getCameraPos();
+	nv::vec3f lateCameraPos = g_scene.m_refCamera.getCameraPos();
+	nv::vec3f cameraPos = g_scene.m_curCamera.getCameraPos();
 
-	cameraPos = g_currentCamera.getCameraPos();
+	cameraPos = g_scene.m_curCamera.getCameraPos();
 	
 	nv::vec3f V = normalize(floorPos-cameraPos);
 	nv::vec3f reflectDirction = normalize( reflect(V, floorNomral));
@@ -2150,7 +1797,7 @@ void optixRendering()
 	float delta = dot(mirrorPosToCamera,floorNomral);
 	nv::vec3f intersectPos = mirrorPos+ toFloorDis/delta*mirrorPosToCamera;
 	
-	nv::matrix4f mvp = g_refCamera.getMvpMat();
+	nv::matrix4f mvp = g_scene.m_refCamera.getMvpMat();
 	nv::vec4f temp = (mvp*nv::vec4f(intersectPos,1));
 	temp /= temp.w;
 	temp.x = temp.x*0.5+0.5;
@@ -2177,14 +1824,15 @@ void optixRendering()
 	currentGbuffer.begin();
 
 	//New_drawscene(cgTechniqueGlossyReflections);
-	//draw_scene(cgTechniqueGlossyReflections,&g_refCamera);
+	//draw_scene(cgTechniqueGlossyReflections,&g_scene.m_refCamera);
 	//testRendering();
-     g_scene.draw_model(g_reflectionShader,&g_refCamera);
+	
+     g_scene.draw_model(g_reflectionShader,&g_scene.m_refCamera);
 	currentGbuffer.end();
 
 	char str[100];
-	sprintf(str,"./test/optix%d_%d.bmp",currentTime,currentTime2);
-	currentGbuffer.SaveBMP(str,0);
+	//sprintf(str,"./test/optix%d_%d.bmp",currentTime,currentTime2);
+	//currentGbuffer.SaveBMP(str,0);
 	glFinish();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);     // bind the screen FBO
@@ -2246,7 +1894,7 @@ void init_RefcletTex()
 		int FrameNums = i*TIMEGAP;
 		RefFrame & frame = RefFrame::getFrameByIndex(i);
 		CCamera camera = frame.getCamera();
-		cameraControl(FrameNums,camera);
+		g_scene.cameraControl(FrameNums,camera);
 
 		frame.getGbuffer().begin();
 		g_scene.draw_model(g_gBufferShader,&camera);
@@ -2365,19 +2013,19 @@ void tcRendering()
 		//sutilCurrentTime(&frameStartTime);
 		g_timeMesure.setBeginTime(frameStartTime);
 	}
-	cameraControl(currentTime2,g_currentCamera);
+	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 	
 	OptixFrame = currentTime2 /JianGe;
 	if(currentTime2 /JianGe> 5)
 		OptixFrame++;
 
-	cameraControl(OptixFrame*10,g_refCamera);
+	g_scene.cameraControl(OptixFrame*10,g_scene.m_refCamera);
 	//test();
 	
 	refGbuffer.begin();
-	//draw_scene(cgTechniqueWorldPosNormal,&g_refCamera);
-   g_scene.draw_model(g_gBufferShader,&g_refCamera);
-	//draw_scene(g_gBufferShader,&g_refCamera);
+	//draw_scene(cgTechniqueWorldPosNormal,&g_scene.m_refCamera);
+   g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
+	//draw_scene(g_gBufferShader,&g_scene.m_refCamera);
 	//refGbuffer.SaveBMP("./test/gbuffer.bmp",0);
 	refGbuffer.end();
 	
@@ -2402,7 +2050,7 @@ void tcRendering()
 	//   cudaEventCreate(&stop);
 
 	// cudaEventRecord(start,0);
-	ComputeVecInCuda();
+ 	ComputeVecInCuda();
 	fflush(stdout);
 	//checkCudaErrors(cudaGraphicsUnregisterResource(cudaRes_Reflect));
 	//    cudaEventRecord(stop,0);
@@ -2480,8 +2128,8 @@ void tcRendering()
 	//TransMapFbo.SaveBMP(str,0);
 		glViewport(0,0, traceWidth, traceHeight);
 	currentGbuffer.begin();
-	//draw_scene(cgTechniqueWorldPosNormal,&g_currentCamera);
-	g_scene.draw_model(g_gBufferShader,&g_currentCamera);
+	//draw_scene(cgTechniqueWorldPosNormal,&g_scene.m_curCamera);
+	g_scene.draw_model(g_gBufferShader,&g_scene.m_curCamera);
 	currentGbuffer.SaveBMP("./test/debugPic.bmp",0);
 	currentGbuffer.end();
 	
@@ -2541,8 +2189,8 @@ void tcRendering()
 
 	g_reflectionShader.setReflectMap(MergeEffectFbo.getTexture(0));
 	currentGbuffer.begin();
-	//draw_scene(cgTechniqueGlossyReflections,&g_currentCamera);
-	g_scene.draw_model(g_reflectionShader,&g_currentCamera);
+	//draw_scene(cgTechniqueGlossyReflections,&g_scene.m_curCamera);
+	g_scene.draw_model(g_reflectionShader,&g_scene.m_curCamera);
 	currentGbuffer.SaveBMP("./test/blending.bmp",0);
 	currentGbuffer.end();
 
@@ -2701,7 +2349,7 @@ void resize(int w, int h)
 
 void idle()
 {
-	g_currentCamera.Update();
+	g_scene.m_curCamera.Update();
 	// Optix_Camare.Update();
 	//  manipulator.idle();
 	glutPostRedisplay();
@@ -2800,7 +2448,7 @@ void keyboard(unsigned char k, int x, int y)
 		}
 		break;
 	case 'p':
-		printf("{make_float3(%f,%f,%f  ),make_float3(%f,%f,%f )},\n",g_currentCamera.Position().x,g_currentCamera.Position().y,g_currentCamera.Position().z,g_currentCamera.View().x,g_currentCamera.View().y,g_currentCamera.View().z);
+		printf("{make_float3(%f,%f,%f  ),make_float3(%f,%f,%f )},\n",g_scene.m_curCamera.Position().x,g_scene.m_curCamera.Position().y,g_scene.m_curCamera.Position().z,g_scene.m_curCamera.View().x,g_scene.m_curCamera.View().y,g_scene.m_curCamera.View().z);
 		break;
 		/*case 's':
 		logReflectionSamplingRate += 1;

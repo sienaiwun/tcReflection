@@ -96,6 +96,8 @@ static posPara glossyArray[] =
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
 
 };
+static float k = 1800/25.0;
+static float glossySequence[14]={0,2*k,4*k,5*k,7*k,10*k,13*k,15*k,19*k,21*k,23*k,25*k,25*k,25*k};
 glossyScene::glossyScene()
 {
 	m_objectNum = geoNumber;	
@@ -103,4 +105,5 @@ glossyScene::glossyScene()
 	m_pObjectDis = glossyObj;
 	 m_pMatDis = glossyMat;
 	 m_posArray = glossyArray;
+	 m_timeSequence = std::vector<int>(glossySequence,glossySequence+sizeof(glossySequence)/sizeof(glossySequence[0]));
 }

@@ -517,8 +517,8 @@ float w3[16] =
 
 };
 
-extern int currentTime;
-extern float k;
+static int currentTime;
+static float k;
 float step = currentTime/fallTime;
 void MutiMatrix9(float * Matrix,float x,float y,float z,float &outx,float &outy,float &outz)
 

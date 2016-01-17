@@ -1,4 +1,13 @@
 #include "scene.h"
+#include <algorithm>
+scene::scene()
+{
+		m_pObjectDis = 0;
+		m_pMatDis = 0;
+		m_posArray = 0;
+		m_ptimeMesure = 0;
+		
+}
 void scene::draw_model(glslShader& shader,CCamera *pCamera)
 {
 	CHECK_ERRORS();
@@ -21,6 +30,20 @@ void scene::draw_model(glslShader& shader,CCamera *pCamera)
 		m_geometryArray[i].drawGeometry(shader,0);
 	}
 	shader.end();
+}
+
+void scene::cameraControl(int currentTime,CCamera& NowCamera)
+{
+	assert(m_timeSequence.size()>0);
+	assert(m_posArray);
+
+	std::vector<int>::iterator up;
+	//low = std::lower_bound (m_timeSequence.begin(), m_timeSequence.end(), currentTime); //   m_timeSequence.
+	up = std::upper_bound  (m_timeSequence.begin(), m_timeSequence.end(), currentTime); //   m_timeSequence.
+	int lowId = std::distance(m_timeSequence.begin(),up)-1;
+	int highId = lowId+1;
+	NowCamera.navigate(m_posArray[lowId],m_posArray[highId],currentTime,m_timeSequence[lowId],m_timeSequence[highId]);
+	NowCamera.Look();
 }
 void scene::draw_model(CGtechnique& tech,CCamera *pCamera)
 {
@@ -52,6 +75,9 @@ void scene::optixInit()
 			m_geometrygroup->setChild(i, geoInstance[i]);
 	m_geometrygroup->setAcceleration( (*pContext)->createAcceleration("Bvh","Bvh") );
 	(*pContext)["reflectors"]->set(m_geometrygroup);
+	(*pContext)["lightPos"]->set3fv((const float*)&make_float3(getLightPos().x,
+			getLightPos().y,
+			getLightPos().z));
 }
 //
 //void updateGeometry( )

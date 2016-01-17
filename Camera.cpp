@@ -155,90 +155,44 @@ void CCamera::PositionCamera(float positionX, float positionY, float positionZ,
 /////	This allows us to look around using the mouse, like in most first person games.
 /////
 ///////////////////////////////// SET VIEW BY MOUSE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
-
+inline void normalizeR(float *v)
+	{
+		float magnitude = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+		v[0] /= magnitude;
+		v[1] /= magnitude;
+		v[2] /= magnitude;
+	}
 void CCamera::SetViewByMouse()
 {
-	POINT mousePos;									// This is a window structure that holds an X and Y
-	int middleX = SCREEN_WIDTH  >> 1;				// This is a binary shift to get half the width
-	int middleY = SCREEN_HEIGHT >> 1;				// This is a binary shift to get half the height
-	float angleY = 0.0f;							// This is the direction for looking up or down
-	float angleZ = 0.0f;							// This will be the value we need to rotate around the Y axis (Left and Right)
-	static float currentRotX = 0.0f;
-	
-	// Get the mouse's current X,Y position
-	GetCursorPos(&mousePos);						
-	
-	// If our cursor is still in the middle, we never moved... so don't update the screen
-	if( (mousePos.x == middleX) && (mousePos.y == middleY) ) return;
+#define sensitivity  0.005f
+	 
+	float rot_x, rot_y;
+	float rot_axis[3];
 
-	// Set the mouse position to the middle of our window
-	SetCursorPos(middleX, middleY);							
+	POINT mousePos;	
 
-	// Get the direction the mouse moved in, but bring the number down to a reasonable amount
-	angleY = (float)( (middleX - mousePos.x) ) / 500.0f;		
-	angleZ = (float)( (middleY - mousePos.y) ) / 500.0f;		
+	GetCursorPos(&mousePos);	// 获得鼠标的当前位置
 
-	static float lastRotX = 0.0f; 
- 	lastRotX = currentRotX; // We store off the currentRotX and will use it in when the angle is capped
-	
-	// Here we keep track of the current rotation (for up and down) so that
-	// we can restrict the camera from doing a full 360 loop.
-	currentRotX += angleZ;
- 
-	// If the current rotation (in radians) is greater than 1.0, we want to cap it.
-	if(currentRotX > 1.0f)     
+	rot_x = -(float)(mousePos.x - old_x) *sensitivity;
+	rot_y = -(float)(mousePos.y - old_y) *sensitivity;
+
+	old_x = mousePos.x;
+	old_y = mousePos.y;
+
+	CVector3 direction = m_vView-m_vPosition;
+	float * vView = (float*)&direction;
+	if(GetKeyState(VK_LBUTTON) & 0x80)
 	{
-		currentRotX = 1.0f;
-		
-		// Rotate by remaining angle if there is any
-		if(lastRotX != 1.0f) 
-		{
-			// To find the axis we need to rotate around for up and down
-			// movements, we need to get a perpendicular vector from the
-			// camera's view vector and up vector.  This will be the axis.
-			// Before using the axis, it's a good idea to normalize it first.
-			CVector3 vAxis = Cross(m_vView - m_vPosition, m_vUpVector);
-			vAxis = Normalize(vAxis);
-				
-			// rotate the camera by the remaining angle (1.0f - lastRotX)
-			RotateView( 1.0f - lastRotX, vAxis.x, vAxis.y, vAxis.z);
-		}
-	}
-	// Check if the rotation is below -1.0, if so we want to make sure it doesn't continue
-	else if(currentRotX < -1.0f)
-	{
-		currentRotX = -1.0f;
-		
-		// Rotate by the remaining angle if there is any
-		if(lastRotX != -1.0f)
-		{
-			// To find the axis we need to rotate around for up and down
-			// movements, we need to get a perpendicular vector from the
-			// camera's view vector and up vector.  This will be the axis.
-			// Before using the axis, it's a good idea to normalize it first.
-			CVector3 vAxis = Cross(m_vView - m_vPosition, m_vUpVector);
-			vAxis = Normalize(vAxis);
-			
-			// rotate the camera by ( -1.0f - lastRotX)
-			RotateView( -1.0f - lastRotX, vAxis.x, vAxis.y, vAxis.z);
-		}
-	}
-	// Otherwise, we can rotate the view around our position
-	else 
-	{	
-		// To find the axis we need to rotate around for up and down
-		// movements, we need to get a perpendicular vector from the
-		// camera's view vector and up vector.  This will be the axis.
-		// Before using the axis, it's a good idea to normalize it first.
-		CVector3 vAxis = Cross(m_vView - m_vPosition, m_vUpVector);
-		vAxis = Normalize(vAxis);
-	
-		// Rotate around our perpendicular axis
-		RotateView(angleZ, vAxis.x, vAxis.y, vAxis.z);
-	}
+		RotateView(rot_x, 0.0f, 1.0f, 0.0f);
 
-	// Always rotate the camera around the y-axis
-	RotateView(angleY, 0, 1, 0);
+		rot_axis[0] = -vView[2];
+		rot_axis[1] = 0.0f;
+		rot_axis[2] = vView[0];
+
+		normalizeR(rot_axis);
+
+		RotateView(rot_y, rot_axis[0], rot_axis[1], rot_axis[2]);
+	}
 }
 
 
@@ -277,6 +231,8 @@ void CCamera::RotateView(float angle, float x, float y, float z)
 	// Now we just add the newly rotated vector to our position to set
 	// our new rotated view of our camera.
 	m_vView = m_vPosition + vNewView;
+
+
 }
 
 
@@ -397,31 +353,13 @@ void CCamera::Update()
 void CCamera::Look()
 {
 	// Give OpenGL our camera position, then camera view, then camera up vector
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-	gluLookAt(m_vPosition.x, m_vPosition.y, m_vPosition.z,	
-			  m_vView.x,	 m_vView.y,     m_vView.z,	
-			  m_vUpVector.x, m_vUpVector.y, m_vUpVector.z);
-	float m[16] = {0},p[16] = {0};
-	glGetFloatv(GL_MODELVIEW_MATRIX, m);
-	m_modelView.set_value(m);
-
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-
-	//glMultMatrixf(ViewMat);
-
-	glGetFloatv(GL_PROJECTION_MATRIX,p);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-
-	nv::matrix4f projMat;
-	projMat.set_value(p);
-	m_mvpMat =  projMat * m_modelView;
-
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
+	#define squire3 (1.732050807/3)
+	m_modelView = nv::matrix4f::lookAt(nv::vec3f(m_vPosition.x, m_vPosition.y, m_vPosition.z),	
+			 nv::vec3f( m_vView.x,	 m_vView.y,     m_vView.z),	
+			  nv::vec3f(m_vUpVector.x, m_vUpVector.y, m_vUpVector.z));
+	m_projMat = nv::matrix4f::frustum(-squire3,squire3,-squire3,squire3,1,1000);
+	m_mvpMat =  m_projMat * m_modelView;
+	
 }
 
 

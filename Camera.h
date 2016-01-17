@@ -104,7 +104,7 @@ public:
 	// This returns the inverse to the current modelview matrix in OpenGL
 	void GetInverseMatrix(float mCameraInverse[16]);
 	void navigate(posPara pos1,posPara pos2,int currentTime,int startTime,int endTime);
-
+	
 
 	void CoutCamera();
 
@@ -124,10 +124,7 @@ public:
 	{
 		return nv::vec3f(m_vPosition.x,m_vPosition.y,m_vPosition.z);
 	}
-		//printf("aasd\n");
-		//printf("%f %f %f\n%f %f %f\n%f %f %f\n",m_vPosition.x,m_vPosition.y,m_vPosition.z,m_vView.x,m_vView.y,m_vView.z,m_vUpVector.x,m_vUpVector.y,m_vUpVector.z);
 private:
-
 	// The camera's position
 	CVector3 m_vPosition;					
 
@@ -142,6 +139,8 @@ private:
 
 	nv::matrix4f m_modelView;
 	nv::matrix4f m_mvpMat;
+	nv::matrix4f m_projMat;
+	float old_x ,old_y;
 };
 
 

@@ -4,6 +4,7 @@
 #include "Camera.h"
 #include "glslShader.h"
 #include "MyMeterial .h"
+#include <vector> 
 #ifndef SCENEH
 #define SCENEH
 class TimeMesure;
@@ -11,14 +12,12 @@ class scene
 {
 	
 public:
-	scene()
-	{
-		
-	}
+	scene();
 	void optixInit() ;
 	void init() ;
 	void draw_model(glslShader& shader,CCamera* pCamera = 0);
 	void draw_model(CGtechnique& tech,CCamera* pCamera = 0);
+	virtual void cameraControl(int currentTime,CCamera& NowCamera);
 	inline void setOptix(optix::Context * p)
 	{
 		pContext = p;
@@ -56,15 +55,17 @@ public:
 	nv::vec3f m_lightPos;
 	optix::GeometryGroup m_geometrygroup;
 	optix::Context *pContext;
-	CCamera m_freeCamera;
+	CCamera m_refCamera;
+	CCamera m_curCamera;
+	
 
 protected:
 	GeoPara * m_pObjectDis;
 	MyMeterial * m_pMatDis;
 	posPara * m_posArray;
 	TimeMesure * m_ptimeMesure;
-
-	CCamera m_refCamera;
-	CCamera m_curCamera;
+	std::vector<int> m_timeSequence;
+	int m_timeSlice;
+	
 };
 #endif
