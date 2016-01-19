@@ -189,6 +189,8 @@ public:
 			//printf("is NotEqual");
 			return 0;
 		}
+		return 1;  
+		// no need to do futher check; nearest sampling
 		pixelPlane.setReflectedPos(*this);
 		float DisPoint2Line;
 		DisPoint2Line = pixelPlane.getDisToPath();
@@ -763,13 +765,17 @@ __device__ int nextThreeStep(float2 moveVec,float2* candicate1,float2* candicate
 	}
 	return 1;
 }
-#define CONVERGE 1
+#define CONVERGE 5
 #define OUTRANGE 2
 #define OUTOBJECT 3
 #define FASTPROJT 4
 __device__ int Floor2Int(float f)
 {
 	return (int)f+0.5;
+}
+__device__ int isOutOfRange(float2 tc)
+{
+	return tc.x>rasterWidth-0.5||tc.y>rasterHeight-0.5||tc.x<0||tc.y<0;
 }
 __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 {
@@ -780,9 +786,9 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	float2 currentUv = make_float2(currentPlace.x,currentPlace.y);
 
 	Plane fittingPlane(currentUv);
-	/*
-	if(x!=677||y!=568)
-	     return;
+	
+	/*if(x!=334||y!=207)
+	   return;
 	*/
 	//printf("1Class: (%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
 	//�����������ľ���
@@ -798,7 +804,9 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	
 	float3 worldPos = fittingPlane.m_worldPos;
 	float3 worldNormal = fittingPlane.m_worldNormal;
-	/*printf("x,y:%d,%d\n",x,y);
+	
+	/*
+	printf("x,y:%d,%d\n",x,y);
 	printf("pos:(%f,%f,%f)\n",worldPos.x,worldPos.y,worldPos.z);
 	printf("normal:(%f,%f,%f)\n",worldNormal.x,worldNormal.y,worldNormal.z);
 	printf("reflected pos:(%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
@@ -809,7 +817,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	*/
 	if(fittingPlane.isAbleFastProj(ProPosUv))
 	{
-		d_cudaPboBuffer[index] =   make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,FASTPROJT,rejectDepth);
+		d_cudaPboBuffer[index] =   make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,FASTPROJT);
 		//printf("fitting");
 		return FASTPROJT;
 	}
@@ -851,6 +859,12 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		/*TmpUv1+=currentUv;
 		TmpUv2+=currentUv;
 		TmpUv3+=currentUv;*/
+		if(isOutOfRange(TmpUv1)||isOutOfRange(TmpUv2)||isOutOfRange(TmpUv3))
+		{
+			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTOBJECT);
+		  
+			return OUTOBJECT;
+		}
 		Plane pixelPlane1(TmpUv1),pixelPlane2(TmpUv2),pixelPlane3(TmpUv3);
 		pixelPlane1.setReflectedPos(fittingPlane);
 		pixelPlane2.setReflectedPos(fittingPlane);
@@ -874,8 +888,8 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		{	
 			//printf("invalid\n");
 			
-			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,OUTOBJECT,rejectDepth);
-		    // printf("@x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
+			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTOBJECT);
+		   // printf("@x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
 			return OUTOBJECT;
 		}
@@ -914,7 +928,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 			*moveToVec = currentUv;
 			if(length(MoveVec)<15&&minDis<5)
 			{
-				d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,CONVERGE,rejectDepth);
+				d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
 				//printf("Converge\n");
 				return CONVERGE;
 			}
@@ -946,7 +960,8 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		*/
 		IterTime++;
 	}
-	d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,OUTRANGE,rejectDepth);
+	d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,-0.1,OUTOBJECT);
+				
 	//printf("！x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
 	
@@ -1790,10 +1805,12 @@ extern "C"  void cudaRelateTex(CudaTexResourse * pResouce)
 	else if(worldNormalRef_t == pResouce->getType())
 	{
 		checkCudaErrors(cudaBindTextureToArray(cuda_WorlNormal_Tex,tmpcudaArray,channelDesc));
+		cuda_WorlNormal_Tex.filterMode = cudaFilterModePoint;
 	}
 	else if(reflecionRef_t ==  pResouce->getType())
 	{
 		checkCudaErrors(cudaBindTextureToArray(cuda_Reflect_Tex,tmpcudaArray,channelDesc));
+		cuda_Reflect_Tex.filterMode = cudaFilterModePoint;
 	}
 	else if(finalEffect_t == pResouce->getType())
 	{

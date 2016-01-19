@@ -89,7 +89,7 @@ optix::GeometryGroup geometrygroup;
 //uint *Host_PixelSum;
 //MyGeometry teapot;
 int CountTime = 1000;
-TimeMesure g_timeMesure(optixRenderingType,CountTime);
+TimeMesure g_timeMesure(tcRenderingType,CountTime);
 nv::vec3f viewDependentMissColor = nv::vec3f(255,0,0);
 nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 //cudaGraphicsResource *cudaRes_WorldNormal,*cudaRes_WorldPos,*cudaRes_Reflect;
@@ -112,8 +112,8 @@ reflectShader g_reflectionShader;
 BlendShader g_blendShader;
 
 
-#include "livingRoom.h"
-livingRoom g_scene;
+#include "toiletScene.h"
+toiletScene g_scene;
 
 
 int currentTime  = 0;
@@ -282,7 +282,7 @@ void IniteMyVBO(){
 	for(int x = 0;x<rasterWidth;x++)
 		for(int y = 0;y<rasterHeight;y++)
 		{
-		/*	if(x==128&&y==245)
+			/*if(x==476&&y==326)
 				;
 			else
 				continue;*/
@@ -293,11 +293,11 @@ void IniteMyVBO(){
 
 			Vertices[PointId++] =  make_float2((float)(x+1.5+EDGEDELTA)/rasterWidth,(float)(y+0.5-EDGEDELTA)/rasterHeight);
 			Vertices[PointId++] =  make_float2((float)(x+1.5+EDGEDELTA)/rasterWidth,(float)(y+1.5+EDGEDELTA)/rasterHeight);
-
+			
 			Vertices[PointId++] = make_float2((float)(x+0.5-EDGEDELTA)/rasterWidth,(float)(y+0.5-EDGEDELTA)/rasterHeight);
 			Vertices[PointId++] =  make_float2((float)(x+1.5+EDGEDELTA)/rasterWidth,(float)(y+1.5+EDGEDELTA)/rasterHeight);
 			Vertices[PointId++] =  make_float2((float)(x+0.5-EDGEDELTA)/rasterWidth,(float)(y+1.5+EDGEDELTA)/rasterHeight);
-
+			
 		}
 
 		MyCallList = glGenLists(1);
@@ -995,7 +995,7 @@ void addtionalTracing(int pixelNum)
 	memset(pTexture, 0, rasterWidth* rasterHeight * 3 * sizeof(BYTE));
 
 	glBindTexture(GL_TEXTURE_2D, reflectionMapTex_Now);//TexPosId   PboTex
-
+	 
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
 
 	int w = rasterWidth;
@@ -1622,31 +1622,6 @@ void drawText( const std::string& text, float x, float y, void* font )
 
 
 
-float delta;
-float height1= 85;
-float height2= 44;
-float height3= 12;
-float g_lerp = 0;
-void cupRound(int beginTime,int endTime)
-{
-	if(currentTime<beginTime)
-	{
-		delta = 1000;
-	}	
-	else if(currentTime<endTime)
-	{
-		g_lerp = (currentTime-beginTime)*1.0f/(endTime-beginTime);
-		delta = (1-g_lerp)*(height3);
-	}
-	else
-	{
-		delta = 0;	
-	}
-	//  delta = 0;	
-}
-
-
-
 void DrawQuad(){
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1676,10 +1651,7 @@ void DrawQuad(){
 	glMatrixMode(GL_MODELVIEW);
 	glPopMatrix();
 }
-nv::vec3f reflect(const nv::vec3f & i, const nv::vec3f & n)
-{
-  return i - 2.0f * n * dot(n,i);
-}
+
 void testRendering();
 void optixRendering()
 {
@@ -1692,9 +1664,9 @@ void optixRendering()
 	}
 	CVector3& pos =g_scene.m_refCamera.Position();
 	g_scene.cameraControl(currentTime,g_scene.m_refCamera);
-	//g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
-	
-	g_scene.m_refCamera = g_scene.m_curCamera;
+//	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
+
+	g_scene.m_curCamera = g_scene.m_refCamera;
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_scene.m_refCamera);
 	//currentGbuffer.SaveBMP("test/worldPos.bmp",0);
@@ -1831,10 +1803,9 @@ void optixRendering()
 	currentGbuffer.end();
 
 	char str[100];
-	//sprintf(str,"./test/optix%d_%d.bmp",currentTime,currentTime2);
-	//currentGbuffer.SaveBMP(str,0);
-	glFinish();
-
+	sprintf(str,"./test/glossy%d_%d.bmp",currentTime,currentTime2);
+	currentGbuffer.SaveBMP(str,0);
+	
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);     // bind the screen FBO
 	glViewport(0, 0, rasterWidth , rasterHeight);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);   
@@ -2110,7 +2081,7 @@ void tcRendering()
 
 	TransMapFbo.BindForWrite(0); 
 	drawTransMap(OptixFrame);
-	TransMapFbo.debugPixel(0,682,577);
+	TransMapFbo.debugPixel(0,346,219);
 	TransMapFbo.end();
 	char str[100];
 	sprintf(str,"test/tttransMap%d.bmp",currentTime2);
@@ -2126,7 +2097,7 @@ void tcRendering()
 
 #endif
 	//TransMapFbo.SaveBMP(str,0);
-		glViewport(0,0, traceWidth, traceHeight);
+	glViewport(0,0, traceWidth, traceHeight);
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_scene.m_curCamera);
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_curCamera);
@@ -2349,7 +2320,8 @@ void resize(int w, int h)
 
 void idle()
 {
-	g_scene.m_curCamera.Update();
+	//g_scene.m_curCamera.Update();
+	g_scene.update();
 	// Optix_Camare.Update();
 	//  manipulator.idle();
 	glutPostRedisplay();
@@ -2468,10 +2440,12 @@ void keyboard(unsigned char k, int x, int y)
 		*/
 	
 	case '=':
-		currentTime2++;
+		//currentTime2++;
+		currentTime++;
 		break;
 	case '-':
-		currentTime2--;
+		//currentTime2--;
+		currentTime--;
 		break;
 
 		// Optix_Camare.CoutCamera();

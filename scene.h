@@ -17,6 +17,7 @@ public:
 	void init() ;
 	void draw_model(glslShader& shader,CCamera* pCamera = 0);
 	void draw_model(CGtechnique& tech,CCamera* pCamera = 0);
+	virtual void update();
 	virtual void cameraControl(int currentTime,CCamera& NowCamera);
 	inline void setOptix(optix::Context * p)
 	{
@@ -66,6 +67,7 @@ protected:
 	TimeMesure * m_ptimeMesure;
 	std::vector<int> m_timeSequence;
 	int m_timeSlice;
+	int m_hasGlossy;
 	
 };
 #endif

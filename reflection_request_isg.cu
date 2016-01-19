@@ -24,6 +24,7 @@ rtDeclareVariable(int,   FrameCount, , );
 
 rtDeclareVariable(int,   PixelNum, , );
 rtDeclareVariable(int,   PixelWidth, , );
+rtDeclareVariable(int,   hasGlossy, , );
 
 rtDeclareVariable(uint2, launch_index, rtLaunchIndex, );
 
@@ -163,7 +164,7 @@ RT_PROGRAM void addition_request()
  
   if( !isnan(ray_origin.x) ) 
   {
-    if(1)
+    if(!hasGlossy)
 	{
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, x, y));
@@ -184,7 +185,7 @@ RT_PROGRAM void addition_request()
 		return;	 
 	}
 	float3 V = normalize(ray_origin-eye_pos);
-    float3 normal = make_float3(tex2D(normal_texture, launch_index.x, launch_index.y));
+    float3 normal = make_float3(tex2D(normal_texture, x, y));
 	float3 ray_direction = normalize(reflect(V, normal));
 	float3 xo, yo;
     createONB(ray_direction, xo, yo);
@@ -222,7 +223,7 @@ RT_PROGRAM void addition_request()
 	float avgDepth;
 	color = (sumColor)/usefulSample; 
 	avgDepth = depthSum/usefulSample;
-	reflection_buffer[launch_index] = make_float4(color, avgDepth);
+	reflection_buffer[FinalPixelPos] = make_float4(color, avgDepth);
   }
 }
 RT_PROGRAM void reflection_request()
@@ -253,7 +254,7 @@ RT_PROGRAM void reflection_request()
  
   if( !isnan(ray_origin.x) ) 
   {
-    if(1)
+    if(!hasGlossy)
 	{
 
 		float3 V = normalize(ray_origin-eye_pos);
@@ -322,9 +323,6 @@ RT_PROGRAM void reflection_request()
 	
 	float avgDepth;
 	color = (sumColor)/usefulSample; 
-	//rtPrintf("sumColor:(%f,%f,%f),count:%d\n",sumColor.x,sumColor.y,sumColor.z,usefulSample);
-	
-	//rtPrintf("color:(%f,%f,%f)\n",color.x,color.y,color.z);
 	avgDepth = depthSum/usefulSample;
 	
 

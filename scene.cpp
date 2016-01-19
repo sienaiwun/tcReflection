@@ -6,6 +6,7 @@ scene::scene()
 		m_pMatDis = 0;
 		m_posArray = 0;
 		m_ptimeMesure = 0;
+		m_hasGlossy = 0;
 		
 }
 void scene::draw_model(glslShader& shader,CCamera *pCamera)
@@ -36,7 +37,7 @@ void scene::cameraControl(int currentTime,CCamera& NowCamera)
 {
 	assert(m_timeSequence.size()>0);
 	assert(m_posArray);
-
+	
 	std::vector<int>::iterator up;
 	//low = std::lower_bound (m_timeSequence.begin(), m_timeSequence.end(), currentTime); //   m_timeSequence.
 	up = std::upper_bound  (m_timeSequence.begin(), m_timeSequence.end(), currentTime); //   m_timeSequence.
@@ -44,6 +45,11 @@ void scene::cameraControl(int currentTime,CCamera& NowCamera)
 	int highId = lowId+1;
 	NowCamera.navigate(m_posArray[lowId],m_posArray[highId],currentTime,m_timeSequence[lowId],m_timeSequence[highId]);
 	NowCamera.Look();
+}
+void scene::update()
+{
+	m_refCamera.Update();
+	m_curCamera.Update();
 }
 void scene::draw_model(CGtechnique& tech,CCamera *pCamera)
 {
@@ -78,6 +84,7 @@ void scene::optixInit()
 	(*pContext)["lightPos"]->set3fv((const float*)&make_float3(getLightPos().x,
 			getLightPos().y,
 			getLightPos().z));
+	(*pContext)["hasGlossy"]->setInt(m_hasGlossy);
 }
 //
 //void updateGeometry( )
