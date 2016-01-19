@@ -2081,7 +2081,7 @@ void tcRendering()
 
 	TransMapFbo.BindForWrite(0); 
 	drawTransMap(OptixFrame);
-	TransMapFbo.debugPixel(0,346,219);
+	TransMapFbo.debugPixel(0,519,567);
 	TransMapFbo.end();
 	char str[100];
 	sprintf(str,"test/tttransMap%d.bmp",currentTime2);

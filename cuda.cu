@@ -308,6 +308,15 @@ public:
 		//printf("!proPosUv(%f,%f)\n",ProPosUv.x,ProPosUv.y);
 		return length(m_tc-ProPosUv)<CONVERGETHRES;
 	}
+	__device__ float getSpherDistance()
+	{
+		float3 inComeDirection = m_worldPos - m_reflectPos;
+		float3 LookVec = normalize(inComeDirection);
+		//计算反射光线方向
+		float3 reflectVec = normalize(reflect(LookVec,m_worldNormal));
+		float3 cuttingPoint = m_worldPos+reflectVec*(dot(d_newCameraPos-m_worldPos,reflectVec));
+		return length(cuttingPoint-d_newCameraPos);
+	}
 	__device__ float getDisToPath()
 	{
 		if(isInValid())
@@ -315,7 +324,7 @@ public:
 			return 3000.0;
 		}
 		//求出新的镜像点
-
+		return getSpherDistance();
 		float3 ReMirrorPos =  getMirrorPos();
 		//printf("!ReMirrorPos: (%f,%f,%f)\n",ReMirrorPos.x,ReMirrorPos.y,ReMirrorPos.z);
 		//求相机与镜像点组成的平面的法线
@@ -787,7 +796,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 
 	Plane fittingPlane(currentUv);
 	
-	/*if(x!=334||y!=207)
+	/*if(x!=518||y!=555)
 	   return;
 	*/
 	//printf("1Class: (%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
