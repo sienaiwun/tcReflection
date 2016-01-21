@@ -19,5 +19,6 @@ public :
 	}
 private:
 	GLuint m_texId;
+	GLuint m_texSlot;
 };
 #endif

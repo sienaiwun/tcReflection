@@ -46,6 +46,7 @@
 #include "reflectionShader.h"
 #include "gBufferShader.h"
 #include "reflectionShader.h"
+#include "ImgMesh.h"
 //#include "toiletScene.h"
 
 unsigned int *Host_PixelSum;
@@ -89,7 +90,7 @@ optix::GeometryGroup geometrygroup;
 //uint *Host_PixelSum;
 //MyGeometry teapot;
 int CountTime = 1000;
-TimeMesure g_timeMesure(tcRenderingType,CountTime);
+TimeMesure g_timeMesure(optixRenderingType,CountTime);
 nv::vec3f viewDependentMissColor = nv::vec3f(255,0,0);
 nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 //cudaGraphicsResource *cudaRes_WorldNormal,*cudaRes_WorldPos,*cudaRes_Reflect;
@@ -97,11 +98,6 @@ TestShader g_testShader;
 
 CudaTexResourse poxCudaTex,normalCudaTex,reflectCudaTex,finalEffectCudaTex;
 CudaPboResource vectorCudaArray,lastCudaArray,finalEffectCudaArray;
-
-//#define  geoNumber  43
-
-//#define  geoNumber  2
-
 
 ReprojectShader g_reprojectShader;
 TranShader g_transShader;
@@ -188,12 +184,13 @@ std::string GROUNDTEX_PATH;
 std::string WALLTEX_PATH;
 //My Fbo For Render
 
-Fbo currentGbuffer(2,rasterWidth,rasterHeight);
+Fbo currentGbuffer(3,rasterWidth,rasterHeight);
 Fbo TransMapFbo(1,rasterWidth,rasterWidth);
 Fbo FinalEffectFbo(1,rasterWidth,rasterWidth);
 Fbo MergeEffectFbo(1,rasterWidth,rasterWidth);
-Fbo refGbuffer(2,rasterWidth,rasterWidth);
+Fbo refGbuffer(3,rasterWidth,rasterWidth);
 
+ImgMesh g_imgMesh(rasterWidth,rasterWidth);
 //New TEXTURE
 GLuint New_Tex;
 
@@ -454,6 +451,9 @@ void init_gl()
 	g_gBufferShader.init();
 	g_reflectionShader.init();
 	g_reflectionShader.setWindowSize(rasterWidth,rasterHeight);
+
+	//载入imgMesh
+	g_imgMesh.init();
 	/*
 #if DrawPoint
 	myTransShader.loadShader("Shader/Trans_Point.vert",0,"Shader/Trans_Point.frag");
@@ -551,13 +551,14 @@ void init_gl()
 
 	glGenTextures (1, &sampleTex);
 	glBindTexture(GL_TEXTURE_2D, sampleTex);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	//aglTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE); // automatic mipmap
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, initialWindowHeight, initialWindowWidth, 0,	GL_RGBA, GL_FLOAT, 0);
-	glGenerateMipmapEXT(GL_TEXTURE_2D);
+	//glGenerateMipmapEXT(GL_TEXTURE_2D);
 
 	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, sampleTex, 0);
 	glGenRenderbuffersEXT(1,&depthTex);
@@ -610,6 +611,34 @@ void init_gl()
 	gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGB8, 2, 2, GL_RGB, GL_FLOAT, gold_data);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	*/
+	  glGenFramebuffersEXT(1, &sampleFbo);
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, sampleFbo);
+  glDrawBuffers(1, buffers);
+
+  glGenTextures (1, &sampleTex);
+  glBindTexture(GL_TEXTURE_2D, sampleTex);
+ // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, initialWindowHeight, initialWindowWidth, 0,	GL_RGBA, GL_FLOAT, 0);
+  */
+ // gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA32F_ARB,initialWindowHeight, initialWindowWidth, GL_RGBA, GL_FLOAT, 0);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, initialWindowHeight, initialWindowWidth, 0,	GL_RGBA, GL_FLOAT, 0);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); 
+
+  //glGenerateMipmapEXT(GL_TEXTURE_2D);
+
+  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, sampleTex, 0);
+   glGenRenderbuffersEXT(1,&depthTex);
+  glBindRenderbufferEXT(GL_RENDERBUFFER_EXT,depthTex);
+  glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT,GL_DEPTH_COMPONENT, initialWindowHeight, initialWindowWidth);
+  //将深度缓冲与FBO绑定
+  glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT,GL_DEPTH_ATTACHMENT_EXT,GL_RENDERBUFFER_EXT,depthTex);
+
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
 	CHECK_ERRORS();
 }
 
@@ -918,7 +947,7 @@ extern unsigned int  *g_PixelPos;
 void addtionalTracing(int pixelNum)
 {
 	
-	nv::vec4f* pixelBuffer = (nv::vec4f*)rtReflectionBuffer->map();
+	/*nv::vec4f* pixelBuffer = (nv::vec4f*)rtReflectionBuffer->map();
 			RTsize numVertices;
 			rtReflectionBuffer->getSize( numVertices );
 			for(int i=0;i<numVertices*numVertices;i++)
@@ -942,7 +971,7 @@ void addtionalTracing(int pixelNum)
 		glUnmapBufferARB(GL_PIXEL_UNPACK_BUFFER); // release the mapped buffer
 	}
 	glBindBufferARB(GL_PIXEL_UNPACK_BUFFER_ARB, 0);
-
+	*/
 	float temp = sqrt((float) pixelNum);
 	int length = ceil(temp);
 
@@ -958,13 +987,13 @@ void addtionalTracing(int pixelNum)
 	lightData[0].casts_shadow = 0;
 	rtLights->unmap();
 
-
+	/*
 	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_scene.m_curCamera);
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_curCamera);
-	currentGbuffer.end();
+	currentGbuffer.end();*/
 	//currentGbuffer.SaveBMP("worPos.
 	try
 	{
@@ -988,7 +1017,7 @@ void addtionalTracing(int pixelNum)
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 	glPopAttrib();
 
-	
+	/*
 	glEnable(GL_TEXTURE_2D);
 	BYTE *pTexture = NULL;
 	pTexture = new BYTE[rasterWidth*  rasterHeight * 3];
@@ -1004,7 +1033,7 @@ void addtionalTracing(int pixelNum)
 	if (pTexture)
 	delete[] pTexture;
 	glBindTexture(GL_TEXTURE_2D, 0);
-	
+	*/
 
 }
 void blending()
@@ -1023,7 +1052,7 @@ void reductionGPU()
 {
 	int pixelNum = 	thrustReduction(rasterWidth,rasterHeight);
 	addtionalTracing(pixelNum);
-	blending();
+	//blending();
 }
 
 
@@ -1113,6 +1142,10 @@ void ComputeVecInCuda()
 	poxCudaTex.unmap();
 	normalCudaTex.unmap();
 	vectorCudaArray.unMap();
+
+	vectorCudaArray.generateTex();
+	VecorTexture = vectorCudaArray.getTexture();
+
 	//lastCudaArray.unMap();
 	//checkCudaErrors(cudaGraphicsUnmapResources(1, &cudaRes_WorldPos, 0));
 	//checkCudaErrors(cudaGraphicsUnmapResources(1, &cudaRes_WorldNormal, 0));
@@ -1454,12 +1487,6 @@ void drawTransMap(int  optixId)
 	glClearColor(viewDependentMissColor.x,viewDependentMissColor.y,viewDependentMissColor.z,1);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
 	//glViewport(0,0,1024,1024);
 	// 
 	// 
@@ -1485,88 +1512,10 @@ void drawTransMap(int  optixId)
 	RefFrame & frame = RefFrame::getFrameByIndex(OptixFrame);
 
 	g_transShader.setParemeter(frame.getOptixTex(),VecorTexture,frame.getGbuffer().getTexture(0),0);
-	g_transShader.setAdditionalTex(frame.getAdditionalTex());
+	//g_transShader.setAdditionalTex(frame.getAdditionalTex());
 	g_transShader.setRes(nv::vec2f(rasterWidth,rasterHeight));
-	g_transShader.begin();
-	// 
-/*
-	glEnable(GL_TEXTURE_2D);
-	float *pTexture = NULL;
-	pTexture = new float[1024*1024 * 3];
-	memset(pTexture, 0, 1024*1024 * 3 * sizeof(float));
-	
-	glBindTexture(GL_TEXTURE_2D, VecorTexture);//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
-
-	int x = 466
-	glBindTexture(GL_TEXTURE_2D, 0);//TexPosId   PboTex
-	*/
-	/*float2 TexCoord0,TexCoord2,TexCoord3,TexCoord4,TexCoord1,TexCoord5,TexCoord6,TexCoord7;
-	float2 Toffset1,Toffset2,Toffset3,Toffset4;
-	float2 TPostion1,TPostion2,TPostion3,TPostion4;
-	glDisable(GL_TEXTURE_2D);
-	
-	glBindTexture(GL_TEXTURE_2D,reflectionMapTex);
-	 	glBegin( GL_TRIANGLES);
-	 	//glBegin(GL_TRIANGLES_ADJACENCY_EXT);
-	 	//glBegin( GL_QUADS);
-	 	//glBegin( GL_POINTS);
-	 	for(int x = 0;x<1024;x++){
-	 		TexCoord0.x = x/1024.0f;
-	 		TexCoord1.x = (x - 1.0) /1024.0;
-	 		TexCoord2.x = x/1024.0f;
-	 		TexCoord3.x = x/1024.0f;
-	 		TexCoord4.x = (x + 1.0)/1024.0f;
-	 		TexCoord5.x = (x + 1.0)/1024.0f;
-	 		TexCoord6.x = (x + 1.0)/1024.0f;
-	 		TexCoord7.x = (x + 2.0)/1024.0f;
-	 			for(int y = 0;y<1024;y++){
-	 
-	 				TexCoord0.y = y/1024.0f;
-	 				TexCoord1.y = (y+1)/1024.0f;
-	 				TexCoord2.y = (y+1)/1024.0f;
-	 				TexCoord3.y = (y+2)/1024.0f;
-	 				TexCoord4.y = (y+1)/1024.0f;
-	 				TexCoord5.y = y/1024.0f;
-	 				TexCoord6.y = (y-1)/1024.0f;
-	 				TexCoord7.y = y/1024.0f;
-	 
-	 				//TPostion1 = Toffset1 + TexCoord1;
-	 
-	 				//glTexCoord2f(TexCoord1.x,TexCoord1.y);
-	 				//glVertex2f(TPostion1.x,TPostion1.y);
-	 				glVertex2f(TexCoord0.x,TexCoord0.y);
-	 				//glVertex2f(TexCoord1.x,TexCoord1.y);
-	 				glVertex2f(TexCoord2.x,TexCoord2.y);
-	 				//glVertex2f(TexCoord3.x,TexCoord4.y);
-	 				glVertex2f(TexCoord4.x,TexCoord4.y);
-	 				//glVertex2f(TexCoord5.x,TexCoord5.y);
-	 
-	 
-	 				glVertex2f(TexCoord0.x,TexCoord0.y);
-	 				//glVertex2f(TexCoord2.x,TexCoord3.y);
-	 				glVertex2f(TexCoord4.x,TexCoord4.y);
-	 				//glVertex2f(TexCoord7.x,TexCoord4.y);
-	 				glVertex2f(TexCoord5.x,TexCoord5.y);
-	 				//glVertex2f(TexCoord6.x,TexCoord6.y);
-	 
-	 				//glVertex2f(x/1024.0,y/1024.0);
-	 				//glVertex2f((x+1)/1024.0,y/1024.0);
-	 				//glVertex2f((x+1)/1024.0,(y+1)/1024.0);
-	 
-	 				//glVertex2f((x+1)/1024.0,(y+1)/1024.0);
-	 				//glVertex2f(x/1024.0,(y+1)/1024.0);
-	 				//glVertex2f(x/1024.0,y/1024.0);
-	 
-	 			}
-	 	}
-	 	glEnd();
-	// 	//glBindTexture(GL_TEXTURE_2D,reflectionMapTex);
-	// 	
-	*/
-	//glCallList(MyCallList);
-
+	g_imgMesh.drawImgMesh(g_transShader);
+	/*g_transShader.begin();
 	glEnableClientState(GL_VERTEX_ARRAY);;
 	glBindBuffer(GL_ARRAY_BUFFER, MyVBO);
 	glVertexPointer  ( 2, GL_FLOAT, 0, (char *) 0);
@@ -1579,19 +1528,8 @@ void drawTransMap(int  optixId)
 
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glDisableClientState(GL_VERTEX_ARRAY);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
-	glDisable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D,0);
 
-	g_transShader.end();
-	//myTransShader.DisUse();
-	//delete [] pFloat2;
-
-	//cgResetPassState(pass);
-
-
+	g_transShader.end();*/
 
 }
 
@@ -1663,13 +1601,11 @@ void optixRendering()
 		g_timeMesure.setBeginTime(display_start);
 	}
 	CVector3& pos =g_scene.m_refCamera.Position();
-	g_scene.cameraControl(currentTime,g_scene.m_refCamera);
-//	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
+	//g_scene.cameraControl(currentTime,g_scene.m_refCamera);
+	//g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 
 	g_scene.m_curCamera = g_scene.m_refCamera;
 	currentGbuffer.begin();
-	//draw_scene(cgTechniqueWorldPosNormal,&g_scene.m_refCamera);
-	//currentGbuffer.SaveBMP("test/worldPos.bmp",0);
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
 	currentGbuffer.end();
 
@@ -1782,7 +1718,6 @@ void optixRendering()
 	*/
 	
 	
-
 	//currentTime2++;
 	if (stat_breakdown) 
 	{
@@ -1790,48 +1725,29 @@ void optixRendering()
 		// sutilCurrentTime(&finalRendingTime);
 		g_timeMesure.setFinalRenderingTime(finalRendingTime);
 	}
-
-	
-	g_reflectionShader.setReflectMap(reflectionMapTex_Now);
-	currentGbuffer.begin();
-
-	//New_drawscene(cgTechniqueGlossyReflections);
-	//draw_scene(cgTechniqueGlossyReflections,&g_scene.m_refCamera);
-	//testRendering();
-	
-     g_scene.draw_model(g_reflectionShader,&g_scene.m_refCamera);
-	currentGbuffer.end();
-
-	char str[100];
-	sprintf(str,"./test/glossy%d_%d.bmp",currentTime,currentTime2);
-	currentGbuffer.SaveBMP(str,0);
-	
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);     // bind the screen FBO
-	glViewport(0, 0, rasterWidth , rasterHeight);
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);   
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	// 
-
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, currentGbuffer.fboId);
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-	glBlitFramebuffer(0, 0, rasterWidth, rasterHeight, 0, 0, rasterWidth, rasterHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
+  g_reflectionShader.setReflectMap(reflectionMapTex_Now);
+  g_blendShader.setDiffuseTex(currentGbuffer.getTexture(2));
+  g_blendShader.setReflectTex(reflectionMapTex_Now);
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+  glDrawBuffer(GL_BACK);
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,sampleFbo);
+  float clear_value = 1.f;
+  glClearColor(clear_value, clear_value, clear_value, clear_value);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+  
+  glEnable(GL_DEPTH_TEST);
+  MyGeometry::drawQuad(g_blendShader);
+  glBindTexture(GL_TEXTURE_2D, sampleTex);
+  glGenerateMipmap(GL_TEXTURE_2D);
+  glBindTexture(GL_TEXTURE_2D, 0);
+  CHECK_ERRORS();
+  g_texShader.setParemeter(sampleTex);
+  CHECK_ERRORS();
+  Fbo::drawScreenBackBuffer(1024,1024);
+   MyGeometry::drawQuad(g_texShader);
+ 
 	glFinish();
+	CHECK_ERRORS();
 	if (stat_breakdown) 
 	{
 		double finish_start = TimeMesure::getCurrentTime();;
@@ -1840,9 +1756,7 @@ void optixRendering()
 		g_timeMesure.setEndTime(finish_start);
 		g_timeMesure.print();
 	}
-	//currentTime2++;
-
-
+	//Fbo::saveScreen("./test/optix.bmp",windowWidth,windowHeight);
 }
 
 void init_RefcletTex()
@@ -1905,7 +1819,7 @@ void init_RefcletTex()
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		glPopAttrib();
 
-
+		/*
 		glPushAttrib(GL_PIXEL_MODE_BIT);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, addtionalMapPBO);
@@ -1915,7 +1829,7 @@ void init_RefcletTex()
 		glBindTexture(GL_TEXTURE_2D, 0);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		glPopAttrib();
-
+		*/
 		/*
 		glEnable(GL_TEXTURE_2D);
 		
@@ -1992,14 +1906,16 @@ void tcRendering()
 
 	g_scene.cameraControl(OptixFrame*10,g_scene.m_refCamera);
 	//test();
-	
-	refGbuffer.begin();
+	RefFrame & frame = RefFrame::getFrameByIndex(OptixFrame);
+	refGbuffer = frame.getGbuffer();
+/*	refGbuffer.begin();
 	//draw_scene(cgTechniqueWorldPosNormal,&g_scene.m_refCamera);
    g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
 	//draw_scene(g_gBufferShader,&g_scene.m_refCamera);
 	//refGbuffer.SaveBMP("./test/gbuffer.bmp",0);
-	refGbuffer.end();
-	
+	refGbuffer.end();*/
+	//refGbuffer 	 = frame.getGbuffer();
+	//refGbuffer.SaveBMP("./test/gbuffer.bmp",0);
 	//checkCudaErrors(cudaGraphicsGLRegisterImage(&cudaRes_Reflect,reflectionMaps[OptixFrame+1],GL_TEXTURE_2D,cudaGraphicsMapFlagsReadOnly));
 	//cudaGraphicsUnmapResources()
 	//cout<<OptixFrame<<endl;
@@ -2010,9 +1926,9 @@ void tcRendering()
 	}
 	float ComputeStar=0,ComputeEnd;
 	
-	RefFrame & frame = RefFrame::getFrameByIndex(OptixFrame);
-	//poxCudaTex.setEveryTex(frame.getGbuffer().getTexture(0));
-	//normalCudaTex.setEveryTex(frame.getGbuffer().getTexture(1));
+	
+	poxCudaTex.setEveryTex(frame.getGbuffer().getTexture(0));
+	normalCudaTex.setEveryTex(frame.getGbuffer().getTexture(1));
 	//reflectCudaTex.setEveryTex(frame.getOptixTex());
 	reflectCudaTex.setEveryTex(frame.getOptixTex());
 	//CpuTracint(reflectionMaps[OptixFrame]);
@@ -2039,9 +1955,7 @@ void tcRendering()
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 	glPopAttrib();
 	*/
-	vectorCudaArray.generateTex();
-	VecorTexture = vectorCudaArray.getTexture();
-
+	
 
 	/*
 	glEnable(GL_TEXTURE_2D);
@@ -2079,7 +1993,7 @@ void tcRendering()
 		g_timeMesure.setForwardingTime(forwardBeginTime);
 	}
 
-	TransMapFbo.BindForWrite(0); 
+	TransMapFbo.begin(); 
 	drawTransMap(OptixFrame);
 	TransMapFbo.debugPixel(0,519,567);
 	TransMapFbo.end();
@@ -2109,7 +2023,7 @@ void tcRendering()
 #if SpeedUp
 
 	
-	FinalEffectFbo.BindForWrite(0);
+	FinalEffectFbo.begin();
 
 	drawFinalEffect();
 
@@ -2158,58 +2072,20 @@ void tcRendering()
 	
 
 
-	g_reflectionShader.setReflectMap(MergeEffectFbo.getTexture(0));
+	/*g_reflectionShader.setReflectMap(MergeEffectFbo.getTexture(0));
 	currentGbuffer.begin();
 	//draw_scene(cgTechniqueGlossyReflections,&g_scene.m_curCamera);
 	g_scene.draw_model(g_reflectionShader,&g_scene.m_curCamera);
 	currentGbuffer.SaveBMP("./test/blending.bmp",0);
 	currentGbuffer.end();
-
-	// currentGbuffer.SaveBMP("asd.bmp",0);
+	*/
+	g_blendShader.setDiffuseTex(frame.getGbuffer().getTexture(2));
+	g_blendShader.setReflectTex(FinalEffectFbo.getTexture(0));
+	
+	g_blendShader.setNewReflectTex(reflectionMapTex_Now);
+	Fbo::drawScreenBackBuffer(windowWidth,windowHeight);
+    MyGeometry::drawQuad(g_blendShader);
 	glFinish();
-	sutilCurrentTime(&DrawTime2);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);     // bind the screen FBO
-	glViewport(0, 0, rasterWidth , rasterHeight);
-	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);   
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	// 
-
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, currentGbuffer.fboId);
-	glReadBuffer(GL_COLOR_ATTACHMENT0);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-	glBlitFramebuffer(0, 0, rasterWidth, rasterHeight, 0, 0, rasterWidth, rasterHeight, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-	glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-	// 	 glBegin( GL_QUADS);
-	// 	 glColor3f(1.0f,0,0);//lTexCoord2f( 0.0f, 0.0f);
-	// 	 glVertex2f( -1.0f, -1.0f);
-	// 	// glTexCoord2f( 1.0f, 0.0f);
-	// 	 glVertex2f( 1.0f,-1.0f);
-	// 	// glTexCoord2f( 1.0f, 1.0f);
-	// 	 glVertex2f( 1.0f, 1.0f);
-	// 	// glTexCoord2f( 0.0f, 1.0f);
-	// 	 glVertex2f( -1.0f, 1.0f);
-	// 	 glEnd();
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
-	glFinish();
-	sutilCurrentTime(&FrameEnd);
-
-	char filename1[256];
-	sprintf(filename1,"pic/heihei2/pic%d.bmp",currentTime2);
 	// currentGbuffer.SaveBMP(filename1,0);
 
 
@@ -2510,8 +2386,8 @@ void printUsageAndExit( const std::string& argv0, bool doExit = true )
 int main(int argc, char** argv)
 {
 	// Allow glut to consume its args first
-	//freopen("stdout.txt","w",stdout);
-	//freopen("stderr.txt","w",stderr);
+	freopen("stdout.txt","w",stdout);
+	freopen("stderr.txt","w",stderr);
 	glutInit(&argc, argv);
 
 	bool dobenchmark = false;
@@ -2584,9 +2460,9 @@ int main(int argc, char** argv)
 	GROUNDTEX_PATH = std::string( sutilSamplesDir() ) + "/isgReflections/ground.ppm";
 	WALLTEX_PATH = std::string( sutilSamplesDir() ) + "/isgReflections/wall.ppm";
 
-	glutInitWindowSize(1024, 1024);
+	glutInitWindowSize(windowWidth, windowHeight);
 	glutInitWindowPosition(0, 0);
-	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH|GLUT_MULTISAMPLE);
 	glutCreateWindow("isgReflections");
 
 	init_gl();

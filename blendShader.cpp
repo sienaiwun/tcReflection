@@ -11,19 +11,24 @@ void BlendShader::init()
 	m_loader.loadShader(m_vertexFileName.c_str(),0,m_fragmentFileName.c_str());
 
 	
-	m_generateUniform = m_loader.getUniform("generateRefTex");
-	m_newRayUniform = m_loader.getUniform("newRefTex");
+	m_diffuseTexSlot = m_loader.getUniform("diffuseTex");
+	m_reflectTexSlot = m_loader.getUniform("reflectTex");
+	m_newRelfectTexSlot = m_loader.getUniform("additionalReflectTex");
 }
 void BlendShader::bindParemeter()
 {
 	
 	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D,m_generateTexId);
-	glUniform1i(m_generateUniform,0);
+	glBindTexture(GL_TEXTURE_2D,m_diffuseTex);
+	glUniform1i(m_diffuseTexSlot,0);
 
 	glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D,m_newRayTexId);
-	glUniform1i(m_newRayUniform,1);
+	glBindTexture(GL_TEXTURE_2D,m_reflectTex);
+	glUniform1i(m_reflectTexSlot,1);
+
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D,m_newRelfectTex);
+	glUniform1i(m_newRelfectTexSlot,2);
 
 
 	/*

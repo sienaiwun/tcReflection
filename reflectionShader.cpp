@@ -6,7 +6,7 @@ void reflectShader::init()
 	m_vmpBinding = m_loader.getUniform("MVP");
 	m_cameraPosBinding = m_loader.getUniform("cameraPos");
 	m_lightPosBinding = m_loader.getUniform("lightPos");
-	m_objectDiffuseBinding = m_loader.getUniform("diffuseColor");
+	m_objectDiffuseBinding = m_loader.getUniform("objectDiffuseColor");
 	m_objectTexBinding = m_loader.getUniform("objectTex");
 	m_hasTex = m_loader.getUniform("hasTex");
 	m_objectId = m_loader.getUniform("objectId");

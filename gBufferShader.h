@@ -27,6 +27,7 @@ private:
 	GLuint m_lightPosBinding;
 	GLuint m_hasTex;
 	GLuint m_objectId;
+	GLuint m_reflectFactor;
 	
 	nv::vec3f m_lightPos;
 	nv::vec3f m_cameraPos;

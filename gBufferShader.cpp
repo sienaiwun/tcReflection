@@ -12,6 +12,8 @@ void GbufferShader::init()
 	m_objectTexBinding = m_loader.getUniform("objectTex");
 	m_hasTex = m_loader.getUniform("hasTex");
 	m_objectId = m_loader.getUniform("objectId");
+	m_reflectFactor = m_loader.getUniform("reflectFactor");
+	
 }
 
 void GbufferShader::bindParemeter()
@@ -33,6 +35,7 @@ void GbufferShader::setGeometry(MyGeometry * pGeometry)
 	CHECK_ERRORS();
 	MyMeterial * pMet = pGeometry->getMaterial();
 	glUniform1i(m_hasTex,pMet->hasTx());
+	glUniform1f(m_reflectFactor,pGeometry->reflectValue);
 	CHECK_ERRORS();
 	if(pGeometry->getMaterial()->hasTx())
 	{

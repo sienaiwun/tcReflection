@@ -74,7 +74,8 @@ void Fbo::attachId()
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT,&beforeFboId);
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fboId);
 }
-void Fbo::begin(){
+void Fbo::begin()
+{
 	//glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT,&beforeFboId);
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fboId);
@@ -295,7 +296,70 @@ void Fbo::SaveBuffToBMP(const char *fileName, int id){
 	delete pTexture;
 
 }
+void Fbo::mipMaptoSceen(GLuint texid, int widht, int height)
+{
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+  glViewport(0, 0, (int)widht, (int)height);
+  glBindTexture(GL_TEXTURE_2D, texid);
+  glGenerateMipmapEXT(GL_TEXTURE_2D);
+
+  glEnable(GL_TEXTURE_2D); 
+  glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_REPLACE);
+  glMatrixMode(GL_MODELVIEW);
+  glPushMatrix();
+  glLoadIdentity();
+  glMatrixMode(GL_PROJECTION);
+  glPushMatrix();
+  glLoadIdentity();
+
+  glBegin( GL_QUADS);
+  glTexCoord2f( 0.0f, 0.0f);
+  glVertex2f( -1.0f, -1.0f);
+  glTexCoord2f( 1.0f, 0.0f);
+  glVertex2f( 1.0f,-1.0f);
+  glTexCoord2f( 1.0f, 1.0f);
+  glVertex2f( 1.0f, 1.0f);
+  glTexCoord2f( 0.0f, 1.0f);
+  glVertex2f( -1.0f, 1.0f);
+  glEnd();
+  glPopMatrix();
+  glMatrixMode(GL_MODELVIEW);
+  glPopMatrix();
+  glDisable(GL_TEXTURE_2D);
+  glBindTexture(GL_TEXTURE_2D,0);
+
+}
+void Fbo::saveScreen(std::string fileName,int width,int height)
+{
+	BYTE *pTexture = NULL;											
+	pTexture = new BYTE[ width* height * 3];
+	memset(pTexture, 0, width* height * 3 * sizeof(BYTE));
+	glReadPixels(0,0,width, height ,GL_RGB,GL_UNSIGNED_BYTE,pTexture);
+
+	int scale = 1;
+	int x = 1023,y = 1023;
+	int index = y*1024+x;
+	BYTE  r = pTexture[3*index]*scale;
+	BYTE g = pTexture[3*index+1]*scale;
+	BYTE b = pTexture[3*index+2]*scale;
+	BYTE a = pTexture[3*index+3]*scale;
+
+
+	Fbo::SaveBMP((char*)fileName.c_str(),pTexture,width, height);
+
+	delete pTexture;
+}
+void Fbo::drawScreenBackBuffer(int w, int h)
+{
+  glViewport(0,0, w, h);
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+  glDrawBuffer(GL_BACK);
+  float clear_value = 1.f;
+  glClearColor(clear_value, clear_value, clear_value, clear_value);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+}
 
 #define WIDTHBYTES(bits)    (((bits) + 31) / 32 * 4)
 void Fbo::SaveBMP(const char *fileName, BYTE *buf, UINT width, UINT height){

@@ -66,6 +66,8 @@ void scene::init()
 		m_geometryArray[i].initGeometry(m_pObjectDis[i]);
 	}
 	m_bbMin = MyGeometry::modelBBMin,m_bbMax = MyGeometry::modelBBMax;
+	cameraControl(0,m_curCamera);
+	cameraControl(0,m_refCamera);
 }
 void scene::optixInit()
 {

@@ -81,7 +81,6 @@ private:
 		return std::string(sutilSamplesPtxDir()) + "/isgReflections_generated_" + base + ".ptx";
 	}
 	nv::vec3f m_modelBBMin, m_modelBBMax;
-
 };
 
 

@@ -97,6 +97,9 @@ public:
 	void CoutFloat(int);
 
 	int ComputNum(int id, int lastNum);
+	static void drawScreenBackBuffer(int w, int h);
+	static void saveScreen(std::string fileName,int width,int height);
+	static void mipMaptoSceen(GLuint texid,int widht,int height);
 	//glm::vec2 ComputError(int);
 };
 

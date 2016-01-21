@@ -13,29 +13,28 @@ public :
 	virtual void bindParemeter();
 	virtual void begin();
 	virtual void end();
-	inline void setParemeter(GLuint generateTex,GLuint newTex)
+	inline void setDiffuseTex(int tex)
 	{
-		m_generateTexId = generateTex;
-		m_newRayTexId = newTex;
+		m_diffuseTex = tex;
+	}
+	inline void setReflectTex(int tex)
+	{
+		m_reflectTex = tex;
+	}
+	inline void setNewReflectTex(int tex)
+	{
+		m_newRelfectTex = tex;
+	}
+	inline void setParemeter(int a,int b)
+	{
 	}
 private:
-	GLuint m_generateTexId;
-	GLuint m_newRayTexId;
-
-	GLuint m_generateUniform;
-	GLuint m_newRayUniform;
-
-
-	GLuint m_newWorldPosTex;
 	GLuint m_reflectTex;
-
-//Trans shader Uniform
-	GLuint m_lastMvp;
-	GLuint m_lastWorldPosTex;
-	GLuint m_clearColor;
-	const float* m_bindingLastMvpFloat;
-	GLuint m_bindingNewWoldPos,m_bindingReflectTex,m_bindginLastWorldTex;
-	nv::vec3f m_bindingIndependentColor;
+	GLuint m_diffuseTex;
+	GLuint m_reflectTexSlot;
+	GLuint m_diffuseTexSlot;
+	GLuint m_newRelfectTex;
+	GLuint m_newRelfectTexSlot;
 
 };
 #endif

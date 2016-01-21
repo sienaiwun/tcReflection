@@ -12,6 +12,8 @@ CGparameter * MyGeometry::mspCgDiffuseColor = 0;
 CGparameter * MyGeometry::msgCgDiffuseTexParam = 0;
 CGparameter * MyGeometry::msgCgreflectVale = 0;
 MyMeterial* MyGeometry::s_mat = 0;
+
+
 MyGeometry::MyGeometry(char *s):filename(s)
 {
 	//initGeometry(s);
@@ -133,33 +135,11 @@ void MyGeometry::initGeometry(GeoPara gp)
 	setMaterial(&s_mat[gp.matNumber]);
 	actionNumber = gp.actionNum;
 }
-/*extern float delta;
-extern GLuint blendFactorTex;
-extern transform1 transformArray[];
-extern action ActArray[];*/
+
 void MyGeometry::drawGeometry(glslShader& shader,int actionNumber)
 {
 	CHECK_ERRORS();
 	glBindBuffer(GL_ARRAY_BUFFER, m_ModelVb);
-	/*glEnableClientState(GL_VERTEX_ARRAY);
-	glVertexPointer(  m_model->getPositionSize(),
-		GL_FLOAT,
-		m_model->getCompiledVertexSize()*sizeof(float),
-		(void*) (m_model->getCompiledPositionOffset()*sizeof(float)));
-
-	if ( m_model->hasNormals() ) {
-		glEnableClientState(GL_NORMAL_ARRAY);
-		glNormalPointer(    GL_FLOAT,
-			m_model->getCompiledVertexSize()*sizeof(float),
-			(void*) (m_model->getCompiledNormalOffset()*sizeof(float)));
-	}
-	if (m_model->hasTexCoords()) {
-		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-		glTexCoordPointer(   m_model->getPositionSize(),
-			GL_FLOAT,
-			m_model->getCompiledVertexSize()*sizeof(float),
-			(void*) (m_model->getCompiledTexCoordOffset()*sizeof(float)));
-	}*/
 	glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
@@ -177,11 +157,7 @@ void MyGeometry::drawGeometry(glslShader& shader,int actionNumber)
 	glDisableVertexAttribArray(1);
 	
 	glDisableVertexAttribArray(2);
-	//glDisableClientState( GL_VERTEX_ARRAY );
-	//glDisableClientState( GL_NORMAL_ARRAY );
-	//glDisableClientState( GL_TEXTURE_COORD_ARRAY );
-
-
+	
 	CHECK_ERRORS();
 }
 void MyGeometry::drawGeometry(CGtechnique& tech,int actionNumber)
