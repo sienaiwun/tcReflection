@@ -86,6 +86,17 @@ void Fbo::begin()
 	glViewport(0, 0, texDescript.getWidth(), texDescript.getHeight());
 
 }
+
+void Fbo::drawScreenBackBuffer(int w, int h,int newFboId)
+{
+  
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, newFboId);
+   glDrawBuffer(GL_BACK);
+  float clear_value = 1.f;
+  glClearColor(clear_value, clear_value, clear_value, clear_value);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+  glViewport(0,0,(int) w, (int)		h);
+}
 void Fbo::copyFromBuffer(Fbo & sourceFbo,int index)
 {
 	int slotNum = std::min<int>(num,sourceFbo.num);
@@ -339,26 +350,16 @@ void Fbo::saveScreen(std::string fileName,int width,int height)
 	glReadPixels(0,0,width, height ,GL_RGB,GL_UNSIGNED_BYTE,pTexture);
 
 	int scale = 1;
-	int x = 1023,y = 1023;
-	int index = y*1024+x;
+	int x = 511 ,y= 511;
+	int index = y*512+x;
 	BYTE  r = pTexture[3*index]*scale;
 	BYTE g = pTexture[3*index+1]*scale;
 	BYTE b = pTexture[3*index+2]*scale;
-	BYTE a = pTexture[3*index+3]*scale;
-
+	
 
 	Fbo::SaveBMP((char*)fileName.c_str(),pTexture,width, height);
 
 	delete pTexture;
-}
-void Fbo::drawScreenBackBuffer(int w, int h)
-{
-  glViewport(0,0, w, h);
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-  glDrawBuffer(GL_BACK);
-  float clear_value = 1.f;
-  glClearColor(clear_value, clear_value, clear_value, clear_value);
-  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 }
 
 #define WIDTHBYTES(bits)    (((bits) + 31) / 32 * 4)

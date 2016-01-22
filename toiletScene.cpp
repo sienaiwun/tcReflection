@@ -40,7 +40,7 @@ static MyMeterial toiletMat[] =
 
 static GeoPara toiletObj[geoNumber] = 
 {
-	{"model/bathroom/toilet_body_all.3ds",15,0,CHINAREFLECT,3},
+	{"model/bathroom/toilet_body_all.3ds",0,0,CHINAREFLECT,3},
 	{"model/bathroom/toilet_up_all.3ds",15,0,CHINAREFLECT,3},
 
 	{"model/bathroom/testSphere.obj",15,0,CHINAREFLECT,0},

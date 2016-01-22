@@ -47,6 +47,7 @@
 #include "gBufferShader.h"
 #include "reflectionShader.h"
 #include "ImgMesh.h"
+#include "screenBuffer.h"
 //#include "toiletScene.h"
 
 unsigned int *Host_PixelSum;
@@ -76,13 +77,7 @@ GLuint groundTex;
 GLuint wallTex;
 
 //GLuint goldTex;
-GLuint woodTex;
-GLuint sampleFbo;
-GLuint sampleTex;
-GLuint depthTex;
 GLuint blendFactorTex;
-GLuint MyVBO;
-GLuint MyCallList;
 char blendFactorPath[] = "./model/blendFactor0.15.bmp";
 GLenum buffers[] = {GL_COLOR_ATTACHMENT0_EXT,GL_COLOR_ATTACHMENT1_EXT,GL_COLOR_ATTACHMENT2_EXT,GL_COLOR_ATTACHMENT3_EXT,GL_COLOR_ATTACHMENT4_EXT,GL_COLOR_ATTACHMENT5_EXT,GL_COLOR_ATTACHMENT6_EXT};
 optix::GeometryGroup geometrygroup;
@@ -191,6 +186,7 @@ Fbo MergeEffectFbo(1,rasterWidth,rasterWidth);
 Fbo refGbuffer(3,rasterWidth,rasterWidth);
 
 ImgMesh g_imgMesh(rasterWidth,rasterWidth);
+ScreenBuffer screenBuffer(windowWidth,windowHeight);
 //New TEXTURE
 GLuint New_Tex;
 
@@ -210,17 +206,6 @@ void cgErrorCallback()
 	{
 		printf("%s\n", cgGetErrorString(lastError));
 		printf("%s\n", cgGetLastListing(cgContext));
-		exit(1);
-	}
-}
-void getEffectParam( CGeffect effect,
-					const char* semantic,
-					CGparameter* param )
-{
-	(*param) = cgGetEffectParameterBySemantic(effect, semantic);
-	if (!(*param))
-	{
-		std::cerr << "getCGParam: Couldn't find parameter with " << semantic << " semantic\n";
 		exit(1);
 	}
 }
@@ -270,58 +255,6 @@ void init_cuda(int argc,char**argv)
 #define EDGEDELTA 0.0
 
 
-void IniteMyVBO(){
-
-	//float2 Vertices[1024 * 1024 *6];
-	float2 *Vertices;
-	Vertices = new float2[rasterWidth *rasterHeight * 6];
-	int PointId = 0;
-	for(int x = 0;x<rasterWidth;x++)
-		for(int y = 0;y<rasterHeight;y++)
-		{
-			/*if(x==476&&y==326)
-				;
-			else
-				continue;*/
-			Vertices[PointId++] = make_float2((float)(x+0.5-EDGEDELTA)/rasterWidth,(float)(y+0.5-EDGEDELTA)/rasterHeight);
-#if DrawPoint
-			;//continue;
-#endif
-
-			Vertices[PointId++] =  make_float2((float)(x+1.5+EDGEDELTA)/rasterWidth,(float)(y+0.5-EDGEDELTA)/rasterHeight);
-			Vertices[PointId++] =  make_float2((float)(x+1.5+EDGEDELTA)/rasterWidth,(float)(y+1.5+EDGEDELTA)/rasterHeight);
-			
-			Vertices[PointId++] = make_float2((float)(x+0.5-EDGEDELTA)/rasterWidth,(float)(y+0.5-EDGEDELTA)/rasterHeight);
-			Vertices[PointId++] =  make_float2((float)(x+1.5+EDGEDELTA)/rasterWidth,(float)(y+1.5+EDGEDELTA)/rasterHeight);
-			Vertices[PointId++] =  make_float2((float)(x+0.5-EDGEDELTA)/rasterWidth,(float)(y+1.5+EDGEDELTA)/rasterHeight);
-			
-		}
-
-		MyCallList = glGenLists(1);
-		glNewList(MyCallList,GL_COMPILE);
-
-		glPointSize(1);
-#if DrawPoint
-		glBegin(GL_POINTS);
-#else
-		glBegin(GL_TRIANGLES);
-#endif
-		for(int i = 0;i<PointId;i++)
-			glVertex2f(Vertices[i].x,Vertices[i].y);
-		glEnd();
-		glEndList();
-		// 		cout<<Vertices[1].x<<" "<<Vertices[1].y<<endl;
-		glGenBuffers(1,&MyVBO);
-		glBindBuffer(GL_ARRAY_BUFFER,MyVBO);
-		glBufferData(GL_ARRAY_BUFFER,sizeof(float2)* rasterWidth *rasterHeight * 6,(GLvoid*)Vertices,GL_STATIC_DRAW);
-		glBindBuffer(GL_ARRAY_BUFFER,0);
-
-		delete [] Vertices;
-
-
-
-
-}
 
 
 void init_gl()
@@ -479,9 +412,6 @@ void init_gl()
 	Merge_FrameCount = MergeShader.getUniform("FrameCount");
 	*/
 	//生成bufferdraw
-#if SpeedUp
-	IniteMyVBO();
-#endif
 
 
 
@@ -544,105 +474,14 @@ void init_gl()
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, 1024, 1024, 0, GL_RGBA, GL_FLOAT, NULL);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
+   
 
-	glGenFramebuffersEXT(1, &sampleFbo);
-	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, sampleFbo);
-	glDrawBuffers(1, buffers);
-
-	glGenTextures (1, &sampleTex);
-	glBindTexture(GL_TEXTURE_2D, sampleTex);
-	
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	//aglTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE); // automatic mipmap
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, initialWindowHeight, initialWindowWidth, 0,	GL_RGBA, GL_FLOAT, 0);
-	//glGenerateMipmapEXT(GL_TEXTURE_2D);
-
-	glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, sampleTex, 0);
-	glGenRenderbuffersEXT(1,&depthTex);
-	glBindRenderbufferEXT(GL_RENDERBUFFER_EXT,depthTex);
-	glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT,GL_DEPTH_COMPONENT, initialWindowHeight, initialWindowWidth);
-	//将深度缓冲与FBO绑定
-	glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT,GL_DEPTH_ATTACHMENT_EXT,GL_RENDERBUFFER_EXT,depthTex);
-
-	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-
-	// load ground texture
-	/* PPMLoader ground_ppm(GROUNDTEX_PATH);
-	if(ground_ppm.failed()) {
-	std::cerr << "Could not load PPM file " << GROUNDTEX_PATH << '\n';
-	exit(1);
-	}
-	glGenTextures(1, &groundTex);
-	glBindTexture(GL_TEXTURE_2D, groundTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGB8, ground_ppm.width(), ground_ppm.height(), GL_RGB, GL_UNSIGNED_BYTE, ground_ppm.raster());
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// load wall texture
-	PPMLoader wall_ppm(WALLTEX_PATH);
-	if(wall_ppm.failed()) {
-	std::cerr << "Could not load PPM file " << WALLTEX_PATH << '\n';
-	exit(1);
-	}
-	glGenTextures(1, &wallTex);
-	glBindTexture(GL_TEXTURE_2D, wallTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGB8, wall_ppm.width(), wall_ppm.height(), GL_RGB, GL_UNSIGNED_BYTE, wall_ppm.raster());
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	// 2x2 texture for gold
-	glGenTextures(1, &goldTex);
-	glBindTexture(GL_TEXTURE_2D, goldTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	float3 gold_data[4];
-	for(int i = 0; i < 4; ++i) gold_data[i] = make_float3(.05f,.92f,.0f);
-	gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGB8, 2, 2, GL_RGB, GL_FLOAT, gold_data);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	*/
-	  glGenFramebuffersEXT(1, &sampleFbo);
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, sampleFbo);
-  glDrawBuffers(1, buffers);
-
-  glGenTextures (1, &sampleTex);
-  glBindTexture(GL_TEXTURE_2D, sampleTex);
- // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, initialWindowHeight, initialWindowWidth, 0,	GL_RGBA, GL_FLOAT, 0);
-  */
- // gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA32F_ARB,initialWindowHeight, initialWindowWidth, GL_RGBA, GL_FLOAT, 0);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, initialWindowHeight, initialWindowWidth, 0,	GL_RGBA, GL_FLOAT, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); 
-
-  //glGenerateMipmapEXT(GL_TEXTURE_2D);
-
-  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, sampleTex, 0);
-   glGenRenderbuffersEXT(1,&depthTex);
-  glBindRenderbufferEXT(GL_RENDERBUFFER_EXT,depthTex);
-  glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT,GL_DEPTH_COMPONENT, initialWindowHeight, initialWindowWidth);
-  //将深度缓冲与FBO绑定
-  glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT,GL_DEPTH_ATTACHMENT_EXT,GL_RENDERBUFFER_EXT,depthTex);
-
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+  screenBuffer.setBuffersize(rasterWidth,rasterHeight);
+  screenBuffer.init();
 	CHECK_ERRORS();
 }
 
-void init_scene(const char* model_filename)
+void init_scene()
 {
 	printf("init scence\n");
 	g_scene.init();
@@ -1560,36 +1399,6 @@ void drawText( const std::string& text, float x, float y, void* font )
 
 
 
-void DrawQuad(){
-
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-
-	//refGbuffer.BindForWrite(0);
-	glViewport(0, 0, (int)1024, (int)1024);
-
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	// 
-	glBegin( GL_QUADS);
-	glTexCoord2f( 0.0f, 0.0f);
-	glVertex2f( -1.0f, -1.0f);
-	glTexCoord2f( 1.0f, 0.0f);
-	glVertex2f( 1.0f,-1.0f);
-	glTexCoord2f( 1.0f, 1.0f);
-	glVertex2f( 1.0f, 1.0f);
-	glTexCoord2f( 0.0f, 1.0f);
-	glVertex2f( -1.0f, 1.0f);
-	glEnd();
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-	glPopMatrix();
-}
-
 void testRendering();
 void optixRendering()
 {
@@ -1601,9 +1410,6 @@ void optixRendering()
 		g_timeMesure.setBeginTime(display_start);
 	}
 	CVector3& pos =g_scene.m_refCamera.Position();
-	//g_scene.cameraControl(currentTime,g_scene.m_refCamera);
-	//g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
-
 	g_scene.m_curCamera = g_scene.m_refCamera;
 	currentGbuffer.begin();
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
@@ -1635,89 +1441,6 @@ void optixRendering()
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 	glPopAttrib();
-	/*
-	{
-	nv::vec3f worldPos;
-	glEnable(GL_TEXTURE_2D);
-	float *pTexture = NULL;
-	int x = 571,y =702;  
-	if(currentTime2==9)
-	{
-		 x = 579,y=706;
-	}
-	int xlenght = 1024,ylength = 1024;
-	pTexture = new float[rasterWidth*rasterHeight * 4];
-	memset(pTexture, 0, rasterWidth*rasterHeight * 4 * sizeof(float));
-
-	glBindTexture(GL_TEXTURE_2D, (reflectionMapTex_Now));//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pTexture);
-
-	int w = rasterWidth;
-	int h = rasterHeight;
-	nv::vec4f pixel = nv::vec4f(&pTexture[4*(y*ylength+x)]);
-	nv::vec3f truePos = nv::vec3f(pixel.x,pixel.y,pixel.z);
-	float reDis = pixel.w;
-
-	if (pTexture)
-	   delete[] pTexture;
-
-	glEnable(GL_TEXTURE_2D);
-	///*pTexture = NULL;
-	pTexture = new float[rasterWidth*rasterHeight * 4];
-	memset(pTexture, 0, rasterWidth*rasterHeight * 4 * sizeof(float));
-
-	glBindTexture(GL_TEXTURE_2D, (currentGbuffer.getTexture(0)));//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pTexture);
-	 pixel = nv::vec4f(&pTexture[4*(y*ylength+x)]);
-	worldPos = nv::vec3f(pixel.x,pixel.y,pixel.z);
-
-	glBindTexture(GL_TEXTURE_2D, (currentGbuffer.getTexture(1)));//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pTexture);
-	 pixel = nv::vec4f(&pTexture[4*(y*ylength+x)]);
-	nv::vec3f floorNomral =  nv::vec3f(pixel.x,pixel.y,pixel.z);
-	
-	if (pTexture)
-	   delete[] pTexture;
-	nv::vec3f floorPos = nv::vec3f(worldPos.x,worldPos.y,worldPos.z);
-	nv::vec3f lateCameraPos = g_scene.m_refCamera.getCameraPos();
-	nv::vec3f cameraPos = g_scene.m_curCamera.getCameraPos();
-
-	cameraPos = g_scene.m_curCamera.getCameraPos();
-	
-	nv::vec3f V = normalize(floorPos-cameraPos);
-	nv::vec3f reflectDirction = normalize( reflect(V, floorNomral));
-	nv::vec3f testPos = floorPos+reflectDirction*reDis;
-	nv::vec3f targetPos = nv::vec3f(15.8356676,0.000000000,13.9763155 );
-	float targetDis = length(testPos-targetPos);
-
-	nv::vec3f reflectedPos = testPos;
-	
-
-	nv::vec3f toCamera = normalize(cameraPos-floorPos);
-	float toFloorDis = dot(( floorPos-reflectedPos),-floorNomral);
-	nv::vec3f mirrorPos = reflectedPos - 2*toFloorDis*floorNomral;
-
-	cameraPos = cameraPos;
-	nv::vec3f mirrorPosToCamera = normalize(cameraPos - mirrorPos);
-	float delta = dot(mirrorPosToCamera,floorNomral);
-	nv::vec3f intersectPos = mirrorPos+ toFloorDis/delta*mirrorPosToCamera;
-	
-	nv::matrix4f mvp = g_scene.m_refCamera.getMvpMat();
-	nv::vec4f temp = (mvp*nv::vec4f(intersectPos,1));
-	temp /= temp.w;
-	temp.x = temp.x*0.5+0.5;
-	temp.y = temp.y*0.5+0.5;
-	temp.x*=1024;
-	temp.y*=1024;
-	temp = temp;
-	}
-	
-	*/
-	
-	
 	//currentTime2++;
 	if (stat_breakdown) 
 	{
@@ -1728,25 +1451,8 @@ void optixRendering()
   g_reflectionShader.setReflectMap(reflectionMapTex_Now);
   g_blendShader.setDiffuseTex(currentGbuffer.getTexture(2));
   g_blendShader.setReflectTex(reflectionMapTex_Now);
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-  glDrawBuffer(GL_BACK);
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,sampleFbo);
-  float clear_value = 1.f;
-  glClearColor(clear_value, clear_value, clear_value, clear_value);
-  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-  
-  glEnable(GL_DEPTH_TEST);
-  MyGeometry::drawQuad(g_blendShader);
-  glBindTexture(GL_TEXTURE_2D, sampleTex);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  CHECK_ERRORS();
-  g_texShader.setParemeter(sampleTex);
-  CHECK_ERRORS();
-  Fbo::drawScreenBackBuffer(1024,1024);
-   MyGeometry::drawQuad(g_texShader);
- 
-	glFinish();
+  screenBuffer.drawToScreen(g_blendShader);
+  glFinish();
 	CHECK_ERRORS();
 	if (stat_breakdown) 
 	{
@@ -1757,6 +1463,14 @@ void optixRendering()
 		g_timeMesure.print();
 	}
 	//Fbo::saveScreen("./test/optix.bmp",windowWidth,windowHeight);
+	/*BYTE *pTexture = NULL;											
+	  pTexture = new BYTE[512 * 512 * 3];
+	  memset(pTexture, 0, 512 * 512 * 3 * sizeof(BYTE));
+	  glReadPixels(0,0,512,512,GL_RGB,GL_UNSIGNED_BYTE,pTexture);
+	  char str[100];
+	  sprintf(str,"./test/optix.bmp");	
+	  Fbo::SaveBMP(str,pTexture,512,512);
+	  delete [] pTexture;*/	
 }
 
 void init_RefcletTex()
@@ -1769,14 +1483,16 @@ void init_RefcletTex()
 	lightData[0].color.z = 1;
 	lightData[0].casts_shadow = 0;
 	rtLights->unmap();
-
+	CHECK_ERRORS();
 	for(int i =0;i<KEYFRAMENUM;i++)
 	{
 		RefFrame::getFrameByIndex(i).init();
 	}
 	for(int i = 0;i<KEYFRAMENUM;i++)
 	{
+		CHECK_ERRORS();
 		int FrameNums = i*TIMEGAP;
+		CHECK_ERRORS();
 		RefFrame & frame = RefFrame::getFrameByIndex(i);
 		CCamera camera = frame.getCamera();
 		g_scene.cameraControl(FrameNums,camera);
@@ -1786,6 +1502,7 @@ void init_RefcletTex()
 		frame.getGbuffer().end();
 		//frame.getGbuffer().SaveBMP("./test/ref0.bmp",0);
 		currentGbuffer.copyFromBuffer(frame.getGbuffer());
+		CHECK_ERRORS();
 		/*
 		rtWorldSpaceTexture->unregisterGLTexture();
 		glBindTexture(GL_TEXTURE_2D, nextframe.getGbuffer().getTexture(0) );
@@ -1808,7 +1525,7 @@ void init_RefcletTex()
 			sutilReportError( e.getErrorString().c_str() );
 			exit(1);
 		}
-
+		CHECK_ERRORS();
 		glPushAttrib(GL_PIXEL_MODE_BIT);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, reflectionMapPBO);
@@ -2391,84 +2108,19 @@ int main(int argc, char** argv)
 	glutInit(&argc, argv);
 
 	bool dobenchmark = false;
-	std::string filename;
-	std::string cgfx_path;
-	std::string ground_tex;
-	for(int i = 1; i < argc; ++i) {
-		std::string arg(argv[i]);
-		if( arg == "--obj" || arg == "-o" ) {
-			if( i == argc-1 ) {
-				printUsageAndExit(argv[0]);
-			}
-			filename = argv[++i];
-		} else if( arg == "--help" || arg == "-h" ) {
-			printUsageAndExit(argv[0]);
-		} else if (arg.substr(0, 3) == "-B=" || arg.substr(0, 23) == "--benchmark-no-display=" ||
-			arg.substr(0, 3) == "-b=" || arg.substr(0, 23) == "--benchmark=") {
-				dobenchmark = true;
-				std::string bnd_args = arg.substr(arg.find_first_of('=') + 1);
-				if (sutilParseImageDimensions(bnd_args.c_str(), &warmup_frames, &timed_frames) != RT_SUCCESS) {
-					std::cerr << "Invalid --benchmark-no-display arguments: '" << bnd_args << "'" << std::endl;
-					printUsageAndExit(argv[0]);
-				}
-		} else if (arg == "-B" || arg == "--benchmark-no-display" || arg == "-b" || arg == "--benchmark") {
-			dobenchmark = true;
-		} else if( arg == "--shader" || arg == "-s" ) {
-			if( i == argc-1 ) {
-				printUsageAndExit(argv[0]);
-			}
-			cgfx_path = argv[++i];
-		} else if( arg == "--zup" || arg == "-z" ) {
-			zUp = true;
-		} else if (arg == "--camera" || arg == "-c" ) {
-			if( i == argc-16 ) {
-				printUsageAndExit(argv[0]);
-			}
-			for(int j = 0; j < 16; ++j) {
-				fixedCameraMatrix(j%4,j/4) = static_cast<float>(atof(argv[++i]));
-			}
-			fixedCamera = true;
-		} else if (arg == "--nofps" || arg == "-nf") { 
-			drawFps = false;
-		} else if (arg == "--compute-normals" || arg == "-cn") {
-			stripNormals = true;
-		} else if ( arg.substr( 0, 6 ) == "--dim=" ) {
-			std::string dims_arg = arg.substr(6);
-			if ( sutilParseImageDimensions( dims_arg.c_str(),
-				&initialWindowWidth,
-				&initialWindowHeight )
-				!= RT_SUCCESS ) {
-					std::cerr << "Invalid window dimensions: '" << dims_arg << "'" << std::endl;
-					printUsageAndExit( argv[0] );
-			}
-		} else {
-			fprintf( stderr, "Unknown option '%s'\n", argv[i] );
-			printUsageAndExit( argv[0] );
-		}
-	}
-	//dobenchmark = true;
-	if( !dobenchmark ) printUsageAndExit( argv[0], false );
 
-	if(filename.empty()) {
-		filename = std::string( sutilSamplesDir() ) + "/isgReflections/table.obj";
-	}
-	if(cgfx_path.empty()) {
-		cgfx_path = std::string( sutilSamplesDir() ) + "/isgReflections/isgReflections_new.cgfx";
-	}
 
-	CGFX_PATH = cgfx_path;
-	GROUNDTEX_PATH = std::string( sutilSamplesDir() ) + "/isgReflections/ground.ppm";
-	WALLTEX_PATH = std::string( sutilSamplesDir() ) + "/isgReflections/wall.ppm";
-
-	glutInitWindowSize(windowWidth, windowHeight);
+	glutInitWindowSize(windowWidth+16, windowHeight+16);
 	glutInitWindowPosition(0, 0);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH|GLUT_MULTISAMPLE);
 	glutCreateWindow("isgReflections");
 
 	init_gl();
-	init_scene(filename.c_str());
+	init_scene();
 	init_optix();
+	CHECK_ERRORS();
 	init_cuda(argc,argv);
+	CHECK_ERRORS();
 	init_RefcletTex();
 
 	CHECK_ERRORS();
@@ -2476,7 +2128,7 @@ int main(int argc, char** argv)
 
 	//MyCuda();
 	glutDisplayFunc(display);
-	// glutReshapeFunc(resize);
+	//glutReshapeFunc(resize);
 	glutKeyboardFunc(keyboard);
 	// glutMouseFunc(mouse);
 	//glutMotionFunc(motion);

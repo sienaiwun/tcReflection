@@ -11,6 +11,11 @@
 #include <GL/wglew.h>
 #ifndef CH_SHADER_H
 #define CH_SHADER_H
+
+void getEffectParam( CGeffect effect,
+					const char* semantic,
+					CGparameter* param );
+
  class CgShader
 {
 public:
