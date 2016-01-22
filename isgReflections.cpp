@@ -85,7 +85,7 @@ optix::GeometryGroup geometrygroup;
 //uint *Host_PixelSum;
 //MyGeometry teapot;
 int CountTime = 1000;
-TimeMesure g_timeMesure(optixRenderingType,CountTime);
+TimeMesure g_timeMesure(tcRenderingType,CountTime);
 nv::vec3f viewDependentMissColor = nv::vec3f(255,0,0);
 nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 //cudaGraphicsResource *cudaRes_WorldNormal,*cudaRes_WorldPos,*cudaRes_Reflect;
@@ -1712,12 +1712,9 @@ void tcRendering()
 
 	TransMapFbo.begin(); 
 	drawTransMap(OptixFrame);
-	TransMapFbo.debugPixel(0,519,567);
 	TransMapFbo.end();
 	char str[100];
-	sprintf(str,"test/tttransMap%d.bmp",currentTime2);
-	
-	TransMapFbo.SaveBMP(str,0);
+
 	if(stat_breakdown)
 	{
 		glFinish();
@@ -1730,9 +1727,7 @@ void tcRendering()
 	//TransMapFbo.SaveBMP(str,0);
 	glViewport(0,0, traceWidth, traceHeight);
 	currentGbuffer.begin();
-	//draw_scene(cgTechniqueWorldPosNormal,&g_scene.m_curCamera);
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_curCamera);
-	currentGbuffer.SaveBMP("./test/debugPic.bmp",0);
 	currentGbuffer.end();
 	
 
@@ -1749,7 +1744,7 @@ void tcRendering()
 	
 
 #endif
-	FinalEffectFbo.SaveBMP("test/FinalEffectFbo.bmp",0);
+	//FinalEffectFbo.SaveBMP("test/FinalEffectFbo.bmp",0);
 
 	if (stat_breakdown) 
 	{
@@ -1758,25 +1753,7 @@ void tcRendering()
 		g_timeMesure.setSecondTraceTime(secendRacingTimec);
 	}
 	mapping();
-	
-		
-
-	vectorCudaArray.generateTex();
-	VecorTexture = vectorCudaArray.getTexture();
-
-	/*glEnable(GL_TEXTURE_2D);
-	BYTE* pTexture = NULL;
-	pTexture = new BYTE[rasterWidth*rasterHeight * 3];
-	memset(pTexture, 0, rasterWidth*rasterHeight * 3 * sizeof(BYTE));
-
-	glBindTexture(GL_TEXTURE_2D, VecorTexture);//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
-
-	SaveBMP("123.bmp", pTexture, rasterWidth, rasterHeight);
-	*/
 	double DrawTime1,DrawTime2;
-
 	glFinish();
 	sutilCurrentTime(&DrawTime1);
 	if (stat_breakdown) 
@@ -1785,26 +1762,11 @@ void tcRendering()
 		double finalRenderingTime=g_timeMesure.getCurrentTime();
 		g_timeMesure.setFinalRenderingTime(finalRenderingTime);
 	}
-
-	
-
-
-	/*g_reflectionShader.setReflectMap(MergeEffectFbo.getTexture(0));
-	currentGbuffer.begin();
-	//draw_scene(cgTechniqueGlossyReflections,&g_scene.m_curCamera);
-	g_scene.draw_model(g_reflectionShader,&g_scene.m_curCamera);
-	currentGbuffer.SaveBMP("./test/blending.bmp",0);
-	currentGbuffer.end();
-	*/
 	g_blendShader.setDiffuseTex(frame.getGbuffer().getTexture(2));
 	g_blendShader.setReflectTex(FinalEffectFbo.getTexture(0));
-	
 	g_blendShader.setNewReflectTex(reflectionMapTex_Now);
-	Fbo::drawScreenBackBuffer(windowWidth,windowHeight);
-    MyGeometry::drawQuad(g_blendShader);
+	screenBuffer.drawToScreen(g_blendShader);
 	glFinish();
-	// currentGbuffer.SaveBMP(filename1,0);
-
 
 	double finish_start;
 	if (stat_breakdown) 
@@ -1814,7 +1776,7 @@ void tcRendering()
 		g_timeMesure.setEndTime(finish_start);
 		g_timeMesure.print();
 	}
-	currentTime2++;
+
 }
 
 void display()
