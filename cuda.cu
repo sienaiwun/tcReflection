@@ -791,14 +791,14 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 #define STEPNUMBER 25
 	int x =Floor2Int(currentPlace.x-0.5);
 	int y =Floor2Int(currentPlace.y-0.5);
-	int index = y * 1024 + x;
+	int index = y * rasterWidth + x;
 	float2 currentUv = make_float2(currentPlace.x,currentPlace.y);
 
 	Plane fittingPlane(currentUv);
 	
-	/*if(x!=518||y!=555)
-	   return;
-	*/
+	//if(x!=645||y!=843)
+	//   return;
+	
 	//printf("1Class: (%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
 	//�����������ľ���
 	//= d_newCameraPos + DisEye2Plane/abs(dot(VecEye2Ref,WorldNormal))* VecEye2Ref;
@@ -831,7 +831,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		return FASTPROJT;
 	}
 	int IterTime = 0;
-	while(IterTime<STEPNUMBER)
+	while(IterTime<STEPNUMBER/1024.0*rasterWidth)
 	{
 		//printf("Item:%d currentUv:(%f,%f)\n",IterTime,currentUv.x,currentUv.y);
 		
@@ -898,7 +898,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 			//printf("invalid\n");
 			
 			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTOBJECT);
-		   // printf("@x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
+		   //printf("@x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
 			return OUTOBJECT;
 		}
@@ -935,7 +935,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		if(minDis>formerDis)
 		{
 			*moveToVec = currentUv;
-			if(length(MoveVec)<15&&minDis<5)
+			if(length(MoveVec)<15/1024.0*rasterWidth&&minDis<5)
 			{
 				d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
 				//printf("Converge\n");
@@ -943,7 +943,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 			}
 			else
 			{
-				d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,OUTOBJECT,-0.1);
+				d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,-0.1,OUTOBJECT);
 				//printf("not right\n");
 				
 				return OUTOBJECT;
@@ -969,7 +969,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		*/
 		IterTime++;
 	}
-	d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,-0.1,OUTOBJECT);
+	d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTRANGE);
 				
 	//printf("！x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
@@ -994,6 +994,8 @@ __global__ void MyNewKernel(int width,int height)
 	int index = y * width + x;
 	float2 currentUv = make_float2(x+0.5,y+0.5);
 	
+//	d_cudaPboBuffer[index] =   make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,-0.1,FASTPROJT);
+//	return;		
 	float2 resultValue;
 	threePointSearch(currentUv,&resultValue);
 	
@@ -1712,7 +1714,7 @@ __global__ void MyThridPass(uint *PixePos,uint *PixelState,uint *PixelSums)
 
 	if(x > rastWidth || y > rastHeight)
 		return;
-	uint index = y * 1024 + x;
+	uint index = y * rasterWidth + x;
 	if(PixelState[index] == 1)
 	{
 		uint Pos1 = PixelSums[index];

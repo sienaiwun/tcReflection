@@ -68,7 +68,7 @@ nv::Model* model,*sofaModel;
 nv::vec3f modelBBMin, modelBBMax, modelBBCenter;
 nv::vec3f lightPos;
 float glossiness = 0.0f;
-GLuint reflectionMapTex;
+
 GLuint reflectionMaps[ReflectNum];
 GLuint reflectionMapTex_Now;
 
@@ -92,7 +92,7 @@ nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 TestShader g_testShader;
 
 CudaTexResourse poxCudaTex,normalCudaTex,reflectCudaTex,finalEffectCudaTex;
-CudaPboResource vectorCudaArray,lastCudaArray,finalEffectCudaArray;
+CudaPboResource vectorCudaArray,finalEffectCudaArray;
 
 ReprojectShader g_reprojectShader;
 TranShader g_transShader;
@@ -118,21 +118,17 @@ GLuint             worldSpaceTex;
 FramebufferObject* worldSpaceNormalFBO;
 
 unsigned int warmup_frames = 10u, timed_frames = 10u;
-unsigned int initialWindowWidth  = 1024;
-unsigned int initialWindowHeight = 1024;
+
 
 int logReflectionSamplingRate = 0;
 
 GLuint reflectionMapPBO;
 GLuint addtionalMapPBO;
 GLuint VectorPBO;
-GLuint LastVecPBO;
-GLuint testPBO;
 
 GLuint VecorTexture;
 
 
-nv::matrix4f TMVPMat;
 
 bool fixedCamera = false;
 nv::matrix4f fixedCameraMatrix;
@@ -188,7 +184,7 @@ Fbo refGbuffer(3,rasterWidth,rasterWidth);
 ImgMesh g_imgMesh(rasterWidth,rasterWidth);
 ScreenBuffer screenBuffer(windowWidth,windowHeight);
 //New TEXTURE
-GLuint New_Tex;
+
 
 
 bool animate = true;
@@ -217,7 +213,7 @@ void init_cuda(int argc,char**argv)
     //绑定opengl纹理到cuda
 	poxCudaTex.set(refGbuffer.getTexture(0),rasterWidth,rasterHeight,worldPosRef_t);
 	normalCudaTex.set(refGbuffer.getTexture(1),rasterWidth,rasterHeight,worldNormalRef_t);
-	reflectCudaTex.set(reflectionMapTex,rasterWidth,rasterHeight,reflecionRef_t);
+	reflectCudaTex.set(reflectionMapTex_Now,rasterWidth,rasterHeight,reflecionRef_t);
 	
 	
 	poxCudaTex.init();
@@ -226,10 +222,8 @@ void init_cuda(int argc,char**argv)
 	//绑定opengl PBO到cuda
 	
 	vectorCudaArray.set(rasterWidth,rasterHeight,float4_t);
-	lastCudaArray.set(rasterWidth,rasterHeight,float2_t);
 	vectorCudaArray.init();
-	lastCudaArray.init();
-
+	
 
 
 	finalEffectCudaTex.set(FinalEffectFbo.getTexture(0),rasterWidth,rasterHeight,finalEffect_t);
@@ -301,15 +295,6 @@ void init_gl()
 	glBufferData(GL_PIXEL_UNPACK_BUFFER,rasterHeight*rasterWidth*sizeof(float4),0,GL_STREAM_READ);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
 
-	glGenBuffers(1,&LastVecPBO);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER,LastVecPBO);
-	glBufferData(GL_PIXEL_UNPACK_BUFFER,rasterHeight*rasterWidth*sizeof(float2),0,GL_STREAM_READ);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
-
-	glGenBuffers(1,&testPBO);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER,testPBO);
-	glBufferData(GL_PIXEL_UNPACK_BUFFER,rasterHeight*rasterWidth*sizeof(float4),0,GL_STREAM_READ);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
 
 	// setup FBO's
 
@@ -358,17 +343,6 @@ void init_gl()
 	}
 	*/
 
-	//生成所需的reflcet纹理
-	glGenTextures(1, &New_Tex);
-
-	glBindTexture(GL_TEXTURE_2D, New_Tex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, rasterWidth, rasterHeight, 0, GL_RGBA, GL_FLOAT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
 
 
 	// cgGLSetTextureParameter(cgCudaTransTexParam, VecorTexture);
@@ -387,97 +361,8 @@ void init_gl()
 
 	//载入imgMesh
 	g_imgMesh.init();
-	/*
-#if DrawPoint
-	myTransShader.loadShader("Shader/Trans_Point.vert",0,"Shader/Trans_Point.frag");
-#else
-	myTransShader.loadShader("Shader/Trans.vert","Shader/Trans.geom","Shader/Trans.frag");
-#endif
-	TransVecTexUniform = myTransShader.getUniform("TransVecTex");
-	RefelctTexUniform = myTransShader.getUniform("RefelctTex");
-	TranWorPosTexUniform = myTransShader.getUniform("WorldPosTex");
-	TranRePosTexUniform = myTransShader.getUniform("RePosTex");
-	*/
-	/*
-	RepjectShader.loadShader("shader/Reprojec.vert",0,"Shader/Reprojec.frag");
-	NewWorldPosTex = RepjectShader.getUniform("NewWorldPos");
-	RefelctTex = RepjectShader.getUniform("Reflection");
-	LastMVP =  RepjectShader.getUniform("LastMVP");
-	LastWorldPosTex = RepjectShader.getUniform("LastWorldPos");
-	*/
-/*
-	MergeShader.loadShader("Shader/Merge.vert",0,"Shader/Merge.frag");
-	MergeOptixTex = MergeShader.getUniform("OptixTex");
-	MergeComputTex = MergeShader.getUniform("ComputeTex");
-	Merge_FrameCount = MergeShader.getUniform("FrameCount");
-	*/
-	//生成bufferdraw
-
-
-
-
-	//setMatrixMode
-
-
-
-	//原来的optix Fbo
-	/* worldSpaceNormalFBO = new FramebufferObject();
-
-	GLuint worldSpaceDepthTex;
-	glGenTextures(1, &worldSpaceTex);
-	glGenTextures(1, &normalTex);
-	glGenTextures(1, &worldSpaceDepthTex);
-
-	glBindTexture(GL_TEXTURE_2D, worldSpaceTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, 32, 32, 0, GL_RGBA, GL_FLOAT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	cgGLSetTextureParameter(cgWorldPosMapParam, worldSpaceTex);
-
-	glBindTexture(GL_TEXTURE_2D, normalTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, 32, 32, 0, GL_RGBA, GL_FLOAT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	cgGLSetTextureParameter(cgNormalMapParam, normalTex);
-
-	glBindTexture(GL_TEXTURE_2D, worldSpaceDepthTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
-	float BorderColor[4] = { std::numeric_limits<float>::max() };
-	glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, BorderColor);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8_EXT, 32, 32, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	worldSpaceNormalFBO->AttachTexture( GL_TEXTURE_2D, worldSpaceTex, GL_COLOR_ATTACHMENT0_EXT );
-	worldSpaceNormalFBO->AttachTexture( GL_TEXTURE_2D, normalTex, GL_COLOR_ATTACHMENT1_EXT );
-	worldSpaceNormalFBO->AttachTexture( GL_TEXTURE_2D, worldSpaceDepthTex, GL_DEPTH_ATTACHMENT_EXT );
-	if(!worldSpaceNormalFBO->IsValid()) {
-	printf("FBO is incomplete\n");
-	exit(-1);
-	}*/
-
-	// and reflection map texture
-	glGenTextures(1, &reflectionMapTex);
-	glBindTexture(GL_TEXTURE_2D, reflectionMapTex);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, 1024, 1024, 0, GL_RGBA, GL_FLOAT, NULL);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-   
-
-  screenBuffer.setBuffersize(rasterWidth,rasterHeight);
-  screenBuffer.init();
+    screenBuffer.setBuffersize(rasterWidth,rasterHeight);
+    screenBuffer.init();
 	CHECK_ERRORS();
 }
 
@@ -544,7 +429,7 @@ void init_optix()
 
 		//
 
-		PixelBuffer = rtContext->createBufferForCUDA(RT_BUFFER_INPUT,RT_FORMAT_UNSIGNED_INT,1024*1024);//PixelsSum);
+		PixelBuffer = rtContext->createBufferForCUDA(RT_BUFFER_INPUT,RT_FORMAT_UNSIGNED_INT,rasterWidth*rasterHeight);//PixelsSum);
 		PixelBuffer->setDevicePointer(0, (CUdeviceptr)g_PixelPos);
 
 		rtContext["Pixels_Buffer"]->setBuffer(PixelBuffer);
@@ -619,6 +504,7 @@ void init_optix()
 		g_scene.optixInit();
 		rtContext["max_depth"]->setUint(2u);
 		rtContext->setStackSize(1850);
+		rtContext["rasterSize"]->setInt(rasterWidth, rasterHeight);
 		rtContext->validate();
 		printf("4444");
 
@@ -882,7 +768,7 @@ void blending()
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	g_blendShader.setParemeter(FinalEffectFbo.getTexture(0),reflectionMapTex_Now);
 	MyGeometry::drawQuad(g_blendShader);
-	MergeEffectFbo.SaveBMP("./test/realBlending.bmp",0);
+	//MergeEffectFbo.SaveBMP("./test/realBlending.bmp",0);
 	MergeEffectFbo.end();
 	
 
@@ -900,55 +786,11 @@ void reductionGPU()
 void ComputeVecInCuda()
 {
 
-	float modelViewF[16],projF[16];
-	//Get MVP Matrix
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-
-	//Optix_Camare.Look();
-	//g_scene.m_curCamera.Look();
-	g_scene.m_refCamera.Look();
-
-
-	//cout<<"Last Camera:"<<endl;
-	//g_scene.m_refCamera.CoutCamera();
-	//cout<<"now Camera:"<<endl;
-	//g_scene.m_curCamera.CoutCamera();
-
-
-
-	glGetFloatv(GL_MODELVIEW_MATRIX,modelViewF);
-
-	glPopMatrix();
-
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-
-	//glMultMatrixf(ViewMat);
-
-	glGetFloatv(GL_PROJECTION_MATRIX,projF);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-
-	//nv::matrix4f ttt;
-	nv::matrix4f viewM;
-	nv::matrix4f projectM;
-
-	//nv::matrix4f TMVPMat;
-
-
-	viewM.set_value(modelViewF);
-	projectM.set_value(projF);
-
-	TMVPMat = projectM * viewM;
-
-	const float *MVPMatf = TMVPMat.get_value();
+	
 
 
 	float3 CameraPos1 = make_float3(g_scene.m_refCamera.Position().x,g_scene.m_refCamera.Position().y,g_scene.m_refCamera.Position().z);
 
-	//float3 CameraPos2 = make_float3(-2.403542,34.498703,37.004547);
 	float3 CameraPos2 = make_float3(g_scene.m_curCamera.Position().x,g_scene.m_curCamera.Position().y,g_scene.m_curCamera.Position().z);
 
 
@@ -960,28 +802,16 @@ void ComputeVecInCuda()
 
 
 
-	//MapResource 
-	//checkCudaErrors(cudaGraphicsMapResources(1,&cudaRes_WorldPos,0));
-	//checkCudaErrors(cudaGraphicsMapResources(1,&cudaRes_WorldNormal,0));
-	//checkCudaErrors(cudaGraphicsMapResources(1,&cudaRes_Reflect,0));
-	//checkCudaErrors(cudaGraphicsMapResources(1,&cudaRes_VectorPBO,0));
-	//checkCudaErrors(cudaGraphicsMapResources(1,&cuda_LastVecPBO,0));
 	vectorCudaArray.map();
-	//lastCudaArray.map();
-
 	
 	poxCudaTex.map();
 	normalCudaTex.map();
-	reflectCudaTex.map();
-	//TransGLRes2Cuda(&cudaRes_VectorPBO,&cudaRes_VectorPBO,&cudaRes_VectorPBO,&cudaRes_VectorPBO,&cuda_LastVecPBO);
-
+	reflectCudaTex.map();	
 	cudaPredict(rasterWidth,rasterHeight);
-	
 	reflectCudaTex.unmap();
 	poxCudaTex.unmap();
 	normalCudaTex.unmap();
 	vectorCudaArray.unMap();
-
 	vectorCudaArray.generateTex();
 	VecorTexture = vectorCudaArray.getTexture();
 
@@ -1024,351 +854,18 @@ void mapping()
 }
 
 
-//Compute Vector
-void ComputeVector(){
-	//int x = 696;
-	//int y = 640;
-	int x = 373,y = 139;
-
-
-	float3 *WorldPosFloat = NULL;
-	float4 *ReflectFloat = NULL;
-
-	float3 *WorldNormalFloat = NULL;
-
-	WorldPosFloat = new float3[1024*1024];
-	ReflectFloat = new float4[1024*1024];
-	WorldNormalFloat = new float3[1024*1024];
-
-	memset(WorldPosFloat,0,1024*1024*sizeof(float3));
-	memset(ReflectFloat,0,1024*1024*sizeof(float4));
-	memset(WorldNormalFloat,0,1024*1024*sizeof(float3));
-
-	glBindTexture(GL_TEXTURE_2D,currentGbuffer.getTexture(0));
-	glGetTexImage(GL_TEXTURE_2D,0,GL_RGB,GL_FLOAT,WorldPosFloat);
-
-	glBindTexture(GL_TEXTURE_2D,0);
-
-	glBindTexture(GL_TEXTURE_2D,reflectionMapTex);
-	glGetTexImage(GL_TEXTURE_2D,0,GL_RGBA,GL_FLOAT,ReflectFloat);
-	glBindTexture(GL_TEXTURE_2D,0);
-
-	glBindTexture(GL_TEXTURE_2D,currentGbuffer.getTexture(1));
-	glGetTexImage(GL_TEXTURE_2D,0,GL_RGB,GL_FLOAT,WorldNormalFloat);
-
-	glBindTexture(GL_TEXTURE_2D,0);
-
-	float3 WorldPos = WorldPosFloat[(y*1024) + x];
-	float3 WorldNormal = normalize(WorldNormalFloat[(y*1024) + x]);
-	float4 tmpReflect = ReflectFloat[(y*1024) + x ];
-
-	//float3 ReflectPos = make_float3(tmpReflect.x,tmpReflect.y,tmpReflect.z);
-	float ReflectDis = tmpReflect.w;
-
-	float3 CameraPos1 = make_float3(-2.403542,34.498703,37.004547);
-
-	float3 CameraPos2 = make_float3(g_scene.m_curCamera.Position().x,g_scene.m_curCamera.Position().y,g_scene.m_curCamera.Position().z);
-
-	float3 CamerVec = normalize(CameraPos2 - CameraPos1);
-
-	float3 LookVec = normalize(WorldPos-CameraPos1);
-
-	float3 reflectVec = normalize(reflect(LookVec,WorldNormal));
-
-
-
-	//被反射物体坐标
-	float3 TmpRePos = WorldPos + reflectVec * ReflectDis;
-
-
-	//求镜像点位置
-	float cosTheta = abs(dot(reflectVec,WorldNormal));
-
-	float3 RefRealPos = ReflectDis * cosTheta * 2 *(-1) * WorldNormal + TmpRePos;
-
-
-	//float PlaneD = -(WorldNormal.x * WorldPos.x + WorldNormal.y + WorldPos.y + WorldNormal.z * WorldPos.z);
-
-	float DisEye2Plane = abs(dot(CameraPos2 - WorldPos,WorldNormal));
-
-	float3 VecEye2Ref = normalize(RefRealPos - CameraPos2);
-	float CosTheta2 = abs(dot(VecEye2Ref,WorldNormal));
-
-	float3 FinalPos = CameraPos2 + (DisEye2Plane/CosTheta2)* VecEye2Ref;
-
-
-
-	//matrix4f MVP;
-	float ViewMat[16],MVPFloat[16];
-	//MVPFloat = new float[16];
-	float modelViewF[16],projF[16];
-
-	glMatrixMode(GL_MODELVIEW);
-	glPushMatrix();
-	glLoadIdentity();
-
-	//Optix_Camare.Look();
-	g_scene.m_curCamera.Look();
-
-	glGetFloatv(GL_MODELVIEW_MATRIX,modelViewF);
-
-	glPopMatrix();
-
-	glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-
-	//glMultMatrixf(ViewMat);
-
-	glGetFloatv(GL_PROJECTION_MATRIX,projF);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
-
-	//nv::matrix4f ttt;
-	nv::matrix4f viewM;
-	nv::matrix4f projectM;
-
-
-	viewM.set_value(modelViewF);
-	projectM.set_value(projF);
-
-
-	float4 tmpPos = make_float4(RefRealPos,1.0);
-
-	nv::vec4f tmpPosVec(FinalPos.x,FinalPos.y,FinalPos.z,1.0);
-
-	//	nv::vec4f ProPos = projectM* viewM*nv::vec4f(RefRealPos.x,RefRealPos.y,RefRealPos.z,1) ;
-	nv::vec4f ProPos = projectM* viewM*tmpPosVec ;
-
-	ProPos.x = ProPos.x / ProPos.w;
-	ProPos.y = ProPos.y / ProPos.w;
-
-	//project位置
-	ProPos.x = (ProPos.x * 0.5 +0.5) * 1024;
-	ProPos.y = (ProPos.y * 0.5 +0.5) * 1024;
-
-	float2 NowProPos = make_float2(ProPos.x ,ProPos.y);
-
-	int2 TmpUv = make_int2(x,y);
-
-	float2 MoveVec = NowProPos - make_float2(TmpUv.x,TmpUv.y);
-
-	int IterTime = 0;
-	while(IterTime < 400 && dot(MoveVec,MoveVec)>=2){
-		int2 TmpUv1,TmpUv2, TmpUv3;
-		TmpUv3 = TmpUv;
-		if(MoveVec.x >0){
-			TmpUv1 = make_int2(TmpUv.x + 1,TmpUv.y);
-			TmpUv3.x = TmpUv3.x + 1;
-		}
-		else{
-			TmpUv1 = make_int2(TmpUv.x - 1,TmpUv.y);
-			TmpUv3.x = TmpUv3.x - 1;
-
-		}
-		if(MoveVec.y>0){
-			TmpUv2 = make_int2(TmpUv.x,TmpUv.y+1);
-			TmpUv3.y += 1;
-		}
-		else{
-			TmpUv2 = make_int2(TmpUv.x,TmpUv.y-1);
-			TmpUv3.y -= 1;
-		}
-
-		//各个采样点对应的WorPos
-		float3 WorldPos1 = WorldPosFloat[(TmpUv1.y*1024)+TmpUv1.x];
-		float3 WorldPos2 = WorldPosFloat[(TmpUv2.y*1024)+TmpUv2.x];
-		float3 WorldPos3 = WorldPosFloat[(TmpUv3.y * 1024) + TmpUv3.x];
-
-		//求相机与采样点组成平面的法线
-		float3 CamWorldPlaneNormal = normalize(cross(CamerVec,normalize(CameraPos1- RefRealPos)));
-		//求相机轨迹所在平面的法线
-		float3 CameraVecPlaneNormal = normalize(cross(CamWorldPlaneNormal,CamerVec));
-
-		//分别求两个点与该平面的交点
-		float3 InsertPoint1 = abs(dot(CameraVecPlaneNormal,CameraPos1 - RefRealPos)/dot(CameraVecPlaneNormal,normalize(WorldPos1-RefRealPos))) * normalize(WorldPos1-RefRealPos) + RefRealPos;
-		float3 InsertPoint2 = abs(dot(CameraVecPlaneNormal,CameraPos1 - RefRealPos)/dot(CameraVecPlaneNormal,normalize(WorldPos2-RefRealPos))) * normalize(WorldPos2-RefRealPos) + RefRealPos;
-		float3 InsertPoint3 = abs(dot(CameraVecPlaneNormal,CameraPos1 - RefRealPos)/dot(CameraVecPlaneNormal,normalize(WorldPos3-RefRealPos))) * normalize(WorldPos3-RefRealPos) + RefRealPos;
-
-		//求点与直线的距离
-		float DisPoint2Line1,DisPoint2Line2,DisPoint2Line3;
-		float TmpDis1,TmpDis2;
-		TmpDis1 = dot(InsertPoint1 - CameraPos1,CamerVec);
-		TmpDis2 = dot(InsertPoint1 - CameraPos1,InsertPoint1 - CameraPos1);
-		DisPoint2Line1 = TmpDis2 - TmpDis1*TmpDis1 ;
-
-		TmpDis1 = dot(InsertPoint2 - CameraPos1,CamerVec);
-		TmpDis2 = dot(InsertPoint2 - CameraPos1,InsertPoint2 - CameraPos1);
-		//距离较小的作为下一个采样点
-		DisPoint2Line2 = TmpDis2 - TmpDis1*TmpDis1 ;
-
-		TmpDis1 = dot(InsertPoint3 - CameraPos1,CamerVec);
-		TmpDis2 = dot(InsertPoint3 - CameraPos1,InsertPoint3 - CameraPos1);
-		DisPoint2Line3 = TmpDis2 - TmpDis1*TmpDis1 ;
-
-		if( DisPoint2Line2 < DisPoint2Line1){
-			TmpUv1 = TmpUv2;
-			WorldPos1 = WorldPos2;
-			DisPoint2Line1 = DisPoint2Line2;
-		}
-		if(DisPoint2Line3 < DisPoint2Line1){
-
-			TmpUv1 = TmpUv3;
-			WorldPos1 = WorldPos3;
-
-		}
-
-		TmpUv = TmpUv1;
-		WorldPos = WorldPos1;
-
-		//得出该点法线
-		WorldNormal = WorldNormalFloat[TmpUv.y*1024+TmpUv.x];
-
-		//求出该点的位平面的被发射物体的镜像点
-		RefRealPos = abs(dot(WorldPos - TmpRePos,WorldNormal)) * (-2) * WorldNormal + TmpRePos;
-		//求该镜像点与相机连线与新平面的交点
-		DisEye2Plane = abs(dot(CameraPos2-WorldPos,WorldNormal));
-		//视点与镜像点连线与视点到平面垂线的cos值
-		CosTheta2 = abs(dot(normalize(CameraPos2 - RefRealPos),WorldNormal));
-		VecEye2Ref = normalize(RefRealPos - CameraPos2);
-		//求出交点
-		FinalPos = CameraPos2 +  VecEye2Ref * (DisEye2Plane/CosTheta2);
-
-
-		tmpPosVec = nv::vec4f(FinalPos.x,FinalPos.y,FinalPos.z,1);
-
-		ProPos = projectM* viewM*tmpPosVec ;
-
-		ProPos.x = ProPos.x / ProPos.w;
-		ProPos.y = ProPos.y / ProPos.w;
-
-		//project位置
-		ProPos.x = (ProPos.x * 0.5 +0.5) * 1024;
-		ProPos.y = (ProPos.y * 0.5 +0.5) * 1024;
-
-		NowProPos = make_float2(ProPos.x ,ProPos.y);
-
-		MoveVec = NowProPos - make_float2(TmpUv.x,TmpUv.y);
-
-		IterTime++;
-
-
-	}
-
-
-	//printf("origin Pos is %f,%f,%f\n",ReflectPos.x,ReflectPos.y,ReflectPos.z);
-	//printf("comput Pos is %f,%f,%f\n",TmpRePos.x,TmpRePos.y,TmpRePos.z);
-	printf("the uv is %f,%f\n",ProPos.x,ProPos.y);
-
-
-
-
-
-
-	//delete [] MVPFloat;
-	delete [] WorldNormalFloat;
-	delete [] WorldPosFloat;
-	delete [] ReflectFloat;
-
-
-
-
-
-}
-
-
-
-
 
 void drawTransMap(int  optixId)
 {
-
-
-
-	// cgGLSetTextureParameter(cgReflectionMapParam, reflectionMapTex);
-	// cgGLEnableTextureParameter(cgReflectionMapParam);
-
-	//cgGLSetTextureParameter(cgCudaTransTexParam, VecorTexture);
-
-	//CGpass pass = cgGetFirstPass(currentTech);
-
-	//cgSetPassState(pass);
-
-	// 
-	// 	CGpass pass = cgGetFirstPass(tech);
-	// 	while(pass) {
-	// 		cgSetPassState(pass);
-	// 		glDrawElements( GL_TRIANGLES, m_model->getCompiledIndexCount(), GL_UNSIGNED_INT, 0 );
-	// 		cgResetPassState(pass);
-	// 		pass = cgGetNextPass(pass);
-	// 	}
-
-	//glPointSize(5.0);
-
-
-	//myTransShader.useShder();
-
-
-
-	//glUniform1i(TransVecTexUniform,1);
-	//glUniform1i(RefelctTexUniform,0);
-
-
-	// 	glBindTexture(GL_TEXTURE_2D,VecorTexture);
-	// 	float2 *pFloat2 = NULL;
-	// 	pFloat2 = new float2[1024*1024];
-	// 	memset(pFloat2, 0, 1024*1024 * sizeof(float2));
-	// 
-	// 	glBindTexture(GL_TEXTURE_2D, VecorTexture);//TexPosId   PboTex
-	// 
-	// 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RG, GL_FLOAT, pFloat2);
-	// 	glBindTexture(GL_TEXTURE_2D, 0);
-
 	glClearColor(viewDependentMissColor.x,viewDependentMissColor.y,viewDependentMissColor.z,1);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-
-	//glViewport(0,0,1024,1024);
-	// 
-	// 
-
-	/*glActiveTexture(GL_TEXTURE1);
-	glBindTexture(GL_TEXTURE_2D,VecorTexture);
-
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D,reflectionMaps[optixId]);
-
-	glActiveTexture(GL_TEXTURE3);
-	glBindTexture(GL_TEXTURE_2D,RePosTexture);
-
-
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D,currentGbuffer.getTexture(0));
-
-	glUniform1i(TransVecTexUniform,1);
-	glUniform1i(RefelctTexUniform,0);
-	glUniform1i(TranWorPosTexUniform,2);
-	glUniform1i(TranRePosTexUniform,3);
-	*/
 	RefFrame & frame = RefFrame::getFrameByIndex(OptixFrame);
-
+	g_transShader.setRes(rasterWidth,rasterHeight);
 	g_transShader.setParemeter(frame.getOptixTex(),VecorTexture,frame.getGbuffer().getTexture(0),0);
 	//g_transShader.setAdditionalTex(frame.getAdditionalTex());
-	g_transShader.setRes(nv::vec2f(rasterWidth,rasterHeight));
+	g_transShader.setRes(rasterWidth,rasterHeight);
 	g_imgMesh.drawImgMesh(g_transShader);
-	/*g_transShader.begin();
-	glEnableClientState(GL_VERTEX_ARRAY);;
-	glBindBuffer(GL_ARRAY_BUFFER, MyVBO);
-	glVertexPointer  ( 2, GL_FLOAT, 0, (char *) 0);
-#if DrawPoint
-	glDrawArrays(GL_POINTS, 0, rasterHeight*rasterWidth*6);
-
-#else
-	glDrawArrays(GL_TRIANGLES, 0, rasterHeight*rasterWidth*6);
-#endif
-
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glDisableClientState(GL_VERTEX_ARRAY);
-
-	g_transShader.end();*/
+	
 
 }
 
@@ -1410,6 +907,7 @@ void optixRendering()
 		g_timeMesure.setBeginTime(display_start);
 	}
 	CVector3& pos =g_scene.m_refCamera.Position();
+	g_scene.cameraControl(currentTime2,g_scene.m_refCamera);
 	g_scene.m_curCamera = g_scene.m_refCamera;
 	currentGbuffer.begin();
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
@@ -1462,15 +960,11 @@ void optixRendering()
 		g_timeMesure.setEndTime(finish_start);
 		g_timeMesure.print();
 	}
-	//Fbo::saveScreen("./test/optix.bmp",windowWidth,windowHeight);
-	/*BYTE *pTexture = NULL;											
-	  pTexture = new BYTE[512 * 512 * 3];
-	  memset(pTexture, 0, 512 * 512 * 3 * sizeof(BYTE));
-	  glReadPixels(0,0,512,512,GL_RGB,GL_UNSIGNED_BYTE,pTexture);
-	  char str[100];
-	  sprintf(str,"./test/optix.bmp");	
-	  Fbo::SaveBMP(str,pTexture,512,512);
-	  delete [] pTexture;*/	
+	/*
+	char sreenstr[20];
+	sprintf(sreenstr,"./test/optix%d.bmp",rasterWidth);
+	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
+	*/
 }
 
 void init_RefcletTex()
@@ -1602,7 +1096,6 @@ void setTitle()
 void tcRendering()
 {
 
-	printf("frame#:%d\n",currentTime2);
 	setTitle();
 	sutilFrameBenchmark("isgReflections", warmup_frames, timed_frames);
 	double FrameStart,FrameEnd;
@@ -1712,6 +1205,7 @@ void tcRendering()
 
 	TransMapFbo.begin(); 
 	drawTransMap(OptixFrame);
+	//TransMapFbo.SaveBMP("./test/transmap.bmp",0);
 	TransMapFbo.end();
 	char str[100];
 
@@ -1776,7 +1270,11 @@ void tcRendering()
 		g_timeMesure.setEndTime(finish_start);
 		g_timeMesure.print();
 	}
-
+	/*
+	char sreenstr[20];
+	sprintf(sreenstr,"./test/tc%d.bmp",rasterWidth);
+	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
+	*/
 }
 
 void display()
@@ -1860,7 +1358,7 @@ void resize(int w, int h)
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH24_STENCIL8_EXT, traceWidth, traceHeight, 0, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, NULL);
 
 	// resize reflection map texture
-	glBindTexture(GL_TEXTURE_2D, reflectionMapTex);
+	glBindTexture(GL_TEXTURE_2D, reflectionMapTex_Now);
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, traceWidth, traceHeight, 0, GL_RGBA, GL_FLOAT, 0);
 
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -2065,8 +1563,8 @@ void printUsageAndExit( const std::string& argv0, bool doExit = true )
 int main(int argc, char** argv)
 {
 	// Allow glut to consume its args first
-	freopen("stdout.txt","w",stdout);
-	freopen("stderr.txt","w",stderr);
+	//freopen("stdout.txt","w",stdout);
+	//freopen("stderr.txt","w",stderr);
 	glutInit(&argc, argv);
 
 	bool dobenchmark = false;

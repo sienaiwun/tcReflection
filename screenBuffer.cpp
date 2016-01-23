@@ -45,10 +45,33 @@ void ScreenBuffer::drawToScreen(glslShader & shader)
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   MyGeometry::drawQuad(shader);
+  /*
+  glReadBuffer(GL_COLOR_ATTACHMENT0 + 0);
+
+	BYTE* pTexture = NULL;
+
+	int width = m_bufferWidth;
+	int height =  m_bufferHeight;
+
+	pTexture = new BYTE[width*height * 3];
+	memset(pTexture, 0, width*height * 3 * sizeof(BYTE));
+
+	float *pData = NULL;
+	pData = new float[width * height * 3];
+	memset(pData, 0, width * height * 3 * sizeof(float));
+
+	glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
+
+	Fbo::SaveBMP("./test/beforeMip.bmp", pTexture, width, height);
+
+	delete pData;
+	delete pTexture;
+	*/
   glBindTexture(GL_TEXTURE_2D, m_sampleTex);
   glGenerateMipmap(GL_TEXTURE_2D);
   glBindTexture(GL_TEXTURE_2D, 0);
   m_texShader.setParemeter(m_sampleTex);
   Fbo::drawScreenBackBuffer(m_windowWidth,m_windowHeight);
   MyGeometry::drawQuad(m_texShader);
+
 }

@@ -26,9 +26,9 @@ public :
 	{
 		m_bindingClearColor = color;
 	}
-	inline void setRes(nv::vec2f r)
+	inline void setRes(int  x,int y)
 	{
-		m_res = r;
+		m_res = nv::vec2f(x,y);
 	}
 	/*
 	inline void setAdditionalTex(int tex)

@@ -26,6 +26,9 @@ rtDeclareVariable(int,   PixelNum, , );
 rtDeclareVariable(int,   PixelWidth, , );
 rtDeclareVariable(int,   hasGlossy, , );
 
+
+rtDeclareVariable(int2,   rasterSize, , );
+
 rtDeclareVariable(uint2, launch_index, rtLaunchIndex, );
 
 struct PerRayData_radiance
@@ -143,8 +146,8 @@ RT_PROGRAM void addition_request()
  			return;
  	uint x,y;
 	uint PixPos = Pixels_Buffer[index];
-    x = PixPos%1024;
-	y = PixPos/1024;
+    x = PixPos%rasterSize.x;
+	y = PixPos/rasterSize.x;
 	uint2 FinalPixelPos = make_uint2(x,y);
 	 float3 ray_origin = make_float3(tex2D(request_texture, x, y));
 	float reflectValue = tex2D(request_texture, x, y).w;
