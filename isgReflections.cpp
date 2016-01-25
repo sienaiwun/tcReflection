@@ -48,6 +48,8 @@
 #include "reflectionShader.h"
 #include "ImgMesh.h"
 #include "screenBuffer.h"
+#include "fboAnalyse.h"
+#include "hybridRendering.h"
 //#include "toiletScene.h"
 
 unsigned int *Host_PixelSum;
@@ -85,7 +87,7 @@ optix::GeometryGroup geometrygroup;
 //uint *Host_PixelSum;
 //MyGeometry teapot;
 int CountTime = 1000;
-TimeMesure g_timeMesure(tcRenderingType,CountTime);
+TimeMesure g_timeMesure(hybridRenderingType,CountTime);
 nv::vec3f viewDependentMissColor = nv::vec3f(255,0,0);
 nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 //cudaGraphicsResource *cudaRes_WorldNormal,*cudaRes_WorldPos,*cudaRes_Reflect;
@@ -101,15 +103,18 @@ TexShader g_texShader;
 GbufferShader g_gBufferShader;
 reflectShader g_reflectionShader;
 BlendShader g_blendShader;
+HybridShader g_hybridShader;
 
 
-#include "toiletScene.h"
-toiletScene g_scene;
 
+//#include "toiletScene.h"
+//toiletScene g_scene;
+#include "livingRoom.h"
+livingRoom g_scene;
 
 int currentTime  = 0;
 int currentTime2 = 9;
-int OptixFrame;
+
 FPS fcount(CountTime);
 
 
@@ -178,11 +183,13 @@ std::string WALLTEX_PATH;
 Fbo currentGbuffer(3,rasterWidth,rasterHeight);
 Fbo TransMapFbo(1,rasterWidth,rasterWidth);
 Fbo FinalEffectFbo(1,rasterWidth,rasterWidth);
+Fbo FinalEffectFbo2(1,rasterWidth,rasterWidth);
 Fbo MergeEffectFbo(1,rasterWidth,rasterWidth);
 Fbo refGbuffer(3,rasterWidth,rasterWidth);
 
 ImgMesh g_imgMesh(rasterWidth,rasterWidth);
 ScreenBuffer screenBuffer(windowWidth,windowHeight);
+//FboAnalyse g_fboAnalyse(rasterWidth,rasterWidth);
 //New TEXTURE
 
 
@@ -305,6 +312,12 @@ void init_gl()
 	refGbuffer.init();
 
 	MergeEffectFbo.init();
+	if(hybridRenderingType == g_timeMesure.getType())
+	{
+		FinalEffectFbo2.init();
+		g_hybridShader.init();
+
+	}
 	//生成vector纹理
 	glGenTextures(1, &VecorTexture);
 
@@ -363,6 +376,7 @@ void init_gl()
 	g_imgMesh.init();
     screenBuffer.setBuffersize(rasterWidth,rasterHeight);
     screenBuffer.init();
+	//g_fboAnalyse.init();
 	CHECK_ERRORS();
 }
 
@@ -773,10 +787,11 @@ void blending()
 	
 
 }
-void reductionGPU()
+int reductionGPU()
 {
 	int pixelNum = 	thrustReduction(rasterWidth,rasterHeight);
 	addtionalTracing(pixelNum);
+	return pixelNum;
 	//blending();
 }
 
@@ -825,7 +840,7 @@ void ComputeVecInCuda()
 
 
 };
-void mapping()
+int mapping()
 {
 
 	//checkCudaErrors(cudaGraphicsMapResources(1,&cudaRes_ProPixels,0));
@@ -839,7 +854,7 @@ void mapping()
 
 
 
-	reductionGPU();
+	int pixelNum = reductionGPU();
 	//checkCudaErrors(cudaGraphicsUnmapResources(1, &cudaRes_VectorPBO, 0));
 
 	//checkCudaErrors(cudaGraphicsUnmapResources(1, &cudaTest_Pixels, 0));
@@ -847,8 +862,7 @@ void mapping()
 	vectorCudaArray.unMap();
 	finalEffectCudaTex.unmap();
 	finalEffectCudaArray.unMap();
-	
-
+	return pixelNum;
 
 
 }
@@ -859,7 +873,7 @@ void drawTransMap(int  optixId)
 {
 	glClearColor(viewDependentMissColor.x,viewDependentMissColor.y,viewDependentMissColor.z,1);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-	RefFrame & frame = RefFrame::getFrameByIndex(OptixFrame);
+	RefFrame & frame = RefFrame::getFrameByIndex(optixId);
 	g_transShader.setRes(rasterWidth,rasterHeight);
 	g_transShader.setParemeter(frame.getOptixTex(),VecorTexture,frame.getGbuffer().getTexture(0),0);
 	//g_transShader.setAdditionalTex(frame.getAdditionalTex());
@@ -896,9 +910,11 @@ void drawText( const std::string& text, float x, float y, void* font )
 
 
 
-void testRendering();
+
+void setTitle();
 void optixRendering()
 {
+	setTitle();
 	if (stat_breakdown) 
 	{
 		glFinish();
@@ -907,8 +923,16 @@ void optixRendering()
 		g_timeMesure.setBeginTime(display_start);
 	}
 	CVector3& pos =g_scene.m_refCamera.Position();
-	g_scene.cameraControl(currentTime2,g_scene.m_refCamera);
-	g_scene.m_curCamera = g_scene.m_refCamera;
+	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
+
+	g_scene.m_refCamera = g_scene.m_curCamera;
+	/*{
+		OptixFrame = currentTime2 /JianGe;
+	//if(currentTime2 %JianGe> JianGe/2)
+	//	OptixFrame++;
+
+		g_scene.cameraControl(OptixFrame*JianGe,g_scene.m_refCamera);
+	}*/
 	currentGbuffer.begin();
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
 	currentGbuffer.end();
@@ -960,11 +984,11 @@ void optixRendering()
 		g_timeMesure.setEndTime(finish_start);
 		g_timeMesure.print();
 	}
-	/*
-	char sreenstr[20];
-	sprintf(sreenstr,"./test/optix%d.bmp",rasterWidth);
+	
+	char sreenstr[30];
+	sprintf(sreenstr,"./test/optix%d.bmp",currentTime2);
 	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
-	*/
+	
 }
 
 void init_RefcletTex()
@@ -1093,6 +1117,135 @@ void setTitle()
 	sprintf(titleBuffer,"Frame:%d",currentTime2);
 	glutSetWindowTitle(titleBuffer); 
 }
+void drawFinalColor(int time,Fbo& finalFbo)
+{
+	g_scene.cameraControl(time*TIMEGAP,g_scene.m_refCamera);
+	//test();
+	RefFrame & frame = RefFrame::getFrameByIndex(time);
+	refGbuffer = frame.getGbuffer();
+	if (stat_breakdown) 
+	{
+		double cudaBeginTime=g_timeMesure.getCurrentTime();;
+		g_timeMesure.setCudaBeginTime(cudaBeginTime);
+	}
+	float ComputeStar=0,ComputeEnd;
+	
+	
+	poxCudaTex.setEveryTex(frame.getGbuffer().getTexture(0));
+	normalCudaTex.setEveryTex(frame.getGbuffer().getTexture(1));
+	reflectCudaTex.setEveryTex(frame.getOptixTex());
+	ComputeVecInCuda();
+	fflush(stdout);
+	
+
+	
+	//Draw TransMap
+
+
+	if (stat_breakdown) 
+	{
+		double forwardBeginTime=g_timeMesure.getCurrentTime();
+		g_timeMesure.setForwardingTime(forwardBeginTime);
+	}
+
+	TransMapFbo.begin(); 
+	drawTransMap(time);
+	//char strs[30];
+	//sprintf(strs,"./test/transmap%d_%d.bmp",OptixFrame*10,currentTime2);
+	//TransMapFbo.SaveBMP(strs,0);
+	TransMapFbo.end();
+	char str[100];
+
+	if(stat_breakdown)
+	{
+		glFinish();
+		
+	}
+	
+
+
+
+
+	
+	finalFbo.begin();
+
+	drawFinalEffect();
+
+	finalFbo.end();
+	
+}
+void hybridRendering()
+{
+	
+	setTitle();
+	sutilFrameBenchmark("isgReflections", warmup_frames, timed_frames);
+	double FrameStart,FrameEnd;
+
+	//sutilCurrentTime(&FrameStart);
+	FrameStart = TimeMesure::getCurrentTime();
+	if (stat_breakdown) 
+	{
+		double frameStartTime =g_timeMesure.getCurrentTime();
+		//sutilCurrentTime(&frameStartTime);
+		g_timeMesure.setBeginTime(frameStartTime);
+	}
+	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
+	glViewport(0,0, traceWidth, traceHeight);
+	currentGbuffer.begin();
+	g_scene.draw_model(g_gBufferShader,&g_scene.m_curCamera);
+	currentGbuffer.end();
+	
+	
+	int OptixFrame = currentTime2 /JianGe;
+	if(currentTime2 %JianGe> JianGe/2)
+		OptixFrame++;
+
+	drawFinalColor(OptixFrame,FinalEffectFbo);
+	//FinalEffectFbo.SaveBMP("./test/fbo1.bmp",0);
+	int anotherTime = OptixFrame;
+	if(currentTime2 %JianGe> JianGe/2)
+	{
+		anotherTime--;
+	}
+	else
+	{
+		anotherTime++;
+	}
+	drawFinalColor(anotherTime,FinalEffectFbo2);
+	
+	
+	double DrawTime1,DrawTime2;
+	glFinish();
+	sutilCurrentTime(&DrawTime1);
+	if (stat_breakdown) 
+	{
+		// glFinish();
+		double finalRenderingTime=g_timeMesure.getCurrentTime();
+		g_timeMesure.setFinalRenderingTime(finalRenderingTime);
+	}
+	g_hybridShader.setDiffuseTex(currentGbuffer.getTexture(2));
+	g_hybridShader.setCurrentTime(currentTime2);
+	g_hybridShader.setTex1(OptixFrame*JianGe,FinalEffectFbo.getTexture(0));
+	g_hybridShader.setTex2(anotherTime*JianGe,FinalEffectFbo2.getTexture(0));
+	screenBuffer.drawToScreen(g_hybridShader);
+	glFinish();
+
+	double finish_start;
+	if (stat_breakdown) 
+	{
+		glFinish();
+		double finish_start=g_timeMesure.getCurrentTime();
+		g_timeMesure.setEndTime(finish_start);
+		g_timeMesure.print();
+
+		
+	}
+	
+	char sreenstr[20];
+	sprintf(sreenstr,"./test/hybrid%d.bmp",currentTime2);
+	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
+	
+}
 void tcRendering()
 {
 
@@ -1110,8 +1263,8 @@ void tcRendering()
 	}
 	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 	
-	OptixFrame = currentTime2 /JianGe;
-	if(currentTime2 /JianGe> 5)
+	int OptixFrame = currentTime2 /JianGe;
+	if(currentTime2 %JianGe> JianGe/2)
 		OptixFrame++;
 
 	g_scene.cameraControl(OptixFrame*10,g_scene.m_refCamera);
@@ -1205,7 +1358,9 @@ void tcRendering()
 
 	TransMapFbo.begin(); 
 	drawTransMap(OptixFrame);
-	//TransMapFbo.SaveBMP("./test/transmap.bmp",0);
+	//char strs[30];
+	//sprintf(strs,"./test/transmap%d_%d.bmp",OptixFrame*10,currentTime2);
+	//TransMapFbo.SaveBMP(strs,0);
 	TransMapFbo.end();
 	char str[100];
 
@@ -1218,7 +1373,6 @@ void tcRendering()
 
 
 #endif
-	//TransMapFbo.SaveBMP(str,0);
 	glViewport(0,0, traceWidth, traceHeight);
 	currentGbuffer.begin();
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_curCamera);
@@ -1246,7 +1400,7 @@ void tcRendering()
 		double secendRacingTimec=g_timeMesure.getCurrentTime();
 		g_timeMesure.setSecondTraceTime(secendRacingTimec);
 	}
-	mapping();
+	int pixelNum = mapping();
 	double DrawTime1,DrawTime2;
 	glFinish();
 	sutilCurrentTime(&DrawTime1);
@@ -1256,7 +1410,7 @@ void tcRendering()
 		double finalRenderingTime=g_timeMesure.getCurrentTime();
 		g_timeMesure.setFinalRenderingTime(finalRenderingTime);
 	}
-	g_blendShader.setDiffuseTex(frame.getGbuffer().getTexture(2));
+	g_blendShader.setDiffuseTex(currentGbuffer.getTexture(2));
 	g_blendShader.setReflectTex(FinalEffectFbo.getTexture(0));
 	g_blendShader.setNewReflectTex(reflectionMapTex_Now);
 	screenBuffer.drawToScreen(g_blendShader);
@@ -1267,9 +1421,17 @@ void tcRendering()
 	{
 		glFinish();
 		double finish_start=g_timeMesure.getCurrentTime();
+		//int ananlyseNum = g_fboAnalyse.analyseColorNum(FinalEffectFbo,0);
+		//float ratio = ananlyseNum/(float)g_fboAnalyse.getRes().x/(float)g_fboAnalyse.getRes().y;
 		g_timeMesure.setEndTime(finish_start);
+		g_timeMesure.setRadio(pixelNum/(float)rasterWidth/(float)rasterHeight);
 		g_timeMesure.print();
+
+		
 	}
+	char sreenstr[20];
+	sprintf(sreenstr,"./test/tc%d.bmp",currentTime2);
+	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
 	/*
 	char sreenstr[20];
 	sprintf(sreenstr,"./test/tc%d.bmp",rasterWidth);
@@ -1289,7 +1451,7 @@ void display()
 	}
 	else if(hybridRenderingType == g_timeMesure.getType())
 	{
-
+		hybridRendering();
 	}
 	//timeMesure.nextFrame();
 	g_timeMesure.updateLastTime();
@@ -1493,12 +1655,12 @@ void keyboard(unsigned char k, int x, int y)
 		*/
 	
 	case '=':
-		//currentTime2++;
-		currentTime++;
+		currentTime2++;
+		//currentTime++;
 		break;
 	case '-':
-		//currentTime2--;
-		currentTime--;
+		currentTime2--;
+		//currentTime--;
 		break;
 
 		// Optix_Camare.CoutCamera();

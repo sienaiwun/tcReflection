@@ -35,18 +35,18 @@ static char text3[32];
 static char text4[32];
 static char text5[32];
 static char text6[32];
-
+static char text7[32];
 void TimeMesure::printOptix()
 {
 	float fps;
 	fps = 1000/(m_frameEndTime - m_lastFrameEndTime);
 	m_fcount.insertTime(m_frame,fps);
-	sprintf( fps_text, "%d fps: %f",m_frame,fps);
-	sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime));
-	sprintf( text2, "first pass   : %6.5f", m_traceBeginTime-m_frameBeginTime);
-	sprintf( text3, "raytrace pass: %6.5f", m_finalRenderingBeginTime-m_traceBeginTime);
-	sprintf( text4, "blur pass    : %6.5f", m_frameEndTime-m_finalRenderingBeginTime); 
-
+	//sprintf( fps_text, "fps: %f",fps);
+	//sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime));
+	//sprintf( text2, "first pass   : %6.5f", m_traceBeginTime-m_frameBeginTime);
+	//sprintf( text3, "raytrace pass: %6.5f", m_finalRenderingBeginTime-m_traceBeginTime);
+	//sprintf( text4, "blur pass    : %6.5f", m_frameEndTime-m_finalRenderingBeginTime); 
+	
 	float offset=12.f;
 	float start=10.f;
 	int index=0;
@@ -55,6 +55,19 @@ void TimeMesure::printOptix()
     drawText( text4   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
 	drawText( text3   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
     drawText( text2   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+	
+}
+void TimeMesure::printHybrid()
+{
+	float fps;
+	float offset=12.f;
+	float start=10.f;
+	int index=0;
+	fps = 1000/(m_frameEndTime - m_lastFrameEndTime);
+	m_fcount.insertTime(m_frame,fps);
+	sprintf( fps_text, "%d fps: %f",m_frame,fps);
+	drawText( fps_text, 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+
 }
 void TimeMesure::printTC()
 {
@@ -71,7 +84,7 @@ void TimeMesure::printTC()
 	sprintf( text4, "projection pass    : %6.5f", m_secondTraceTime-m_forwardTime); 
 	sprintf( text5, "second optix pass: %6.5f ",m_finalRenderingBeginTime- m_secondTraceTime);
 	sprintf( text6, "final rendering pass: %6.5f",m_frameEndTime - m_finalRenderingBeginTime);
-
+	sprintf( text7, "ratio        : %6.5f", m_radio);
 	drawText( fps_text, 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
 	drawText( text1   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
 	drawText( text6   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
@@ -79,8 +92,8 @@ void TimeMesure::printTC()
     drawText( text4   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
     drawText( text3   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
 	drawText( text2   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
+	drawText( text7   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
 	
-
 }
 void TimeMesure::print()
 {
@@ -91,6 +104,10 @@ void TimeMesure::print()
 	else if (m_type == tcRenderingType)
 	{
 		printTC();
+	}
+	else if (m_type == hybridRenderingType)
+	{
+		printHybrid();
 	}
 }
 void TimeMesure::updateLastTime()

@@ -7,7 +7,8 @@ public :
 	BlendShader()
 	{
 		m_vertexFileName = "Shader/blendShader.vert";
-		m_fragmentFileName = "Shader/blendShader.frag";
+		m_fragmentFileName = "Shader/blendShader.frag"; 
+		m_usingAddition = 0;
 	}
 	virtual void init();
 	virtual void bindParemeter();
@@ -24,9 +25,14 @@ public :
 	inline void setNewReflectTex(int tex)
 	{
 		m_newRelfectTex = tex;
+		m_usingAddition = 1;
 	}
 	inline void setParemeter(int a,int b)
 	{
+	}
+	inline void setUsingAdditional(int m)
+	{
+		m_usingAddition = m;
 	}
 private:
 	GLuint m_reflectTex;
@@ -35,6 +41,7 @@ private:
 	GLuint m_diffuseTexSlot;
 	GLuint m_newRelfectTex;
 	GLuint m_newRelfectTexSlot;
-
+	GLuint m_useAdditionalTexSlot;
+	int m_usingAddition;
 };
 #endif

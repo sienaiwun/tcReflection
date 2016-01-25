@@ -105,7 +105,7 @@ static GeoPara livingObj[geoNumber] =
 	{"./t/ArcBack.obj",18,0,0.0f},
 	{"./t/deskLamp.obj",1,0,0.0f},
 	{"./vase/treeC2.obj",1,0,0.0f},
-	{"./vase/vaseC2.obj",1,0,0.2f},
+	{"./vase/vaseC2.obj",24,0,0.2f},
 	{"./new/table_back.obj",17,0,0.0f},
 
 };

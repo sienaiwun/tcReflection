@@ -17,6 +17,7 @@ private:
 	float m_lastFrameEndTime;
 	float m_frameBeginTime,m_traceBeginTime,m_finalRenderingBeginTime,m_frameEndTime;
 	float m_cudaBeginTime,m_forwardTime,m_secondTraceTime;
+	float m_radio;
 	int m_frame;
 	int m_totalTime;
 	static float last_frame_time ;
@@ -69,6 +70,10 @@ public:
 	{
 		m_frameEndTime = m;
 	}
+	inline void setRadio(float m)
+	{
+		m_radio = m;
+	}
 	TimeMesure(TimeType t,int totalTime):m_frame(0),m_totalTime(totalTime)
 	{
 
@@ -83,6 +88,7 @@ public:
 	void print();
 	void printTC();
 	void printOptix();
+	void printHybrid();
 	void nextFrame();
 	void previousFrame();
 	void finishFuc();
