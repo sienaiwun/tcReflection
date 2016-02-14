@@ -4,6 +4,7 @@
 #include<GL/glut.h>
 #include<GL/wglew.h>
 #include<fstream>
+#include"nvMath.h"
 //#include<glm/vec2.hpp>
 
 #define CHECK_ERRORS()         \
@@ -70,7 +71,7 @@ public:
 	void init( GLenum FiterModel = GL_NEAREST);
 	//∆Ù∂Øfbo
 	void attachId();
-	void begin();
+	void begin(nv::vec3f clearColor = nv::vec3f(0,0,0));
 
 	//÷∏∂®‰÷»æbuffer
 	void BindForWrite(int i);

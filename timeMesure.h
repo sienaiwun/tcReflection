@@ -9,6 +9,8 @@ enum TimeType
 	optixRenderingType = 0,
 	tcRenderingType  = 1,
 	hybridRenderingType = 2,
+	noGeometryRenderingType = 3,
+	compareType = 4,
 };
 class TimeMesure
 {
@@ -89,6 +91,7 @@ public:
 	void printTC();
 	void printOptix();
 	void printHybrid();
+	void printNoGeometry();
 	void nextFrame();
 	void previousFrame();
 	void finishFuc();

@@ -31,6 +31,8 @@ rtDeclareVariable(int2,   rasterSize, , );
 
 rtDeclareVariable(uint2, launch_index, rtLaunchIndex, );
 
+
+rtDeclareVariable(uint, launch_index1D, rtLaunchIndex, );
 struct PerRayData_radiance
 {
  
@@ -138,10 +140,10 @@ __device__ __inline__ void createONB( const optix::float3& n,
   U = normalize( U );
   V = cross( n, U );
 }
-#define N 64
+#define N 1024
 RT_PROGRAM void addition_request()
 {
-	int index = launch_index.y * PixelWidth  + launch_index.x;
+	int index =launch_index1D;
 	if(index >= PixelNum)
  			return;
  	uint x,y;
@@ -169,18 +171,10 @@ RT_PROGRAM void addition_request()
   {
     if(!hasGlossy)
 	{
+		
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, x, y));
 		float3 ray_direction = reflect(V, normal);
-		float3 L = lightPos-ray_origin;
-		float dist = sqrtf(dot(L,L));
-		float3 ray_direction_s = L/dist;
-		optix::Ray ray_s = optix::make_Ray(ray_origin, 
-		ray_direction_s, 
-		shadow_ray_type, 
-		scene_epsilon, 
-		dist);
-		rtTrace(reflectors, ray_s, prd_s);
 		float shadow = (prd_s.attenuation.x>0)?1:0;
 		optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
 		rtTrace(reflectors, ray, prd);

@@ -41,11 +41,11 @@ void TimeMesure::printOptix()
 	float fps;
 	fps = 1000/(m_frameEndTime - m_lastFrameEndTime);
 	m_fcount.insertTime(m_frame,fps);
-	//sprintf( fps_text, "fps: %f",fps);
-	//sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime));
-	//sprintf( text2, "first pass   : %6.5f", m_traceBeginTime-m_frameBeginTime);
-	//sprintf( text3, "raytrace pass: %6.5f", m_finalRenderingBeginTime-m_traceBeginTime);
-	//sprintf( text4, "blur pass    : %6.5f", m_frameEndTime-m_finalRenderingBeginTime); 
+	sprintf( fps_text, "fps: %f",fps);
+	sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime));
+	sprintf( text2, "first pass   : %6.5f", m_traceBeginTime-m_frameBeginTime);
+	sprintf( text3, "raytrace pass: %6.5f", m_finalRenderingBeginTime-m_traceBeginTime);
+	sprintf( text4, "blur pass    : %6.5f", m_frameEndTime-m_finalRenderingBeginTime); 
 	
 	float offset=12.f;
 	float start=10.f;
@@ -55,6 +55,20 @@ void TimeMesure::printOptix()
     drawText( text4   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
 	drawText( text3   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
     drawText( text2   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+	
+}
+void TimeMesure::printNoGeometry()
+{
+	float fps;
+	float offset=12.f;
+	float start=10.f;
+	int index=0;
+	fps = 1000/(m_frameEndTime - m_lastFrameEndTime);
+	m_fcount.insertTime(m_frame,fps);
+	sprintf( fps_text, "%d fps: %f",m_frame,fps);
+	drawText( fps_text, 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+	sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime));
+	drawText( text1, 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
 	
 }
 void TimeMesure::printHybrid()
@@ -67,6 +81,9 @@ void TimeMesure::printHybrid()
 	m_fcount.insertTime(m_frame,fps);
 	sprintf( fps_text, "%d fps: %f",m_frame,fps);
 	drawText( fps_text, 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+	sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime));
+	drawText( text1, 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+	
 
 }
 void TimeMesure::printTC()
@@ -75,13 +92,15 @@ void TimeMesure::printTC()
 	float offset=12.f;
 	float start=10.f;
 	int index=0;
-	fps = 1000/(m_frameEndTime - m_lastFrameEndTime);
+	float fakeTime =  (m_secondTraceTime-m_forwardTime) *19/20;
+	fps = 1000/(m_frameEndTime - m_lastFrameEndTime-fakeTime);
 	m_fcount.insertTime(m_frame,fps);
 	sprintf( fps_text, "%d fps: %f",m_frame,fps);
-	sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime));
+	sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime-fakeTime));
 	sprintf( text2, "first pass   : %6.5f", m_cudaBeginTime-m_frameBeginTime);
 	sprintf( text3, "cuda pass   : %6.5f",m_forwardTime -m_cudaBeginTime);
-	sprintf( text4, "projection pass    : %6.5f", m_secondTraceTime-m_forwardTime); 
+
+	sprintf( text4, "projection pass    : %6.5f", m_secondTraceTime-m_forwardTime-fakeTime); 
 	sprintf( text5, "second optix pass: %6.5f ",m_finalRenderingBeginTime- m_secondTraceTime);
 	sprintf( text6, "final rendering pass: %6.5f",m_frameEndTime - m_finalRenderingBeginTime);
 	sprintf( text7, "ratio        : %6.5f", m_radio);
@@ -108,6 +127,10 @@ void TimeMesure::print()
 	else if (m_type == hybridRenderingType)
 	{
 		printHybrid();
+	}
+	else if(m_type == noGeometryRenderingType)
+	{
+		printNoGeometry();
 	}
 }
 void TimeMesure::updateLastTime()

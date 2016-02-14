@@ -131,7 +131,7 @@ extern "C" void TransConstData(const float *MvpMat,const float *ViewMat,float3 *
 extern "C" void InitCudpp();
 extern "C" void RunCudpp(unsigned int* ,unsigned int *);
 
-extern "C" void RunThridPass(dim3,dim3,int);
+extern "C" void RunThridPass(dim3,dim3);
 extern "C" int thrustReduction(int width,int height);
 extern "C" void cudaPredict(int width,int height);
 extern "C" void InitThrust();

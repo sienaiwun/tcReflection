@@ -42,7 +42,7 @@ rtDeclareVariable(float3, texcoord, attribute texcoord, );
 rtDeclareVariable(float3, geometric_normal, attribute geometric_normal, ); 
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, ); 
 rtDeclareVariable(optix::Ray, ray, rtCurrentRay, );
-
+rtDeclareVariable(int3, index_color, attribute index_color, ); 
 
 RT_PROGRAM void mesh_intersect( int primIdx )
 {
@@ -68,6 +68,7 @@ RT_PROGRAM void mesh_intersect( int primIdx )
       float3 t1 = vertex_buffer[ v_idx.y ].tex;
       float3 t2 = vertex_buffer[ v_idx.z ].tex;
 	//  texcoord = make_float3(1,0,0);
+	  index_color = v_idx;
       texcoord=( t0*(1.0f-beta-gamma) + t1*beta + t2*gamma );
       rtReportIntersection(material_buffer[primIdx]);
     }

@@ -1,12 +1,12 @@
 #include "Fbo.h"
 #include "texShader.h"
 #include "glslShader.h"
-#ifndef SCREENBUFFER_H
-#define SCREENBUFFER_H
-class ScreenBuffer
+#ifndef SCREENBUFFERFACK_H
+#define SCREENBUFFERFACK_H
+class ScreenBufferFake
 {
 public:
-	ScreenBuffer(int w,int h):m_windowWidth(w),m_windowHeight(h)
+	ScreenBufferFake(int w,int h):m_windowWidth(w),m_windowHeight(h)
 	{
 	}
 	inline void setBuffersize(int w,int h)

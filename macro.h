@@ -1,7 +1,9 @@
-#define TIMERANGE 1000
+#define BEGININDEX 0
+#define ENDINDEX 100
+#define TIMERANGE (ENDINDEX-BEGININDEX)
 #define TIMEGAP 10
 #define KEYFRAMENUM (TIMERANGE/TIMEGAP)
-#define rasterWidth 1024
-#define rasterHeight 1024
-#define windowWidth 512
-#define windowHeight 512
+#define rasterWidth 2048
+#define rasterHeight 2048
+#define windowWidth 1024
+#define windowHeight 1024

@@ -74,12 +74,13 @@ void Fbo::attachId()
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT,&beforeFboId);
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fboId);
 }
-void Fbo::begin()
+void Fbo::begin(nv::vec3f clearColor)
 {
 	//glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT,&beforeFboId);
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fboId);
 	glDrawBuffers(num, mybuffers);
+	glClearColor(clearColor.x,clearColor.y,clearColor.z,1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	glClearDepth(1.0f);

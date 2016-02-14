@@ -28,6 +28,8 @@ rtTextureSampler<float4, 2> diffuse_texture;
 rtDeclareVariable(float3,   texcoord, attribute texcoord, );
 rtDeclareVariable(float3,   lightPos, , );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
+rtDeclareVariable(int3, index_color, attribute index_color, ); 
+
 rtDeclareVariable(uint, max_depth, , );
 rtDeclareVariable(uint, radiance_ray_type, , );
 rtDeclareVariable(uint, shadow_ray_type, , );
@@ -54,7 +56,7 @@ RT_PROGRAM void closest_hit_radiance()
   // if(0)
  if(refl_prd.depth <= max_depth && refl_prd.importance > 0.05) 
   {
-
+	  
     optix::Ray refl_ray = optix::make_Ray(hit_point, reflect(ray.direction, shading_normal), 
                                           radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
     rtTrace(reflectors, refl_ray, refl_prd);
@@ -66,7 +68,7 @@ RT_PROGRAM void closest_hit_radiance()
   }
   prd_radiance.t_hit = t_hit;
   prd_radiance.objectId = id;
- 
+ //  color = make_float3(index_color.x,index_color.y,index_color.z);
   prd_radiance.result= color ;//	prd_radiance.result = make_float3(1,0,0);
 
 }

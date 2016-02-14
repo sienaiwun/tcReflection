@@ -19,14 +19,12 @@ void ReprojectShader::bindParemeter()
 		m_bindingLastMvpFloat = lastmvp;
 		*/
 	glActiveTexture(GL_TEXTURE0);
-	//glBindTexture(GL_TEXTURE_2D,refGbuffer.getTexture(0));
 	glBindTexture(GL_TEXTURE_2D,m_bindingReflectTex);
 
 
 	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D,m_bindingNewWoldPos);
-	//glBindTexture(GL_TEXTURE_2D,refGbuffer.getTexture(0));
-
+	
 	
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D,m_bindginLastWorldTex);

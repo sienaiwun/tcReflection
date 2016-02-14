@@ -1,9 +1,9 @@
-#include "screenBuffer.h"
+#include "screenBufferFake.h"
 #include "assert.h"
 #include "Geometry.h"
 static GLenum mybuffers2[] = { GL_COLOR_ATTACHMENT0_EXT, GL_COLOR_ATTACHMENT1_EXT, GL_COLOR_ATTACHMENT2_EXT, GL_COLOR_ATTACHMENT3_EXT,
                            GL_COLOR_ATTACHMENT4_EXT, GL_COLOR_ATTACHMENT5_EXT, GL_COLOR_ATTACHMENT6_EXT };
-void ScreenBuffer::init()
+void ScreenBufferFake::init()
 {
 	assert(m_bufferHeight*m_bufferHeight);
 	assert(m_windowWidth*m_windowHeight);
@@ -37,13 +37,13 @@ void ScreenBuffer::init()
   CHECK_ERRORS();
   m_texShader.init();
 }
-void ScreenBuffer::clear()
+void ScreenBufferFake::clear()
 {
 	glClearColor(0,0,0,1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
    glEnable(GL_DEPTH_TEST);
 }
-void ScreenBuffer::drawToScreen(glslShader & shader)
+void ScreenBufferFake::drawToScreen(glslShader & shader)
 {
   glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,m_fboId);
   float clear_value = 1.f;
@@ -51,8 +51,6 @@ void ScreenBuffer::drawToScreen(glslShader & shader)
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   MyGeometry::drawQuad(shader);
-   // tcFrame.debugPixel(0,512,512);
-	
   /*
   glReadBuffer(GL_COLOR_ATTACHMENT0 + 0);
 
@@ -75,35 +73,4 @@ void ScreenBuffer::drawToScreen(glslShader & shader)
 	delete pData;
 	delete pTexture;
 	*/
-	/*int width = m_bufferWidth;
-	int height =  m_bufferHeight;
-
-	glEnable(GL_TEXTURE_2D);
-	float *pTexture = NULL;
-	pTexture = new float[width*height* 4];
-	memset(pTexture, 0,width*height * 4 * sizeof(float));
-
-	glBindTexture(GL_TEXTURE_2D, TexId[id]);//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pTexture);
-
-	int w = width;
-	int h = width;
-	int x = 512;
-	int y = 512;
-	int scale = 1;
-	int index = y*w+x;
-	float  r = pTexture[4*index]*scale;
-	float g = pTexture[4*index+1]*scale;
-	float b = pTexture[4*index+2]*scale;
-	float a = pTexture[4*index+3]*scale;
-	*/
-	glBindTexture(GL_TEXTURE_2D, 0);
-  glBindTexture(GL_TEXTURE_2D, m_sampleTex);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  m_texShader.setParemeter(m_sampleTex);
-  Fbo::drawScreenBackBuffer(m_windowWidth,m_windowHeight);
-  MyGeometry::drawQuad(m_texShader);
-
 }

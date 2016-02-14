@@ -36,6 +36,8 @@ rtDeclareVariable(PerRayData_radiance, prd_radiance, rtPayload, );
 rtDeclareVariable(PerRayData_shadow,   prd_shadow,   rtPayload, );
 rtDeclareVariable(float3,   lightPos, , );
 rtDeclareVariable(float3, shading_normal, attribute shading_normal, );
+rtDeclareVariable(int3, index_color, attribute index_color, ); 
+
 rtDeclareVariable(float3,diffuse_Color,,);
 rtDeclareVariable(int, id, ,);
 RT_PROGRAM void closest_hit_radiance()
@@ -76,6 +78,7 @@ RT_PROGRAM void closest_hit_radiance()
   }
   prd_radiance.t_hit = t_hit;
    prd_radiance.objectId = id;
+ //  color = make_float3(index_color.x,index_color.y,index_color.z);
   prd_radiance.result = color;
 }
 

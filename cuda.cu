@@ -1893,7 +1893,7 @@ void InitThrust()
 
 
 
-extern "C" void RunThridPass(dim3 BlockSize ,dim3 GridSize,int totalNum)
+extern "C" void RunThridPass(dim3 BlockSize ,dim3 GridSize)
 {	  	
 	thrust::device_ptr<uint> dp = &thrustPosVec[0];
 	uint * raw_ptr_pos = thrust :: raw_pointer_cast ( dp );  
@@ -1905,10 +1905,9 @@ extern "C" void RunThridPass(dim3 BlockSize ,dim3 GridSize,int totalNum)
 	uint * raw_ptr_sum = thrust :: raw_pointer_cast ( d_psum );
 	MyThridPass<<<GridSize,BlockSize>>>(raw_ptr_pos,raw_ptr_state,raw_ptr_sum);
 
-	uint* h_state = thrust::raw_pointer_cast(d_pstate);
-
+	//uint* h_state = thrust::raw_pointer_cast(d_pstate);
 	//thrust::host_vector <uint> h_pos =thrustSumVec;
-	thrust::host_vector <uint> h_pos =thrustPosVec;
+	//thrust::host_vector <uint> h_pos =thrustPosVec;
 	/* 
 	for(int y = 0;y<1024;y++)
 	{
@@ -1942,11 +1941,15 @@ int thrustReduction(int width,int height)
 	dim3 blockSize(16,16,1);
 	dim3 GridSize(width/blockSize.x,height/blockSize.y,1);
 	RunFirstPass(blockSize,GridSize,width,height);
-	thrust::inclusive_scan(thrustStateVec.begin(), thrustStateVec.end() , thrustSumVec.begin());
-	thrust::host_vector<uint> hSum = thrustSumVec;
 
+	thrust::inclusive_scan(thrustStateVec.begin(), thrustStateVec.end() , thrustSumVec.begin());
+	//thrust::host_vector<uint> hSum = thrustSumVec;
+	
+
+	
 	int totalNum = thrustSumVec[width*height-1]+thrustStateVec[width*height-1];
-	RunThridPass(blockSize,GridSize,totalNum);
+	
+	RunThridPass(blockSize,GridSize);
 	//return totalNum;
 
 	return totalNum;

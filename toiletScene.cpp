@@ -47,7 +47,7 @@ static GeoPara toiletObj[geoNumber] =
 	{"model/bathroom/testBox.obj",15,0,CHINAREFLECT,0},
 	{"model/aoBathroom/littleBarrier.obj",9,0,0.0f,0},
 	{"model/bathroom/ceil.obj",15,0,0.0f,0},
-	{"model/bathroom/cockoff2.3ds",24,0,0,5},
+	{"model/bathroom/cockoff.3ds",24,0,0,5},
 	{"model/bathroom/cupOrigin.3ds",21,0,0.0f,8},
 	{"model/bathroom/floor.obj",15,0,0.0f,0},
 	{"model/aoBathroom/littleWall.obj",14,0,0.0f,0},

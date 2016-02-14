@@ -3,8 +3,6 @@ void HybridShader::init()
 {
 	
 	m_loader.loadShader(m_vertexFileName.c_str(),0,m_fragmentFileName.c_str());
-
-	
 	m_diffuseSlot = m_loader.getUniform("diffuseTex");
 	m_tex1Slot= m_loader.getUniform("tex1");
 	m_tex2Slot= m_loader.getUniform("tex2");;
