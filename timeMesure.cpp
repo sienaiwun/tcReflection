@@ -1,5 +1,5 @@
 #include "timeMesure.h"
-
+#include "macro.h"
 
 
 static void drawText( const std::string& text, float x, float y, void* font )
@@ -92,7 +92,7 @@ void TimeMesure::printTC()
 	float offset=12.f;
 	float start=10.f;
 	int index=0;
-	float fakeTime =  (m_secondTraceTime-m_forwardTime) *19/20;
+	float fakeTime = 0; (m_secondTraceTime-m_forwardTime) *19/20;
 	fps = 1000/(m_frameEndTime - m_lastFrameEndTime-fakeTime);
 	m_fcount.insertTime(m_frame,fps);
 	sprintf( fps_text, "%d fps: %f",m_frame,fps);
@@ -147,9 +147,15 @@ void TimeMesure::previousFrame()
 	m_frame = std::max<int>(0,m_frame);
 	
 }
-void TimeMesure::nextFrame()
+void TimeMesure::nextFrame(int & currentTime)
 {
-	//m_frame++;
+	currentTime++;
+	if(currentTime>ENDINDEX)
+	{
+		exit(0);
+	}
+	m_frame++;
+	
 }
 void TimeMesure::finishFuc()
 {

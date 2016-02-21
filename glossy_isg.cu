@@ -78,7 +78,7 @@ RT_PROGRAM void closest_hit_radiance()
   }
   prd_radiance.t_hit = t_hit;
    prd_radiance.objectId = id;
- //  color = make_float3(index_color.x,index_color.y,index_color.z);
+ // color = make_float3(index_color.x,index_color.y,index_color.z);
   prd_radiance.result = color;
 }
 

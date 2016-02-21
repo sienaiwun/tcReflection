@@ -92,7 +92,7 @@ public:
 	void printOptix();
 	void printHybrid();
 	void printNoGeometry();
-	void nextFrame();
+	void nextFrame(int& time );
 	void previousFrame();
 	void finishFuc();
 	void updateLastTime();

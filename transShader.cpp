@@ -2,7 +2,7 @@
 void TranShader::init()
 {
 	m_loader.loadShader(m_vertexFileName.c_str(),m_geometryFileName.c_str(),m_fragmentFileName.c_str());
-
+	//m_loader.loadShader(m_vertexFileName.c_str(),0,m_fragmentFileName.c_str());
 	m_transVecTexUniform = m_loader.getUniform("TransVecTex");
 	m_refelctTexUniform = m_loader.getUniform("RefelctTex");
 	m_tranWorPosTexUniform = m_loader.getUniform("WorldPosTex");

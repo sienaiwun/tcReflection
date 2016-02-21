@@ -2,6 +2,7 @@
 #include "macro.h"
 #include "Fbo.h"
 #include "Camera.h"
+#include "macro.h"
 #ifndef REFFRAME_H
 #define REFFRAME_H
 class RefFrame
@@ -9,6 +10,9 @@ class RefFrame
 public:
 	GLuint m_reflectIndex;
 	Fbo m_refGbuffer;
+#ifdef DIFFNORMAL
+	Fbo m_diffBuffer;
+#endif
 	GLuint m_frame;
 	CCamera m_camera;
 	inline CCamera& getCamera()
@@ -48,7 +52,10 @@ public:
 			glBindTexture(GL_TEXTURE_2D, 0);
 			m_refGbuffer.set(3,rasterWidth, rasterHeight);
 			m_refGbuffer.init();
-
+#ifdef DIFFNORMAL
+	        m_diffBuffer.set(1,rasterWidth, rasterHeight);;
+		    m_diffBuffer.init();
+#endif
 
 			/*
 			glGenTextures(1, &m_additionalTex);
@@ -64,6 +71,12 @@ public:
 	{
 		return m_refGbuffer;
 	}
+#ifdef DIFFNORMAL
+	inline Fbo& getDiffNormalBuffer()
+	{
+		return m_diffBuffer;
+	}
+#endif
 };
 
 #endif

@@ -277,6 +277,7 @@ RT_PROGRAM void reflection_request()
 	/*rtPrintf("eye_pos:(%f,%f£¬%f)\n",eye_pos.x,eye_pos.y,eye_pos.z);
 		rtPrintf("wordldPos:(%f,%f£¬%f)\n",ray_origin.x,ray_origin.y,ray_origin.z);
 		rtPrintf("reflectPos:(%f,%f£¬%f)\n",reflectPos.x,reflectPos.y,reflectPos.z);*/
+		
 		reflection_buffer[launch_index] = make_float4(prd.result,r_dis);
 		addition_buffer[launch_index] = make_float4(prd.objectId,0,0,1);
 		//rtPrintf("object id:%d",prd.objectId);

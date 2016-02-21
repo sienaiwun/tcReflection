@@ -1,4 +1,4 @@
-#define BEGINFRAME 10
+#define BEGINFRAMECOUNT 10
 #ifndef FPSCOUNT_H
 #define FPSCOUNT_H
 class FPS
@@ -31,7 +31,7 @@ public:
 			return;
 		if(!beginWrite)
 			MinusCaculate();*/
-		for(int i =BEGINFRAME;i<nCount;i++)
+		for(int i =BEGINFRAMECOUNT;i<nCount;i++)
 		{
 			if(beginWrite)
 				fprintf(mfile,"%f\n",timeS[i]);
@@ -53,7 +53,7 @@ public:
 	void MinusCaculate()
 	{
 		FILE *loadFile = fopen("writeFile1.txt","r");
-		for(int i =BEGINFRAME;i<nCount;i++)
+		for(int i =BEGINFRAMECOUNT;i<nCount;i++)
 		{
 			float readNum ;
 			fscanf(loadFile,"%f",&readNum);

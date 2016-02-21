@@ -36,11 +36,7 @@
 #include "PPMLoader.h"
 //#include <ObjLoader.h>
 
-#define SpeedUp    10
-#define DrawPoint 0
-#define JianGe   10
-#define MerGe    0
-#define DEBUG 
+
 
 using namespace optix;
 

@@ -199,17 +199,14 @@ bool stripNormals = false;
 bool g_Recordpic = false;
 float scene_epsilon = 1e-2f;
 
-void cgErrorCallback()
+int getIndex(int frameNumber)
 {
-	CGerror lastError = cgGetError();
-	if(lastError)
-	{
-		printf("%s\n", cgGetErrorString(lastError));
-		printf("%s\n", cgGetLastListing(cgContext));
-		exit(1);
-	}
+	assert(frameNumber>=BEGININDEX&&frameNumber<=ENDINDEX);
+	int OptixFrame = (currentTime2-BEGININDEX) /JianGe;
+	if(currentTime2 %JianGe> JianGe/2)
+		OptixFrame++;
+	return OptixFrame;
 }
-//init Cuda
 void init_cuda(int argc,char**argv)
 {
 
@@ -391,7 +388,7 @@ void init_scene()
 	printf("init scence\n");
 	g_scene.init();
 	g_scene.setTimeMesure(&g_timeMesure);
-	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
+	//g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 }
 
 std::string ptxpath( const std::string& base )
@@ -929,15 +926,16 @@ void optixRendering()
 	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 
 	g_scene.m_refCamera = g_scene.m_curCamera;
-	/*{
-		OptixFrame = currentTime2 /JianGe;
-	//if(currentTime2 %JianGe> JianGe/2)
-	//	OptixFrame++;
+	/*
+	{
+		int optixTime = getIndex(currentTime2);
 
-		g_scene.cameraControl(OptixFrame*JianGe,g_scene.m_refCamera);
-	}*/
+		g_scene.cameraControl(optixTime*JianGe+BEGININDEX,g_scene.m_refCamera);
+	}
+	*/
 	currentGbuffer.begin();
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
+	//currentGbuffer.SaveBMP("./test/1.bmp",0);
 	currentGbuffer.end();
 
 	rtContext["eye_pos"]->setFloat(g_scene.m_curCamera.Position().x, g_scene.m_curCamera.Position().y, g_scene.m_curCamera.Position().z);
@@ -985,13 +983,13 @@ void optixRendering()
 		glFinish();
 		//sutilCurrentTime(&finish_start);
 		g_timeMesure.setEndTime(finish_start);
-		g_timeMesure.print();
+		//g_timeMesure.print();
 	}
-	/*
+	
 	char sreenstr[30];
-	sprintf(sreenstr,"./test/tc%d.bmp",currentTime2);
+	sprintf(sreenstr,"./test/disoclu%d.bmp",currentTime2);
 	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
-	*/
+	
 }
 
 void init_RefcletTex()
@@ -1085,7 +1083,7 @@ void init_RefcletTex()
 		char str [32];
 		sprintf(str,"./test/ref%d.bmp",i);
 		Fbo::SaveBMP(str, pTexture, w, h);
-		
+		*/
 		/*
 		glEnable(GL_TEXTURE_2D);
 		int x= 67,y =572;  
@@ -1183,9 +1181,9 @@ void hybridRendering()
 	currentGbuffer.end();
 	
 	
-	int OptixFrame = currentTime2 /JianGe;
-	if(currentTime2 %JianGe> JianGe/2)
-		OptixFrame++;
+	int OptixFrame = getIndex(currentTime2);
+
+	
 
 	drawFinalColor(OptixFrame,FinalEffectFbo);
 	int anotherTime = OptixFrame;
@@ -1328,13 +1326,7 @@ void noGeometryRendering()
 		
 	}
 }
-int getIndex(int frmaeNumber)
-{
-	int OptixFrame = currentTime2 /JianGe;
-	if(currentTime2 %JianGe> JianGe/2)
-		OptixFrame++;
-	return OptixFrame;
-}
+
 void tcRendering()
 {
 
@@ -1355,7 +1347,7 @@ void tcRendering()
 	
 	int OptixFrame = getIndex(currentTime2);
 
-	g_scene.cameraControl(OptixFrame*10,g_scene.m_refCamera);
+	g_scene.cameraControl(OptixFrame*JianGe+BEGININDEX,g_scene.m_refCamera);
 	//test();
 	RefFrame & frame = RefFrame::getFrameByIndex(OptixFrame);
 	refGbuffer = frame.getGbuffer();
@@ -1432,7 +1424,7 @@ void tcRendering()
 
 	
 	//Draw TransMap
-#if SpeedUp
+
 
 	double BeginDrawT;
 	double EndDirawT;
@@ -1445,12 +1437,15 @@ void tcRendering()
 
 	TransMapFbo.begin(); 
 	drawTransMap(OptixFrame);
-	//char strs[30];
-	//sprintf(strs,"./test/transmap%d_%d.bmp",OptixFrame*10,currentTime2);
-	//TransMapFbo.SaveBMP(strs,0);
+	
+	/*char strs[30];
+	sprintf(strs,"./test/transmap%d_%d.bmp",OptixFrame*TIMEGAP,currentTime2);
+	TransMapFbo.SaveBMP(strs,0);
+	*/
+	//TransMapFbo.debugPixel(0,459,605);
 	TransMapFbo.end();
 	char str[100];
-
+	
 	if(stat_breakdown)
 	{
 		glFinish();
@@ -1459,15 +1454,11 @@ void tcRendering()
 	
 
 
-#endif
 	glViewport(0,0, traceWidth, traceHeight);
 	currentGbuffer.begin();
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_curCamera);
 	currentGbuffer.end();
 	
-
-
-#if SpeedUp
 
 	
 	FinalEffectFbo.begin();
@@ -1478,7 +1469,6 @@ void tcRendering()
 
 	
 
-#endif
 	//FinalEffectFbo.SaveBMP("test/FinalEffectFbo.bmp",0);
 
 	if (stat_breakdown) 
@@ -1487,7 +1477,8 @@ void tcRendering()
 		double secendRacingTimec=g_timeMesure.getCurrentTime();
 		g_timeMesure.setSecondTraceTime(secendRacingTimec);
 	}
-	int pixelNum = mapping();
+	int pixelNum =0;
+	 pixelNum = mapping();
 	double DrawTime1,DrawTime2;
 	glFinish();
 	sutilCurrentTime(&DrawTime1);
@@ -1512,13 +1503,16 @@ void tcRendering()
 		//float ratio = ananlyseNum/(float)g_fboAnalyse.getRes().x/(float)g_fboAnalyse.getRes().y;
 		g_timeMesure.setEndTime(finish_start);
 		g_timeMesure.setRadio(pixelNum/(float)rasterWidth/(float)rasterHeight);
-		g_timeMesure.print();
+		 g_timeMesure.print();
 
 		
 	}
-	//char sreenstr[20];
-	//sprintf(sreenstr,"./test/tc%d.bmp",currentTime2);
-	//Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
+	
+	/*
+	char sreenstr[30];
+	sprintf(sreenstr,"./test/tc%d.bmp",currentTime2);
+	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
+	*/
 	/*
 	  char sreenstr[20];
 	  sprintf(sreenstr,"./test/tc%d.bmp",rasterWidth);
@@ -1615,11 +1609,9 @@ void compareTypRendering()
 	}
 	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 	
-	int OptixFrame = currentTime2 /JianGe;
-	if(currentTime2 %JianGe> JianGe/2)
-		OptixFrame++;
+	int OptixFrame = getIndex(currentTime2);
 
-	g_scene.cameraControl(OptixFrame*10,g_scene.m_refCamera);
+	g_scene.cameraControl(OptixFrame*JianGe+BEGININDEX,g_scene.m_refCamera);
 	//test();
 	RefFrame & frame = RefFrame::getFrameByIndex(OptixFrame);
 	refGbuffer = frame.getGbuffer();
@@ -1774,6 +1766,11 @@ void compareTypRendering()
 	screenBuffer.drawToScreen(g_compareShader);
 	glFinish();
 
+	/*
+	char sreenstr[20];
+	sprintf(sreenstr,"./sequence/compare%d.bmp",currentTime2);
+	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
+	*/
 }
 void display()
 {
@@ -1797,7 +1794,7 @@ void display()
 	{
 		compareTypRendering();
 	}
-	g_timeMesure.nextFrame();
+	//g_timeMesure.nextFrame(currentTime2);
 	g_timeMesure.updateLastTime();
 	CHECK_ERRORS();
 	glutSwapBuffers();
@@ -2087,8 +2084,9 @@ int main(int argc, char** argv)
 	CHECK_ERRORS();
 	init_cuda(argc,argv);
 	CHECK_ERRORS();
-	init_RefcletTex();
-
+	if(optixRenderingType != g_timeMesure.getType()){
+		init_RefcletTex();
+	}
 	CHECK_ERRORS();
 	glutReportErrors();
 

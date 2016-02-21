@@ -247,7 +247,7 @@ void Fbo::debugPixel(int id, int x,int y,int scale)
 	pTexture = new float[texDescript.getWidth()*texDescript.getHeight() * 4];
 	memset(pTexture, 0, texDescript.getWidth()*texDescript.getHeight() * 4 * sizeof(float));
 
-	glBindTexture(GL_TEXTURE_2D, TexId[id]);//TexPosId   PboTex
+	glBindTexture(GL_TEXTURE_2D, TexId[id]);//Tez   PboTex
 
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pTexture);
 

@@ -47,8 +47,8 @@ static GeoPara toiletObj[geoNumber] =
 	{"model/bathroom/testBox.obj",15,0,CHINAREFLECT,0},
 	{"model/aoBathroom/littleBarrier.obj",9,0,0.0f,0},
 	{"model/bathroom/ceil.obj",15,0,0.0f,0},
-	{"model/bathroom/cockoff.3ds",24,0,0,5},
-	{"model/bathroom/cupOrigin.3ds",21,0,0.0f,8},
+	{"model/bathroom/cockoff2.3ds",24,0,0.2,5},
+	{"model/bathroom/cupOrigin.3ds",21,0,0.3f,8},
 	{"model/bathroom/floor.obj",15,0,0.0f,0},
 	{"model/aoBathroom/littleWall.obj",14,0,0.0f,0},
 	{"model/aoBathroom/walls.obj",11,0,0.0f,0},
@@ -92,22 +92,18 @@ posPara toiletScenePosArray[] =
 	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
 	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
 	//10
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
-
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7//7
-	{make_float3(24.302208,48.071339,26.106796  ),make_float3(24.212349,47.543545,25.262188 )},//7
-
 	{make_float3(13.948970,43.934372,17.002832  ),make_float3(18.528547,37.866623,10.505962 )},//14
 	{make_float3(6.768429,44.201805,11.434514  ),make_float3(7.580947,43.711884,11.118615 )},
 	{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )}, //16
-	{make_float3(-21.551481,41.017429,22.418484  ),make_float3(-15.171497,37.550900,15.542520 )},  //18
 	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//22
-	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )}//25
+	{make_float3(-31.926453,38.532524,-19.002571  ),make_float3(-23.099068,34.075119,-20.488741 )},//25
+	
+
 
 };
-static float k = 1800/25.0;
-static float toiletSequence[14]={0,2*k,3*k,4*k,6*k,7*k,9*k,10*k,19*k,21*k,23*k,25*k,25*k,25*k};
+static float k = 72;
+static float stay = 0.25*k;
+static float toiletSequence[14]={0,2*k,2*k+stay,3*k+stay,3*k+2*stay,4*k+2*stay,5*k+2*stay,6*k+2*stay,7*k+2*stay,8*k+2*stay,9*k+2*stay,10*k+2*stay};
 toiletScene::toiletScene()
 {
 	m_objectNum = geoNumber;	
