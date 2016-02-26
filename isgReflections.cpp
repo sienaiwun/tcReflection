@@ -52,6 +52,7 @@
 #include "hybridRendering.h"
 #include "ImageWarpingShader.h"
 #include "compareShader.h"
+#include "diffNormal.h"
 //#include "toiletScene.h"
 
 unsigned int *Host_PixelSum;
@@ -92,6 +93,9 @@ nv::vec3f viewIndepentdentMissColor = nv::vec3f(0,255,0);
 TestShader g_testShader;
 
 CudaTexResourse poxCudaTex,normalCudaTex,reflectCudaTex,finalEffectCudaTex;
+#ifdef DIFFNORMAL
+CudaTexResourse diffCudaTex;
+#endif
 CudaPboResource vectorCudaArray,finalEffectCudaArray;
 
 ReprojectShader g_reprojectShader;
@@ -104,13 +108,15 @@ BlendShader g_blendShader;
 HybridShader g_hybridShader;
 ImgWarpingShader g_imgWarpShader;
 CompareShader g_compareShader;
+DiffNormalShader g_diffNormalShader;
+
 
 TimeMesure g_timeMesure(tcRenderingType
 						,CountTime);
 #include "toiletScene.h"
 toiletScene g_scene;
 int currentTime  = 0;
-int currentTime2 = 9;
+int currentTime2 = 109;
 
 FPS fcount(CountTime);
 
@@ -181,7 +187,12 @@ Fbo TransMapFbo(1,rasterWidth,rasterWidth);
 Fbo FinalEffectFbo(1,rasterWidth,rasterWidth);
 Fbo FinalEffectFbo2(1,rasterWidth,rasterWidth);
 Fbo MergeEffectFbo(1,rasterWidth,rasterWidth);
-Fbo refGbuffer(3,rasterWidth,rasterWidth);
+
+#ifdef DIFFNORMAL
+	Fbo refGbuffer(4,rasterWidth,rasterWidth);
+#else 
+	Fbo refGbuffer(3,rasterWidth,rasterWidth);
+#endif
 
 ImgMesh g_imgMesh(rasterWidth,rasterWidth);
 ScreenBuffer screenBuffer(windowWidth,windowHeight);
@@ -215,11 +226,16 @@ void init_cuda(int argc,char**argv)
 	poxCudaTex.set(refGbuffer.getTexture(0),rasterWidth,rasterHeight,worldPosRef_t);
 	normalCudaTex.set(refGbuffer.getTexture(1),rasterWidth,rasterHeight,worldNormalRef_t);
 	reflectCudaTex.set(reflectionMapTex_Now,rasterWidth,rasterHeight,reflecionRef_t);
-	
+#ifdef DIFFNORMAL
+	diffCudaTex.set(refGbuffer.getTexture(3),rasterWidth,rasterHeight,diffRef_t);
+#endif
 	
 	poxCudaTex.init();
 	normalCudaTex.init();
 	reflectCudaTex.init();
+#ifdef DIFFNORMAL
+	diffCudaTex.init();
+#endif
 	//绑定opengl PBO到cuda
 	
 	vectorCudaArray.set(rasterWidth,rasterHeight,float4_t);
@@ -369,6 +385,7 @@ void init_gl()
 	g_imgWarpShader.setRes(rasterWidth,rasterHeight);
 	g_imgWarpShader.setClearColor(viewIndepentdentMissColor);
 	g_compareShader.init();
+	g_diffNormalShader.init();
 	//载入imgMesh
 	g_imgMesh.init();
 
@@ -816,15 +833,18 @@ void ComputeVecInCuda()
 
 	TransConstData(g_scene.m_refCamera.getMvpMat(),g_scene.m_refCamera.getModelViewMat(),&CameraPos1,&CameraPos2);
 
-
-
-
 	vectorCudaArray.map();
 	
 	poxCudaTex.map();
 	normalCudaTex.map();
 	reflectCudaTex.map();	
+#ifdef DIFFNORMAL
+	diffCudaTex.map();
+#endif
 	cudaPredict(rasterWidth,rasterHeight);
+#ifdef DIFFNORMAL
+	diffCudaTex.unmap();
+#endif
 	reflectCudaTex.unmap();
 	poxCudaTex.unmap();
 	normalCudaTex.unmap();
@@ -1016,11 +1036,21 @@ void init_RefcletTex()
 		RefFrame & frame = RefFrame::getFrameByIndex(i);
 		CCamera& camera = frame.getCamera();
 		g_scene.cameraControl(FrameNums,camera);
-
 		frame.getGbuffer().begin();
 		g_scene.draw_model(g_gBufferShader,&camera);
 		frame.getGbuffer().end();
-		//frame.getGbuffer().SaveBMP("./test/ref0.bmp",0);
+		
+#ifdef DIFFNORMAL
+		
+		g_diffNormalShader.setGbuffer(&frame.getGbuffer());
+		g_diffNormalShader.setCamera(&camera);
+		g_diffNormalShader.setRes(nv::vec2f(rasterWidth,rasterWidth));
+		frame.getGbuffer().begin(nv::vec3f(0,0,0),false);
+		MyGeometry::drawQuad(g_diffNormalShader);
+		frame.getGbuffer().end();
+		//frame.getGbuffer().debugPixel(3,358,389);
+		//frame.getGbuffer().debugPixel(0,359,390);
+#endif
 		currentGbuffer.copyFromBuffer(frame.getGbuffer());
 		CHECK_ERRORS();
 		/*
@@ -1136,6 +1166,10 @@ void drawFinalColor(int time,Fbo& finalFbo)
 	poxCudaTex.setEveryTex(frame.getGbuffer().getTexture(0));
 	normalCudaTex.setEveryTex(frame.getGbuffer().getTexture(1));
 	reflectCudaTex.setEveryTex(frame.getOptixTex());
+
+#ifdef DIFFNORMAL
+	diffCudaTex.setEveryTex(frame.getGbuffer().getTexture(3));
+#endif
 	ComputeVecInCuda();
 	fflush(stdout);
 	if (stat_breakdown) 
@@ -1372,6 +1406,9 @@ void tcRendering()
 	
 	poxCudaTex.setEveryTex(frame.getGbuffer().getTexture(0));
 	normalCudaTex.setEveryTex(frame.getGbuffer().getTexture(1));
+#ifdef DIFFNORMAL
+	diffCudaTex.setEveryTex(frame.getGbuffer().getTexture(3));
+#endif
 	reflectCudaTex.setEveryTex(frame.getOptixTex());
 	//CpuTracint(reflectionMaps[OptixFrame]);
 	//   cudaEvent_t start,stop;
@@ -1438,11 +1475,11 @@ void tcRendering()
 	TransMapFbo.begin(); 
 	drawTransMap(OptixFrame);
 	
-	/*char strs[30];
+	char strs[30];
 	sprintf(strs,"./test/transmap%d_%d.bmp",OptixFrame*TIMEGAP,currentTime2);
-	TransMapFbo.SaveBMP(strs,0);
-	*/
-	//TransMapFbo.debugPixel(0,459,605);
+ 	TransMapFbo.SaveBMP(strs,0);
+	
+	TransMapFbo.debugPixel(0,420,580);
 	TransMapFbo.end();
 	char str[100];
 	

@@ -112,7 +112,11 @@ CCamera::CCamera()
 	m_vUpVector	= vUp;						// Init the UpVector
 
 	// Set the mouse position to the middle of our window
-	SetCursorPos(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);							
+	SetCursorPos(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);	
+#define squire3 (1.732050807/3)
+
+	m_framebbmax = nv::vec2f(squire3,squire3);
+	m_framebbmin = nv::vec2f(-squire3,-squire3);
 }
 
 CCamera::CCamera(CVector3 vZero,CVector3 vView,CVector3 vUp){
@@ -353,11 +357,10 @@ void CCamera::Update()
 void CCamera::Look()
 {
 	// Give OpenGL our camera position, then camera view, then camera up vector
-	#define squire3 (1.732050807/3)
 	m_modelView = nv::matrix4f::lookAt(nv::vec3f(m_vPosition.x, m_vPosition.y, m_vPosition.z),	
 			 nv::vec3f( m_vView.x,	 m_vView.y,     m_vView.z),	
 			  nv::vec3f(m_vUpVector.x, m_vUpVector.y, m_vUpVector.z));
-	m_projMat = nv::matrix4f::frustum(-squire3,squire3,-squire3,squire3,1,1000);
+	m_projMat = nv::matrix4f::frustum(m_framebbmin.x,m_framebbmax.x,m_framebbmin.y,m_framebbmax.y,1,1000);
 	m_mvpMat =  m_projMat * m_modelView;
 	
 }

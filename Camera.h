@@ -124,6 +124,14 @@ public:
 	{
 		return nv::vec3f(m_vPosition.x,m_vPosition.y,m_vPosition.z);
 	}
+	inline nv::vec2f getImageMin()
+	{
+		return m_framebbmin;
+	}
+	inline nv::vec2f getImageMax()
+	{
+		return m_framebbmax;
+	}
 private:
 	// The camera's position
 	CVector3 m_vPosition;					
@@ -140,6 +148,7 @@ private:
 	nv::matrix4f m_modelView;
 	nv::matrix4f m_mvpMat;
 	nv::matrix4f m_projMat;
+	nv::vec2f m_framebbmin,m_framebbmax;
 	float old_x ,old_y;
 };
 

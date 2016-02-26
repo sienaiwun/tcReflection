@@ -71,7 +71,7 @@ public:
 	void init( GLenum FiterModel = GL_NEAREST);
 	//∆Ù∂Øfbo
 	void attachId();
-	void begin(nv::vec3f clearColor = nv::vec3f(0,0,0));
+	void begin(nv::vec3f clearColor = nv::vec3f(0,0,0),bool clear = true);
 
 	//÷∏∂®‰÷»æbuffer
 	void BindForWrite(int i);

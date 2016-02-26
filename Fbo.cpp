@@ -74,16 +74,19 @@ void Fbo::attachId()
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT,&beforeFboId);
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fboId);
 }
-void Fbo::begin(nv::vec3f clearColor)
+void Fbo::begin(nv::vec3f clearColor,bool clear)
 {
 	//glBindFramebuffer(GL_FRAMEBUFFER, fboId);
 	glGetIntegerv(GL_FRAMEBUFFER_BINDING_EXT,&beforeFboId);
 	glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, fboId);
 	glDrawBuffers(num, mybuffers);
-	glClearColor(clearColor.x,clearColor.y,clearColor.z,1);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	if(clear)
+	{
+		glClearColor(clearColor.x,clearColor.y,clearColor.z,1);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glClearDepth(1.0f);
+	}
 	glEnable(GL_DEPTH_TEST);
-	glClearDepth(1.0f);
 	glViewport(0, 0, texDescript.getWidth(), texDescript.getHeight());
 
 }
@@ -236,7 +239,8 @@ void Fbo::end()
 	glBindFramebufferEXT(GL_FRAMEBUFFER, 0);
 }
 
-GLuint Fbo::getTexture(int id){
+GLuint Fbo::getTexture(int id)
+{
 	return TexId[id];
 }
 void Fbo::debugPixel(int id, int x,int y,int scale)
@@ -255,7 +259,7 @@ void Fbo::debugPixel(int id, int x,int y,int scale)
 	int h = texDescript.getHeight();
 
 	int index = y*w+x;
-	float  r = pTexture[4*index]*scale;
+	float r = pTexture[4*index]*scale;
 	float g = pTexture[4*index+1]*scale;
 	float b = pTexture[4*index+2]*scale;
 	float a = pTexture[4*index+3]*scale;

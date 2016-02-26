@@ -27,6 +27,7 @@ public:
 private:
 	GLuint m_vboId;
 	int m_w,  m_h;
+	GLuint m_vboindexId;
 };
 
 #endif 

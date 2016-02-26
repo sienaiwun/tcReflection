@@ -27,6 +27,7 @@ enum cudaTexType
 	worldNormalRef_t,
 	reflecionRef_t,
 	finalEffect_t,
+	diffRef_t,
 
 };
 

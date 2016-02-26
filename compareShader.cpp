@@ -21,6 +21,7 @@ void CompareShader::bindParemeter()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D,m_tex1);
 	glUniform1i(m_tex1_slot,0);
+	glActiveTexture(GL_TEXTURE1);
 	glBindTexture(GL_TEXTURE_2D,m_tex2);
 	glUniform1i(m_tex2_slot,1);
 }

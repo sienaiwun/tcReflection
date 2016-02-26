@@ -10,9 +10,6 @@ class RefFrame
 public:
 	GLuint m_reflectIndex;
 	Fbo m_refGbuffer;
-#ifdef DIFFNORMAL
-	Fbo m_diffBuffer;
-#endif
 	GLuint m_frame;
 	CCamera m_camera;
 	inline CCamera& getCamera()
@@ -51,11 +48,11 @@ public:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, rasterWidth, rasterHeight, 0, GL_RGBA, GL_FLOAT, NULL);
 			glBindTexture(GL_TEXTURE_2D, 0);
 			m_refGbuffer.set(3,rasterWidth, rasterHeight);
-			m_refGbuffer.init();
 #ifdef DIFFNORMAL
-	        m_diffBuffer.set(1,rasterWidth, rasterHeight);;
-		    m_diffBuffer.init();
+	        m_refGbuffer.set(4,rasterWidth, rasterHeight);
 #endif
+			m_refGbuffer.init();
+
 
 			/*
 			glGenTextures(1, &m_additionalTex);
@@ -71,12 +68,7 @@ public:
 	{
 		return m_refGbuffer;
 	}
-#ifdef DIFFNORMAL
-	inline Fbo& getDiffNormalBuffer()
-	{
-		return m_diffBuffer;
-	}
-#endif
+
 };
 
 #endif
