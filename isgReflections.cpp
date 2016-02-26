@@ -116,7 +116,7 @@ TimeMesure g_timeMesure(tcRenderingType
 #include "toiletScene.h"
 toiletScene g_scene;
 int currentTime  = 0;
-int currentTime2 = 109;
+int currentTime2 = 9;
 
 FPS fcount(CountTime);
 
@@ -832,7 +832,7 @@ void ComputeVecInCuda()
 
 
 	TransConstData(g_scene.m_refCamera.getMvpMat(),g_scene.m_refCamera.getModelViewMat(),&CameraPos1,&CameraPos2);
-
+	cudaSetImageFrame(g_scene.m_refCamera.getImageMin(),g_scene.m_refCamera.getImageMax());
 	vectorCudaArray.map();
 	
 	poxCudaTex.map();

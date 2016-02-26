@@ -10,6 +10,7 @@
 //#include <cutil_inline.h>
 #include <helper_cuda.h>
 
+#include "nvMath.h"
 #include <cuda_gl_interop.h>
 //#include <cutil_gl_inline.h>
 #include <helper_cuda_gl.h>
@@ -129,6 +130,7 @@ extern "C" void RunKernel(dim3,dim3,int,int);
 extern "C" void RunFirstPass(dim3,dim3,int,int);
 extern "C" void MappingContantPeremeter(int *w,int* h);
 extern "C" void TransConstData(const float *MvpMat,const float *ViewMat,float3 *CameraPos1,float3 *CameraPos2);
+extern "C" void cudaSetImageFrame(nv::vec2f bbmin,nv::vec2f bbmax);
 extern "C" void InitCudpp();
 extern "C" void RunCudpp(unsigned int* ,unsigned int *);
 

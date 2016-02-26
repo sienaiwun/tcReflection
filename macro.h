@@ -1,5 +1,5 @@
-#define BEGININDEX 100    //must be 10 time
-#define ENDINDEX 150
+#define BEGININDEX 0    //must be 10 time
+#define ENDINDEX 50
 #define TIMERANGE (ENDINDEX-BEGININDEX)
 
 #define TIMEGAP 20
@@ -11,7 +11,7 @@
 #define windowHeight 512
 
 
-//#define DIFFNORMAL
+#define DIFFNORMAL
 //no use
 
 #define SpeedUp    10
