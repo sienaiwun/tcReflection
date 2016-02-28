@@ -83,7 +83,17 @@ void MyGeometry::initGeometry(char* name)
 		m_model->getCompiledVertexCount()*size*sizeof(float),
 		m_model->getCompiledOptixVertices(), GL_STATIC_READ);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	static int vertexTotalNumber = 0,triangTotalNum = 0;
+	int thisModelVertex =  m_model->getCompiledVertexCount();
+	int thisModelTriangle =  m_model->getCompiledIndexCount()/3;
 
+	vertexTotalNumber += thisModelVertex;
+	triangTotalNum += thisModelTriangle;
+	m_vertexNumber = thisModelVertex;
+	m_totalVertexNumber = vertexTotalNumber;
+	m_geometryNumber = thisModelTriangle;
+	m_totalGeometryNumber = triangTotalNum;
+	printf("Load:%s,<v:%d,t:%d>,total<v:%d,t:%d>\n",name,thisModelVertex,thisModelTriangle,vertexTotalNumber,triangTotalNum);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }

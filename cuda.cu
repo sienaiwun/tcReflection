@@ -115,11 +115,11 @@ __device__ float2 normalizeVec(float2 moveVec)
 {
 	if(abs(moveVec.y)>abs(moveVec.x))
 	{
-		return moveVec/moveVec.y;
+		return moveVec/abs(moveVec.y);
 	}
 	else
 	{
-		return moveVec/moveVec.x;
+		return moveVec/abs(moveVec.x);
 	}
 }
 __device__ float Cuda_Compute_Cos(float2 TmpUV,float3 ReflectPos,int orignId)
@@ -314,7 +314,7 @@ public:
 		float2 targetVec = m_tc+nextStep;
 		float4 value = tex2D(cuda_Diff_Tex,m_tc.x,m_tc.y);
 		float ddx = value.x,ddy = value.y,dxdy = value.z;
-		//printf("ddx:%f,ddy:%f,dxdy:%f\n",ddx,ddy,dxdy);
+		printf("ddx:%f,ddy:%f,dxdy:%f\n",ddx,ddy,dxdy);
 		float3 predictPos = getIntersectPosition(m_worldPos,m_worldNormal,targetVec/make_float2(rastWidth,rastHeight));
 		float f0 = getDepthRep(predictPos);
 		float pridictF = f0 + 1/2.0*ddx*nextStep.x*nextStep.x+ 1/2.0*ddy*nextStep.y*nextStep.y+ dxdy*nextStep.x*nextStep.y;
@@ -611,6 +611,22 @@ __device__ int nextThreeStep(float2 moveVec,float2* candicate1,float2* candicate
 	*candicate3+=currentUv;
 	return 1;
 }
+__device__ int nextThreeStep2(float2 moveVec,float2* candicate1,float2* candicate2,float2* candicate3,float2 currentUv)
+{
+	#define PI 3.141592654f
+/*	if(length(moveVec)<0.717)
+	{
+
+		return 0;
+	}*/
+	*candicate1 = moveVec;
+	*candicate2 = moveVec;
+	*candicate3 = moveVec;
+	*candicate1+=currentUv;
+	*candicate2+=currentUv;
+	*candicate3+=currentUv;
+	return 1;
+}
 #define CONVERGE 5
 #define OUTRANGE 2
 #define OUTOBJECT 3
@@ -639,8 +655,9 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,1,OUTRANGE);
 		return;
 	}
-	//if(x!=369||y!=227)  //convave point
-	//  return;
+	if(x!=502||y!=583)
+	 return;
+	
 	
 	//printf("1Class: (%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
 	//�����������ľ���
@@ -656,7 +673,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	float3 worldPos = fittingPlane.m_worldPos;
 	float3 worldNormal = fittingPlane.m_worldNormal;
 	
-	/*
+	
 	printf("three x,y:%d,%d\n",x,y);
 	printf("pos:(%f,%f,%f)\n",worldPos.x,worldPos.y,worldPos.z);
 	printf("normal:(%f,%f,%f)\n",worldNormal.x,worldNormal.y,worldNormal.z);
@@ -665,26 +682,31 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	printf("refCamera:(%f,%f,%f)\n",d_refCameraPos.x,d_refCameraPos.y,d_refCameraPos.z);
 	printf("newCameraPos:(%f,%f,%f)\n",d_newCameraPos.x,d_newCameraPos.y,d_newCameraPos.z);
 	printf("project Pos:(%f,%f),depth:%f\n",ProPosUv.x,ProPosUv.y,rejectDepth);
-	*/
+	
+		
 	float2 MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
+	
+	//printf("ProUV(%f,%f)\n",ProPosUv.x,ProPosUv.y);
+	//printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);
+	
 	int isLocal;
 	float formerDis = fittingPlane.getDisToPath();
 	if(fittingPlane.isAbleFastProj(ProPosUv))
 	{
-		if(fabs(ProPosUv.x-currentUv.x)<0.5&&(fabs(ProPosUv.y-currentUv.y)<0.5))
-		{
-			d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
-			return CONVERGE;
-		}
 		d_cudaPboBuffer[index] =   make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,FASTPROJT);
 		return FASTPROJT;
 	}
 	int IterTime = 0;
+#ifdef DIFFNORMAL
 	MoveVec = fittingPlane.changeMoveVec(MoveVec,&ProPosUv,&isLocal);
+#endif
+	printf("ProUV(%f,%f)\n",ProPosUv.x,ProPosUv.y);
+	printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);
+	
 	
 	while(IterTime<STEPNUMBER/1024.0*rasterWidth)
 	{
-		//printf("Item:%d currentUv:(%f,%f)\n",IterTime,currentUv.x,currentUv.y);
+		printf("Item:%d currentUv:(%f,%f)\n",IterTime,currentUv.x,currentUv.y);
 		
 		float2 TmpUv1,TmpUv2,TmpUv3,TmpUv;
 		nextThreeStep(MoveVec,&TmpUv1,&TmpUv2,&TmpUv3,currentUv);
@@ -729,10 +751,10 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		//printf("DisPoint2Line1:%f\n",DisPoint2Line1);
 		if(pixelPlane1.isInValid()&&pixelPlane2.isInValid()&&pixelPlane2.isInValid())
 		{	
-			//printf("invalid\n");
+		//	printf("invalid\n");
 			
 			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTOBJECT);
-	    	//  printf("@x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
+	    	// printf("@x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
 	
 			return OUTOBJECT;
 		}
@@ -769,9 +791,9 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		//printf("result uv(%f,%f) nextuv(%f,%f),dis:%f,formerDis:%f\n",currentUv.x,currentUv.y, minPlane.getTc().x, minPlane.getTc().y,minDis,formerDis);
 		if(isLocal)
 		{
-				//	printf("local Converge\n");
-					d_cudaPboBuffer[index] =  make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
-					return CONVERGE;		
+					//printf("local Converge\n");
+				d_cudaPboBuffer[index] =  make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
+				return CONVERGE;		
 		}
 		if(minDis>formerDis)
 		{
@@ -780,13 +802,13 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 			{
 				
 				d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
-			//	printf("non local Converge\n");
+				//printf("non local Converge\n");
 				return CONVERGE;
 			}
 			else
 			{
 				d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,-0.1,OUTOBJECT);
-			//	printf("not right minDis\n");	
+				//printf("not right minDis\n");	
 				return OUTOBJECT;
 			}
 		}
@@ -800,16 +822,19 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		ndcPos =  transFormToNdc(FinalPos);
 	    ProPosUv =make_float2(ndcPos.x,ndcPos.y);
 		rejectDepth = fittingPlane.getMirrorDepth();
-		/*
+		
 		printf("ProUV(%f,%f)\n",ProPosUv.x,ProPosUv.y);
-		printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);*/
+		printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);
+		
 		MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
+#ifdef DIFFNORMAL
 		MoveVec = fittingPlane.changeMoveVec(MoveVec,&ProPosUv,&isLocal);
-		/*
+#endif
+		
 		printf("ProUV(%f,%f)\n",ProPosUv.x,ProPosUv.y);
 		printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);
 		printf("worldPos(%f,%f,%f),normal:(%f,%f,%f)\n",fittingPlane.m_worldPos.x,fittingPlane.m_worldPos.y,fittingPlane.m_worldPos.z,fittingPlane.m_worldNormal.x,fittingPlane.m_worldNormal.y,fittingPlane.m_worldNormal.z);
-		*/
+		
 		IterTime++;
 	}
 	d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTRANGE);
@@ -837,9 +862,10 @@ __device__ int ninePointSearch(float2 currentPlace,float2* moveToVec)
 		d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,1,OUTRANGE);
 		return;
 	}
-	
-	//if(x!=482||y!=585)
-	//  return;
+	/*
+	if(x!=502||y!=583)
+	 return;
+	*/
 	
 	//printf("1Class: (%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
 	//�����������ľ���
@@ -868,7 +894,7 @@ __device__ int ninePointSearch(float2 currentPlace,float2* moveToVec)
 	*/
 	if(fittingPlane.isAbleFastProj(ProPosUv))
 	{
-		//printf("fitting\n");
+	//	printf("fitting\n");
 		if(fabs(ProPosUv.x-currentUv.x)<0.5&&(fabs(ProPosUv.y-currentUv.y)<0.5))
 		{
 			d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
@@ -906,7 +932,7 @@ __device__ int ninePointSearch(float2 currentPlace,float2* moveToVec)
 					continue;
 				}
 				float dis = testPlan.getDisToPath();
-			//	printf("point1(%f,%f,%f)\n",uv.x,uv.y,dis);
+				//printf("point1(%f,%f,%f)\n",uv.x,uv.y,dis);
 				if(minDis>dis)
 				{
 					//printf("min\n");
@@ -928,11 +954,13 @@ __device__ int ninePointSearch(float2 currentPlace,float2* moveToVec)
 		if(minDis>formerDis)
 		{
 			*moveToVec = currentUv;
-			if(length(MoveVec)<15/1024.0*rasterWidth&&minDis<5)
+			if(1)
+			//if(length(MoveVec)<15/1024.0*rasterWidth&&minDis<5)
 			{
-			//	printf("convenge result uv(%f,%f) nextuv(%f,%f),dis:%f,formerDis:%f\n",currentUv.x,currentUv.y, minPlane.getTc().x, minPlane.getTc().y,minDis,formerDis);
+				//printf("convenge result uv(%f,%f) nextuv(%f,%f),dis:%f,formerDis:%f\n",currentUv.x,currentUv.y, minPlane.getTc().x, minPlane.getTc().y,minDis,formerDis);
 				if(isInBox(currentUv,ProPosUv))
 				{
+					//printf("here\n");
 					d_cudaPboBuffer[index] =  make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
 					return CONVERGE;
 				}

@@ -1,5 +1,5 @@
 #define BEGININDEX 0    //must be 10 time
-#define ENDINDEX 50
+#define ENDINDEX 30
 #define TIMERANGE (ENDINDEX-BEGININDEX)
 
 #define TIMEGAP 20

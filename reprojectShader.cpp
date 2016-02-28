@@ -6,7 +6,7 @@ void ReprojectShader::init()
 	m_reflectTex = m_loader.getUniform("Reflection");
 	m_lastMvp = m_loader.getUniform("LastMVP");
 	m_lastWorldPosTex = m_loader.getUniform("LastWorldPos");
-
+	m_lastNormalTex_slot = m_loader.getUniform("LastNormlTex");
 	m_clearColor = m_loader.getUniform("Clearcolor");
 
 }
@@ -28,10 +28,16 @@ void ReprojectShader::bindParemeter()
 	
 	glActiveTexture(GL_TEXTURE2);
 	glBindTexture(GL_TEXTURE_2D,m_bindginLastWorldTex);
+
+	glActiveTexture(GL_TEXTURE3);
+	glBindTexture(GL_TEXTURE_2D,m_lastNormalTex);
+	
 	
 	glUniform1i(m_reflectTex,0);
 	glUniform1i(m_newWorldPosTex,1);
 	glUniform1i(m_lastWorldPosTex,2);
+	glUniform1i(m_lastNormalTex_slot,3);
+
 	glUniform3f(m_clearColor,m_bindingIndependentColor.x,m_bindingIndependentColor.y,m_bindingIndependentColor.z);
 	glUniformMatrix4fv(m_lastMvp,1,GL_FALSE,m_bindingLastMvpFloat);
 

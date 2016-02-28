@@ -53,6 +53,7 @@
 #include "ImageWarpingShader.h"
 #include "compareShader.h"
 #include "diffNormal.h"
+#include "idShader.h"
 //#include "toiletScene.h"
 
 unsigned int *Host_PixelSum;
@@ -109,6 +110,7 @@ HybridShader g_hybridShader;
 ImgWarpingShader g_imgWarpShader;
 CompareShader g_compareShader;
 DiffNormalShader g_diffNormalShader;
+IDShader g_idShader;
 
 
 TimeMesure g_timeMesure(tcRenderingType
@@ -116,7 +118,7 @@ TimeMesure g_timeMesure(tcRenderingType
 #include "toiletScene.h"
 toiletScene g_scene;
 int currentTime  = 0;
-int currentTime2 = 9;
+int currentTime2 = 30;
 
 FPS fcount(CountTime);
 
@@ -386,6 +388,7 @@ void init_gl()
 	g_imgWarpShader.setClearColor(viewIndepentdentMissColor);
 	g_compareShader.init();
 	g_diffNormalShader.init();
+	g_idShader.init();
 	//载入imgMesh
 	g_imgMesh.init();
 
@@ -402,7 +405,7 @@ void init_gl()
 
 void init_scene()
 {
-	printf("init scence\n");
+	printf("init scene\n");
 	g_scene.init();
 	g_scene.setTimeMesure(&g_timeMesure);
 	//g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
@@ -560,6 +563,7 @@ void drawFinalEffect()
 	glClearColor(viewIndepentdentMissColor.x,viewIndepentdentMissColor.y,viewIndepentdentMissColor.z,1);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	g_reprojectShader.setParemeter(TransMapFbo.getTexture(0),currentGbuffer.getTexture(0),refGbuffer.getTexture(0), g_scene.m_refCamera.getMvpMat());
+	g_reprojectShader.setNormalTex(refGbuffer.getTexture(1));
 	MyGeometry::drawQuad(g_reprojectShader);
 }
 
@@ -945,14 +949,14 @@ void optixRendering()
 	CVector3& pos =g_scene.m_refCamera.Position();
 	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 
-	g_scene.m_refCamera = g_scene.m_curCamera;
-	/*
+	//g_scene.m_refCamera = g_scene.m_curCamera;
+	int optixTime;
 	{
-		int optixTime = getIndex(currentTime2);
+		 optixTime = getIndex(currentTime2);
 
 		g_scene.cameraControl(optixTime*JianGe+BEGININDEX,g_scene.m_refCamera);
 	}
-	*/
+	
 	currentGbuffer.begin();
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
 	//currentGbuffer.SaveBMP("./test/1.bmp",0);
@@ -1007,7 +1011,7 @@ void optixRendering()
 	}
 	
 	char sreenstr[30];
-	sprintf(sreenstr,"./test/disoclu%d.bmp",currentTime2);
+	sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,optixTime*JianGe+BEGININDEX);
 	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
 	
 }
@@ -1045,9 +1049,20 @@ void init_RefcletTex()
 		g_diffNormalShader.setGbuffer(&frame.getGbuffer());
 		g_diffNormalShader.setCamera(&camera);
 		g_diffNormalShader.setRes(nv::vec2f(rasterWidth,rasterWidth));
+	 
 		frame.getGbuffer().begin(nv::vec3f(0,0,0),false);
 		MyGeometry::drawQuad(g_diffNormalShader);
 		frame.getGbuffer().end();
+		
+		
+		frame.getGbuffer().begin();
+		g_scene.draw_model(g_idShader,&camera);
+		frame.getGbuffer().end();
+	
+		char str [32];
+		sprintf(str,"./test/ref_i%d.bmp",i);
+		frame.getGbuffer().SaveBMP(str,0);
+		
 		//frame.getGbuffer().debugPixel(3,358,389);
 		//frame.getGbuffer().debugPixel(0,359,390);
 #endif
@@ -1104,7 +1119,7 @@ void init_RefcletTex()
 		pTexture = new BYTE[rasterWidth*rasterHeight * 3];
 		memset(pTexture, 0, rasterWidth*rasterHeight * 3 * sizeof(BYTE));
 		//glBindTexture(GL_TEXTURE_2D,reflectionMaps[i]);//TexPosId   PboTex
-		glBindTexture(GL_TEXTURE_2D, (RefFrame::getFrameByIndex(0).getOptixTex()));//TexPosId   PboTex
+		glBindTexture(GL_TEXTURE_2D, (RefFrame::getFrameByIndex(i).getOptixTex()));//TexPosId   PboTex
 
 		glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
 
@@ -1410,6 +1425,25 @@ void tcRendering()
 	diffCudaTex.setEveryTex(frame.getGbuffer().getTexture(3));
 #endif
 	reflectCudaTex.setEveryTex(frame.getOptixTex());
+
+	/*
+	glEnable(GL_TEXTURE_2D);
+	BYTE *pTexture = NULL;
+	int w = 1024;
+	int h = 1024;
+	pTexture = new BYTE[w*h * 3];
+	memset(pTexture, 0, w*h* 3 * sizeof(BYTE));
+
+	glBindTexture(GL_TEXTURE_2D, frame.getOptixTex());//TexPosId   PboTex
+
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
+
+	
+	Fbo::SaveBMP("aa.bmp", pTexture, w, h);
+	if (pTexture)
+	   delete[] pTexture;
+	glBindTexture(GL_TEXTURE_2D, 0);//
+	*/
 	//CpuTracint(reflectionMaps[OptixFrame]);
 	//   cudaEvent_t start,stop;
 	//   cudaEventCreate(&start);
@@ -1459,7 +1493,7 @@ void tcRendering()
 	glBindTexture(GL_TEXTURE_2D, 0);
 	*/
 
-	
+		
 	//Draw TransMap
 
 
@@ -1479,7 +1513,8 @@ void tcRendering()
 	sprintf(strs,"./test/transmap%d_%d.bmp",OptixFrame*TIMEGAP,currentTime2);
  	TransMapFbo.SaveBMP(strs,0);
 	
-	TransMapFbo.debugPixel(0,420,580);
+	TransMapFbo.debugPixel(0,503,583);
+	
 	TransMapFbo.end();
 	char str[100];
 	

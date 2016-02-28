@@ -20,6 +20,10 @@ public :
 		m_bindginLastWorldTex = lastWorld;
 		m_bindingLastMvpFloat = lastmvp;
 	}
+	inline void setNormalTex(GLuint tex)
+	{
+		m_lastNormalTex = tex;
+	}
 	inline void setClearColor(nv::vec3f color)
 	{
 		m_bindingIndependentColor = color;
@@ -28,6 +32,8 @@ public :
 private:
 	GLuint m_newWorldPosTex;
 	GLuint m_reflectTex;
+	GLuint m_lastNormalTex;
+	GLuint m_lastNormalTex_slot;
 
 //Trans shader Uniform
 	GLuint m_lastMvp;

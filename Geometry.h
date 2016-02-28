@@ -70,12 +70,17 @@ public:
 		s_mat = pMatArray;
 	}
 	float reflectValue;
+	int m_geometryNumber;
+	int m_totalGeometryNumber;
+	int m_vertexNumber;
+	int m_totalVertexNumber;
 private:
 	int m_objectIndexId;
 	char * filename;
 	int m_hasTX;
 	float shiness;
 	MyMeterial* mp_met;
+	
 	std::string ptxpath( const std::string& base )
 	{
 		return std::string(sutilSamplesPtxDir()) + "/isgReflections_generated_" + base + ".ptx";
