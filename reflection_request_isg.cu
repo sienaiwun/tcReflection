@@ -1,8 +1,29 @@
 
 #include <optix.h>
 #include <optixu/optixu_math_namespace.h>
-
+#include <optixu/optixu_matrix_namespace.h>
+#include "macro.h"
 using namespace optix;
+
+#ifdef NOGEOMETRY
+rtBuffer<float4, 2>         posBuffer;
+rtBuffer<float4, 2>         normalBuffer;;
+rtBuffer<float4, 2>         colorBuffer;
+rtDeclareVariable(float3, eye_pos, , );
+rtDeclareVariable(float2,   bbmin,,);
+rtDeclareVariable(float2,   bbmax,,);
+rtDeclareVariable(optix::Matrix4x4, optixModelView_Inv, , );
+__device__ float3 getImagePos(float2 tc)
+{
+	float2 xy = bbmin + (bbmax-bbmin)*tc;
+	xy = xy;
+	//printf("xyz:(%f,%f)\n",xy.x,xy.y,z);	
+	float4 temp =  make_float4(xy.x,xy.y,-1,1)*optixModelView_Inv;
+	temp = temp/temp.w;
+	return make_float3(temp.x,temp.y,temp.z);
+}
+
+#endif
 
 rtBuffer<float4, 2>         reflection_buffer;
 rtBuffer<float4, 2>         addition_buffer;;
@@ -17,7 +38,7 @@ rtDeclareVariable(uint, radiance_ray_type, , );
 rtDeclareVariable(uint, shadow_ray_type, , );
 rtDeclareVariable(float, scene_epsilon, , );
 rtDeclareVariable(rtObject, reflectors, , );
-rtDeclareVariable(float3, eye_pos, , );
+
 rtDeclareVariable(float3,   lightPos, , );
 
 rtDeclareVariable(int,   FrameCount, , );
@@ -41,6 +62,8 @@ struct PerRayData_radiance
   int   objectId;
   int depth;
   float t_hit;
+  float reflectValue;
+  float3 shadingNormal;
 };
 struct PerRayData_shadow
 {
@@ -175,7 +198,6 @@ RT_PROGRAM void addition_request()
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, x, y));
 		float3 ray_direction = reflect(V, normal);
-		float shadow = (prd_s.attenuation.x>0)?1:0;
 		optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
 		rtTrace(reflectors, ray, prd);
 		reflection_buffer[FinalPixelPos] = make_float4(prd.result,1);
@@ -223,15 +245,74 @@ RT_PROGRAM void addition_request()
 	reflection_buffer[FinalPixelPos] = make_float4(color, avgDepth);
   }
 }
+#ifdef NOGEOMETRY
+RT_PROGRAM void gBufferAndRequest()
+{
+	   
+	//if(launch_index.y<=512||launch_index.y>=512)
+	//   return;
+	 float3 ray_origin  = eye_pos;
+	 float2 tc = make_float2(launch_index.x+0.5, launch_index.y+0.5)/make_float2(rasterSize.x,rasterSize.y);
+	 float3 imageSpot = getImagePos(tc);
+	  PerRayData_radiance prd;
+	  PerRayData_shadow prd_s;
+	  prd_s.attenuation = make_float3(0);
+	  prd.result = make_float3(0);
+	  prd.importance = 1.f;
+	  prd.depth = 0;
+	  prd.t_hit = -1.f;
+	  float3 V = (imageSpot)-ray_origin;
+	  float dist = sqrtf(dot(V,V));
+	  V =  V/dist;
+	
+	  optix::Ray ray = optix::make_Ray(ray_origin,  V, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+	  rtTrace(reflectors, ray, prd);
+	  float r_dis = prd.t_hit;
+	  float3 worldPos = ray_origin + r_dis* V;
+	  float objectId = prd.objectId;
+	  float reflectValue = prd.reflectValue;
+	  float3 normal = prd.shadingNormal;
+	  posBuffer[launch_index] = make_float4(prd.result,objectId);
+	  normalBuffer[launch_index] = make_float4(normal.x,normal.y,normal.z,reflectValue);
+	  colorBuffer[launch_index] = make_float4(prd.result,reflectValue);
+
+	     ray_origin = worldPos;
+	  	 V = normalize(ray_origin-eye_pos);
+		
+		float3 ray_direction = normalize(reflect(V, normal));
+
+		/*float3 L = lightPos-ray_origin;
+		float dist = sqrtf(dot(L,L));
+		float3 ray_direction_s = L/dist;
+		optix::Ray ray_s = optix::make_Ray(ray_origin, 
+		ray_direction_s, 
+		shadow_ray_type, 
+		scene_epsilon, 
+		dist);
+		rtTrace(reflectors, ray_s, prd_s);
+		float shadow = (prd_s.attenuation.x>0)?1:0;*/
+		 ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+		rtTrace(reflectors, ray, prd);
+	//shadow = 0;
+		 r_dis = prd.t_hit;
+	/*rtPrintf("eye_pos:(%f,%f£¬%f)\n",eye_pos.x,eye_pos.y,eye_pos.z);
+		rtPrintf("wordldPos:(%f,%f£¬%f)\n",ray_origin.x,ray_origin.y,ray_origin.z);
+		rtPrintf("reflectPos:(%f,%f£¬%f)\n",reflectPos.x,reflectPos.y,reflectPos.z);*/
+		
+		reflection_buffer[launch_index] = make_float4(prd.result,r_dis);
+		addition_buffer[launch_index] = make_float4(prd.objectId,0,0,1);
+		//rtPrintf("object id:%d",prd.objectId);
+	 return;	 
+}
+#endif
 RT_PROGRAM void reflection_request()
 {
 	//return;
+	if(tex2D(normal_texture, launch_index.x, launch_index.y).w<0.01)
+		return;
   float3 ray_origin = make_float3(tex2D(request_texture, launch_index.x, launch_index.y));
-  //if(launch_index.x!=91||launch_index.y!=623)
-	//  return;
- // rtPrintf("x,y %d,%d\n",launch_index.x, launch_index.y);
- /* if(launch_index.x<=91||launch_index.x>=94)
-	  return;
+  // rtPrintf("x,y %d,%d\n",launch_index.x, launch_index.y);
+ /*
   if(launch_index.y<=91||launch_index.y>=94)
 	  return;*/
   float reflectValue = tex2D(request_texture, launch_index.x, launch_index.y).w;
@@ -242,7 +323,7 @@ RT_PROGRAM void reflection_request()
   prd.importance = 1.f;
   prd.depth = 0;
   prd.t_hit = -1.f;
-	
+ 
   // PerRayData_radiance prd2 = prd;
  //    PerRayData_radiance prd3 = prd;
  

@@ -94,25 +94,48 @@ void TimeMesure::printTC()
 	int index=0;
 	float fakeTime = 0; (m_secondTraceTime-m_forwardTime) *19/20;
 	fps = 1000/(m_frameEndTime - m_lastFrameEndTime-fakeTime);
-	m_fcount.insertTime(m_frame,fps);
-	sprintf( fps_text, "%d fps: %f",m_frame,fps);
-	sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime-fakeTime));
-	sprintf( text2, "first pass   : %6.5f", m_cudaBeginTime-m_frameBeginTime);
-	sprintf( text3, "cuda pass   : %6.5f",m_forwardTime -m_cudaBeginTime);
+	m_fcount.insertTime(m_frameEndTime - m_lastFrameEndTime-fakeTime);
+	if(!m_fcount.isReady())
+	{
+		sprintf( fps_text, "%d fps: %f",m_frame,fps);
+		sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime-fakeTime));
+		sprintf( text2, "first pass   : %6.5f", m_cudaBeginTime-m_frameBeginTime);
+		sprintf( text3, "cuda pass   : %6.5f",m_forwardTime -m_cudaBeginTime);
 
-	sprintf( text4, "projection pass    : %6.5f", m_secondTraceTime-m_forwardTime-fakeTime); 
-	sprintf( text5, "second optix pass: %6.5f ",m_finalRenderingBeginTime- m_secondTraceTime);
-	sprintf( text6, "final rendering pass: %6.5f",m_frameEndTime - m_finalRenderingBeginTime);
-	sprintf( text7, "ratio        : %6.5f", m_radio);
-	drawText( fps_text, 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
-	drawText( text1   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
-	drawText( text6   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
-    drawText( text5   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
-    drawText( text4   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
-    drawText( text3   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
-	drawText( text2   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
-	drawText( text7   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
-	
+		sprintf( text4, "projection pass    : %6.5f", m_secondTraceTime-m_forwardTime-fakeTime); 
+		sprintf( text5, "second optix pass: %6.5f ",m_finalRenderingBeginTime- m_secondTraceTime);
+		sprintf( text6, "final rendering pass: %6.5f",m_frameEndTime - m_finalRenderingBeginTime);
+		sprintf( text7, "ratio        : %6.5f", m_radio);
+		drawText( fps_text, 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+		drawText( text1   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+		drawText( text6   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+		drawText( text5   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+		drawText( text4   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+		drawText( text3   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
+		drawText( text2   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
+		drawText( text7   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
+	}
+	else
+	{
+		m_fcount.countResult();
+		sprintf( fps_text, "avg number: %f",m_fcount.getAverge());
+		sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime-fakeTime));
+		sprintf( text2, "first pass   : %6.5f", m_cudaBeginTime-m_frameBeginTime);
+		sprintf( text3, "cuda pass   : %6.5f",m_forwardTime -m_cudaBeginTime);
+
+		sprintf( text4, "projection pass    : %6.5f", m_secondTraceTime-m_forwardTime-fakeTime); 
+		sprintf( text5, "second optix pass: %6.5f ",m_finalRenderingBeginTime- m_secondTraceTime);
+		sprintf( text6, "final rendering pass: %6.5f",m_frameEndTime - m_finalRenderingBeginTime);
+		sprintf( text7, "ratio        : %6.5f", m_radio);
+		drawText( fps_text, 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+		drawText( text1   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+		drawText( text6   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+		drawText( text5   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+		drawText( text4   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
+		drawText( text3   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
+		drawText( text2   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
+		drawText( text7   , 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13);
+	}
 }
 void TimeMesure::print()
 {
@@ -130,7 +153,7 @@ void TimeMesure::print()
 	}
 	else if(m_type == noGeometryRenderingType)
 	{
-		printNoGeometry();
+		printOptix();
 	}
 }
 void TimeMesure::updateLastTime()

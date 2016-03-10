@@ -40,14 +40,17 @@ RT_PROGRAM void intersect(int primIdx)
   float3 n = make_float3( plane );
   float dt = dot(ray.direction, n );
   float t = (plane.w - dot(n, ray.origin))/dt;
-  if( t > ray.tmin && t < ray.tmax ) {
+  if( t > ray.tmin && t < ray.tmax ) 
+  {
     float3 p = ray.origin + ray.direction * t;
     float3 vi = p - anchor;
     float a1 = dot(v1, vi);
-    if(a1 >= 0 && a1 <= 1){
+    if(a1 >= 0 && a1 <= 1)
+	{
       float a2 = dot(v2, vi);
       if(a2 >= 0 && a2 <= 1){
-        if( rtPotentialIntersection( t ) ) {
+        if( rtPotentialIntersection( t ) )
+		{
           shading_normal = geometric_normal = n;
           texcoord = make_float3(a1,a2,0);
           lgt_idx = 0;
@@ -71,10 +74,13 @@ RT_PROGRAM void bounds (int, float result[6])
   
   optix::Aabb* aabb = (optix::Aabb*)result;
   
-  if(area > 0.0f && !isinf(area)) {
+  if(area > 0.0f && !isinf(area)) 
+  {
     aabb->m_min = fminf( fminf( p00, p01 ), fminf( p10, p11 ) );
     aabb->m_max = fmaxf( fmaxf( p00, p01 ), fmaxf( p10, p11 ) );
-  } else {
+  } 
+  else
+  {
     aabb->invalidate();
   }
 }

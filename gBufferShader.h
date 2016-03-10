@@ -20,7 +20,9 @@ public :
 private:
 	
 	GLuint m_vmpBinding;
+	GLuint m_modelViewBinding;
 	float* m_mvp;
+	float* m_modelView;
 	GLuint m_objectTexBinding;
 	GLuint m_objectDiffuseBinding;
 	GLuint m_cameraPosBinding;

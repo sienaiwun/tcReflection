@@ -69,6 +69,10 @@ public:
 	{
 		s_mat = pMatArray;
 	}
+	inline float getReflectValue()
+	{
+		return reflectValue;
+	}
 	float reflectValue;
 	int m_geometryNumber;
 	int m_totalGeometryNumber;

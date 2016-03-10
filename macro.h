@@ -1,5 +1,5 @@
 #define BEGININDEX 0    //must be 10 time
-#define ENDINDEX 30
+#define ENDINDEX 20
 #define TIMERANGE (ENDINDEX-BEGININDEX)
 
 #define TIMEGAP 20
@@ -12,6 +12,7 @@
 
 
 #define DIFFNORMAL
+#define NOGEOMETRY
 //no use
 
 #define SpeedUp    10

@@ -15,7 +15,9 @@ public:
 		m_bufferHeight = h;
 	}
 	void clear();
+	void clearScreen();
 	void drawToScreen(glslShader& shader);
+	void directDrawToScreen(glslShader & shader);
 	void init();
 private:
 	int m_windowWidth,m_windowHeight;

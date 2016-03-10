@@ -1,5 +1,5 @@
 #include "toiletScene.h"
-#define  geoNumber  35
+#define  geoNumber  33
 #define  CHINAREFLECT 0.185f
 static nv::vec3f toiletLightPos =  nv::vec3f(0.0f, 65.0f, 30.0f);
 static MyMeterial toiletMat[] = 
@@ -43,8 +43,8 @@ static GeoPara toiletObj[geoNumber] =
 	{"model/bathroom/toilet_body_all.3ds",0,0,CHINAREFLECT,3},
 	{"model/bathroom/toilet_up_all.3ds",15,0,CHINAREFLECT,3},
 
-	{"model/bathroom/testSphere.obj",15,0,CHINAREFLECT,0},
-	{"model/bathroom/testBox.obj",15,0,CHINAREFLECT,0},
+	//{"model/bathroom/testSphere.obj",15,0,CHINAREFLECT,0},
+	//{"model/bathroom/testBox.obj",15,0,CHINAREFLECT,0},
 	{"model/aoBathroom/littleBarrier.obj",9,0,0.0f,0},
 	{"model/bathroom/ceil.obj",15,0,0.0f,0},
 	{"model/bathroom/cockoff2.3ds",24,0,0.2,5},

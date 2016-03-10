@@ -116,6 +116,10 @@ public:
 	{
 		return (float*)m_mvpMat.get_value();
 	}
+	inline float* getInvMvp()
+	{
+		return (float*)inverse(m_mvpMat).get_value();
+	}
 	inline  float * getModelViewInvMat()
 	{
 		return (float*)inverse(m_modelView).get_value();

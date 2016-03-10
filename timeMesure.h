@@ -81,7 +81,7 @@ public:
 
 		m_frame = 4;//debug 
 		m_type = t;
-		m_fcount = FPS(totalTime);
+		m_fcount = FPS(110);
 	};
 	inline void setTotalTime(int m)
 	{

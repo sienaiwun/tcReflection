@@ -37,6 +37,7 @@ optix::Material MyMeterial::getMaterial(MyGeometry *  pGeometry)
 	   flat_tex->setClosestHitProgram(0, rtContext->createProgramFromPTXFile( ptxpath("flat_tex_isg.cu"), "closest_hit_radiance"));
 	   flat_tex["diffuse_texture"]->setTextureSampler(getTexture());
 	   flat_tex["id"]->setInt(pGeometry->getObjectId());
+	   flat_tex["reflectValue"]->setFloat(pGeometry->getReflectValue());
 	   return flat_tex;
    }
    else
@@ -46,6 +47,7 @@ optix::Material MyMeterial::getMaterial(MyGeometry *  pGeometry)
 	   glossy->setAnyHitProgram(1, rtContext->createProgramFromPTXFile( ptxpath("glossy_isg.cu"), "any_hit_shadow") );
 	   glossy["diffuse_Color"]->setFloat( m_diffuseColor.x,m_diffuseColor.y,m_diffuseColor.z );
 	   glossy["id"]->setInt(pGeometry->getObjectId());
+	   glossy["reflectValue"]->setFloat(pGeometry->getReflectValue());
 	   return glossy;
    }
 }

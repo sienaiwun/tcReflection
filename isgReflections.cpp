@@ -54,6 +54,8 @@
 #include "compareShader.h"
 #include "diffNormal.h"
 #include "idShader.h"
+#include  "keyFrame.h"
+#include "showShader.h"
 //#include "toiletScene.h"
 
 unsigned int *Host_PixelSum;
@@ -110,15 +112,16 @@ HybridShader g_hybridShader;
 ImgWarpingShader g_imgWarpShader;
 CompareShader g_compareShader;
 DiffNormalShader g_diffNormalShader;
+showShader g_showShader;
 IDShader g_idShader;
+KeyFrame g_keyFrame;
 
-
-TimeMesure g_timeMesure(tcRenderingType
+TimeMesure g_timeMesure(optixRenderingType
 						,CountTime);
 #include "toiletScene.h"
 toiletScene g_scene;
 int currentTime  = 0;
-int currentTime2 = 30;
+int currentTime2 = 9;
 
 FPS fcount(CountTime);
 
@@ -134,8 +137,15 @@ int logReflectionSamplingRate = 0;
 
 GLuint reflectionMapPBO;
 GLuint addtionalMapPBO;
-GLuint VectorPBO;
 
+#ifdef NOGEOMETRY
+GLuint colorPBO;
+GLuint posPBO;
+GLuint normalPBO;
+optix::Buffer         rtPosBuffer;
+optix::Buffer         rtNormalBuffer;
+optix::Buffer         rtColorBuffer;
+#endif
 GLuint VecorTexture;
 
 
@@ -212,14 +222,6 @@ bool stripNormals = false;
 bool g_Recordpic = false;
 float scene_epsilon = 1e-2f;
 
-int getIndex(int frameNumber)
-{
-	assert(frameNumber>=BEGININDEX&&frameNumber<=ENDINDEX);
-	int OptixFrame = (currentTime2-BEGININDEX) /JianGe;
-	if(currentTime2 %JianGe> JianGe/2)
-		OptixFrame++;
-	return OptixFrame;
-}
 void init_cuda(int argc,char**argv)
 {
 
@@ -307,13 +309,24 @@ void init_gl()
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, addtionalMapPBO);
 	glBufferData(GL_PIXEL_UNPACK_BUFFER, rasterHeight*rasterWidth*sizeof(float4), 0, GL_STREAM_READ);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+#ifdef NOGEOMETRY
+	glGenBuffers(1, &colorPBO);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, colorPBO);
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, rasterHeight*rasterWidth*sizeof(float4), 0, GL_STREAM_READ);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
+	glGenBuffers(1, &posPBO);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, posPBO);
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, rasterHeight*rasterWidth*sizeof(float4), 0, GL_STREAM_READ);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 
-	glGenBuffers(1,&VectorPBO);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER,VectorPBO);
-	glBufferData(GL_PIXEL_UNPACK_BUFFER,rasterHeight*rasterWidth*sizeof(float4),0,GL_STREAM_READ);
-	glBindBuffer(GL_PIXEL_UNPACK_BUFFER,0);
+	glGenBuffers(1, &normalPBO);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, normalPBO);
+	glBufferData(GL_PIXEL_UNPACK_BUFFER, rasterHeight*rasterWidth*sizeof(float4), 0, GL_STREAM_READ);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+#endif
 
+	
 
 	// setup FBO's
 
@@ -389,6 +402,7 @@ void init_gl()
 	g_compareShader.init();
 	g_diffNormalShader.init();
 	g_idShader.init();
+	g_showShader.init();
 	//载入imgMesh
 	g_imgMesh.init();
 
@@ -400,7 +414,8 @@ void init_gl()
          tcFrame.init();
 	}
 	//g_fboAnalyse.init();
-	CHECK_ERRORS();
+	//CHECK_ERRORS();
+	//glEnable(GL_CULL_FACE);
 }
 
 void init_scene()
@@ -447,8 +462,8 @@ void init_optix()
 	{
 		//  printf("111");
 		rtContext = optix::Context::create();
-		rtContext->setRayTypeCount(2);
-		rtContext->setEntryPointCount(2);
+		rtContext->setRayTypeCount(3);
+		rtContext->setEntryPointCount(3);
 
 		rtContext->setPrintEnabled( true );
 		rtContext->setPrintBufferSize( 4096 *8);
@@ -518,6 +533,24 @@ void init_optix()
 		rtAdditionalBuffer->setFormat(RT_FORMAT_FLOAT4);
 		rtContext["addition_buffer"]->setBuffer(rtAdditionalBuffer);
 
+#ifdef NOGEOMETRY
+
+		rtPosBuffer = rtContext->createBufferFromGLBO(RT_BUFFER_OUTPUT, posPBO);
+		rtPosBuffer->setSize(rasterWidth,rasterHeight);
+		rtPosBuffer->setFormat(RT_FORMAT_FLOAT4);
+		rtContext["posBuffer"]->setBuffer(rtPosBuffer);
+
+		rtNormalBuffer = rtContext->createBufferFromGLBO(RT_BUFFER_OUTPUT, normalPBO);
+		rtNormalBuffer->setSize(rasterWidth,rasterHeight);
+		rtNormalBuffer->setFormat(RT_FORMAT_FLOAT4);
+		rtContext["normalBuffer"]->setBuffer(rtNormalBuffer);
+
+		rtColorBuffer = rtContext->createBufferFromGLBO(RT_BUFFER_OUTPUT, colorPBO);
+		rtColorBuffer->setSize(rasterWidth,rasterHeight);
+		rtColorBuffer->setFormat(RT_FORMAT_FLOAT4);
+		rtContext["colorBuffer"]->setBuffer(rtColorBuffer);
+
+#endif
 
 		rtLights = rtContext->createBuffer(RT_BUFFER_INPUT);
 		rtLights->setSize(1);
@@ -533,6 +566,10 @@ void init_optix()
 		rtContext->setExceptionProgram( 1, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_exception" ) );
 		rtContext->setMissProgram( 1, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_miss" ) );
 
+		rtContext->setRayGenerationProgram(2, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "gBufferAndRequest" ) );
+		rtContext->setExceptionProgram( 2, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_exception" ) );
+		rtContext->setMissProgram( 2, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_miss" ) );
+
 		// printf("222");
 		MyGeometry::ms_rtContext = rtContext;
 		MyMeterial::ms_rtContext = rtContext;
@@ -543,8 +580,7 @@ void init_optix()
 		rtContext->setStackSize(1850);
 		rtContext["rasterSize"]->setInt(rasterWidth, rasterHeight);
 		rtContext->validate();
-		printf("4444");
-
+		
 
 	} 
 	catch ( optix::Exception& e )
@@ -563,6 +599,7 @@ void drawFinalEffect()
 	glClearColor(viewIndepentdentMissColor.x,viewIndepentdentMissColor.y,viewIndepentdentMissColor.z,1);
 	glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 	g_reprojectShader.setParemeter(TransMapFbo.getTexture(0),currentGbuffer.getTexture(0),refGbuffer.getTexture(0), g_scene.m_refCamera.getMvpMat());
+	//g_reprojectShader.setParemeter(currentGbuffer.getTexture(2),currentGbuffer.getTexture(0),refGbuffer.getTexture(0), g_scene.m_refCamera.getMvpMat());
 	g_reprojectShader.setNormalTex(refGbuffer.getTexture(1));
 	MyGeometry::drawQuad(g_reprojectShader);
 }
@@ -949,17 +986,17 @@ void optixRendering()
 	CVector3& pos =g_scene.m_refCamera.Position();
 	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 
-	//g_scene.m_refCamera = g_scene.m_curCamera;
-	int optixTime;
+	g_scene.m_refCamera = g_scene.m_curCamera;
+	/*int optixTime;
 	{
 		 optixTime = getIndex(currentTime2);
 
 		g_scene.cameraControl(optixTime*JianGe+BEGININDEX,g_scene.m_refCamera);
-	}
+	}*/
 	
 	currentGbuffer.begin();
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
-	//currentGbuffer.SaveBMP("./test/1.bmp",0);
+	//currentGbuffer.SaveBMP("./test/1.bmp",1);
 	currentGbuffer.end();
 
 	rtContext["eye_pos"]->setFloat(g_scene.m_curCamera.Position().x, g_scene.m_curCamera.Position().y, g_scene.m_curCamera.Position().z);
@@ -988,6 +1025,25 @@ void optixRendering()
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 	glPopAttrib();
+	/*
+	glEnable(GL_TEXTURE_2D);
+		
+	BYTE *pTexture = NULL;
+	pTexture = new BYTE[rasterWidth*rasterHeight * 3];
+	memset(pTexture, 0, rasterWidth*rasterHeight * 3 * sizeof(BYTE));
+		//glBindTexture(GL_TEXTURE_2D,reflectionMaps[i]);//TexPosId   PboTex
+	glBindTexture(GL_TEXTURE_2D, reflectionMapTex_Now);//TexPosId   PboTex
+
+	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
+
+	int w = rasterWidth;
+	int h = rasterHeight;
+	char sreenstr [32];
+	sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,optixTime*JianGe+BEGININDEX);
+	Fbo::SaveBMP(sreenstr, pTexture, w, h);
+	if(pTexture)
+		delete pTexture;
+	*/
 	//currentTime2++;
 	if (stat_breakdown) 
 	{
@@ -1007,13 +1063,14 @@ void optixRendering()
 		glFinish();
 		//sutilCurrentTime(&finish_start);
 		g_timeMesure.setEndTime(finish_start);
-		//g_timeMesure.print();
+		g_timeMesure.print();
 	}
-	
+	/*
 	char sreenstr[30];
-	sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,optixTime*JianGe+BEGININDEX);
+	sprintf(sreenstr,"./test/disoclu%d.bmp",currentTime2);
+	//sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,optixTime*JianGe+BEGININDEX);
 	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
-	
+	*/
 }
 
 void init_RefcletTex()
@@ -1054,15 +1111,15 @@ void init_RefcletTex()
 		MyGeometry::drawQuad(g_diffNormalShader);
 		frame.getGbuffer().end();
 		
-		
+		/*idmap 
 		frame.getGbuffer().begin();
 		g_scene.draw_model(g_idShader,&camera);
 		frame.getGbuffer().end();
-	
-		char str [32];
+		*/
+		/*char str [32];
 		sprintf(str,"./test/ref_i%d.bmp",i);
-		frame.getGbuffer().SaveBMP(str,0);
-		
+		frame.getGbuffer().SaveBMP(str,3);
+		*/
 		//frame.getGbuffer().debugPixel(3,358,389);
 		//frame.getGbuffer().debugPixel(0,359,390);
 #endif
@@ -1081,6 +1138,8 @@ void init_RefcletTex()
 		*/
 
 		rtContext["eye_pos"]->setFloat(camera.Position().x, camera.Position().y, camera.Position().z);
+	    rtContext["optixModelView_Inv"]->setMatrix4x4fv(false,camera.getModelViewInvMat());
+
 		try
 		{
 			rtContext->launch(0, rasterWidth, rasterHeight);
@@ -1230,7 +1289,7 @@ void hybridRendering()
 	currentGbuffer.end();
 	
 	
-	int OptixFrame = getIndex(currentTime2);
+	int OptixFrame = g_keyFrame.getOptixFrame(currentTime2);
 
 	
 
@@ -1280,6 +1339,96 @@ void hybridRendering()
 	*/
 }
 void noGeometryRendering()
+{
+	setTitle();
+	if (stat_breakdown) 
+	{
+		glFinish();
+		double display_start = TimeMesure::getCurrentTime();
+		// sutilCurrentTime(&display_start);
+		g_timeMesure.setBeginTime(display_start);
+	}
+	CVector3& pos =g_scene.m_refCamera.Position();
+	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
+	g_scene.m_refCamera = g_scene.m_curCamera;
+	rtContext["eye_pos"]->setFloat(g_scene.m_curCamera.Position().x, g_scene.m_curCamera.Position().y, g_scene.m_curCamera.Position().z);
+	rtContext["bbmin"]->setFloat(g_scene.m_curCamera.getImageMin().x, g_scene.m_curCamera.getImageMin().y);
+	rtContext["bbmax"]->setFloat(g_scene.m_curCamera.getImageMax().x, g_scene.m_curCamera.getImageMax().y);
+	rtContext["optixModelView_Inv"]->setMatrix4x4fv(false,g_scene.m_refCamera.getInvMvp());
+	CVector3 view = g_scene.m_refCamera.View()  - g_scene.m_curCamera.Position();
+	nv::matrix4f matInv = inverse(nv::matrix4f(g_scene.m_refCamera.getModelViewMat()));
+	rtContext["optixModelView_Inv"]->setMatrix4x4fv(false,matInv.get_value());
+	
+  
+	try
+	{
+		if (stat_breakdown) 
+		{
+			double optixBeginTime = TimeMesure::getCurrentTime();;
+			g_timeMesure.setOptixBeginTime(optixBeginTime);
+		}
+		rtContext->launch(2, rasterWidth, rasterHeight);
+	}
+	catch (optix::Exception& e) 
+	{
+		sutilReportError( e.getErrorString().c_str() );
+		exit(1);
+	}
+
+	glPushAttrib(GL_PIXEL_MODE_BIT);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, reflectionMapPBO);
+	glBindTexture(GL_TEXTURE_2D,reflectionMapTex_Now);
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rasterWidth, rasterHeight,
+		GL_RGBA, GL_FLOAT, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+	glPopAttrib();
+
+	glPushAttrib(GL_PIXEL_MODE_BIT);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, posPBO);
+	glBindTexture(GL_TEXTURE_2D,currentGbuffer.getTexture(0));
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rasterWidth, rasterHeight,
+		GL_RGBA, GL_FLOAT, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+	glPopAttrib();
+
+	glPushAttrib(GL_PIXEL_MODE_BIT);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, normalPBO);
+	glBindTexture(GL_TEXTURE_2D,currentGbuffer.getTexture(1));
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rasterWidth, rasterHeight,
+		GL_RGBA, GL_FLOAT, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+	glPopAttrib();
+
+	glPushAttrib(GL_PIXEL_MODE_BIT);
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, colorPBO);
+	glBindTexture(GL_TEXTURE_2D,currentGbuffer.getTexture(2));
+	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, rasterWidth, rasterHeight,
+		GL_RGBA, GL_FLOAT, 0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+	glPopAttrib();
+	g_blendShader.setDiffuseTex(currentGbuffer.getTexture(2));
+    g_blendShader.setReflectTex(reflectionMapTex_Now);
+    screenBuffer.drawToScreen(g_blendShader);
+    glFinish();
+	if (stat_breakdown) 
+	{
+		double finish_start = TimeMesure::getCurrentTime();;
+		glFinish();
+		//sutilCurrentTime(&finish_start);
+		g_timeMesure.setEndTime(finish_start);
+		g_timeMesure.print();
+	}
+}
+
+void noGeometryRendering2()
 {
 	setTitle();
 	sutilFrameBenchmark("isgReflections", warmup_frames, timed_frames);
@@ -1394,7 +1543,7 @@ void tcRendering()
 	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 	
 	
-	int OptixFrame = getIndex(currentTime2);
+	int OptixFrame = g_keyFrame.getOptixFrame(currentTime2);
 
 	g_scene.cameraControl(OptixFrame*JianGe+BEGININDEX,g_scene.m_refCamera);
 	//test();
@@ -1416,16 +1565,16 @@ void tcRendering()
 		double cudaBeginTime=g_timeMesure.getCurrentTime();;
 		g_timeMesure.setCudaBeginTime(cudaBeginTime);
 	}
-	float ComputeStar=0,ComputeEnd;
 	
-	
-	poxCudaTex.setEveryTex(frame.getGbuffer().getTexture(0));
-	normalCudaTex.setEveryTex(frame.getGbuffer().getTexture(1));
+	if(g_keyFrame.isKeyFrameChage())
+	{
+		poxCudaTex.setEveryTex(frame.getGbuffer().getTexture(0));
+		normalCudaTex.setEveryTex(frame.getGbuffer().getTexture(1));
 #ifdef DIFFNORMAL
-	diffCudaTex.setEveryTex(frame.getGbuffer().getTexture(3));
+		diffCudaTex.setEveryTex(frame.getGbuffer().getTexture(3));
 #endif
-	reflectCudaTex.setEveryTex(frame.getOptixTex());
-
+		reflectCudaTex.setEveryTex(frame.getOptixTex());
+	}
 	/*
 	glEnable(GL_TEXTURE_2D);
 	BYTE *pTexture = NULL;
@@ -1451,7 +1600,6 @@ void tcRendering()
 
 	// cudaEventRecord(start,0);
  	ComputeVecInCuda();
-	fflush(stdout);
 	//checkCudaErrors(cudaGraphicsUnregisterResource(cudaRes_Reflect));
 	//    cudaEventRecord(stop,0);
 	//    cudaEventSynchronize(start);
@@ -1492,68 +1640,56 @@ void tcRendering()
 	   delete[] pTexture;
 	glBindTexture(GL_TEXTURE_2D, 0);
 	*/
-
-		
+	/*
+	g_showShader.setTex1(VecorTexture);
+	currentGbuffer.begin();
+	MyGeometry::drawQuad(g_showShader);
+	currentGbuffer.SaveBMP("./test/vector.bmp",0);
+	currentGbuffer.end();
+	*/
 	//Draw TransMap
 
-
-	double BeginDrawT;
-	double EndDirawT;
-	
 	if (stat_breakdown) 
 	{
 		double forwardBeginTime=g_timeMesure.getCurrentTime();
 		g_timeMesure.setForwardingTime(forwardBeginTime);
 	}
-
+	
 	TransMapFbo.begin(); 
 	drawTransMap(OptixFrame);
-	
-	char strs[30];
-	sprintf(strs,"./test/transmap%d_%d.bmp",OptixFrame*TIMEGAP,currentTime2);
- 	TransMapFbo.SaveBMP(strs,0);
-	
-	TransMapFbo.debugPixel(0,503,583);
-	
+	//TransMapFbo.SaveBMP("test/TransMapFbo.bmp",0);
 	TransMapFbo.end();
 	char str[100];
 	
-	if(stat_breakdown)
-	{
-		glFinish();
-		sutilCurrentTime(&EndDirawT);
-	}
+
+
 	
-
-
 	glViewport(0,0, traceWidth, traceHeight);
 	currentGbuffer.begin();
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_curCamera);
 	currentGbuffer.end();
 	
-
+	
 	
 	FinalEffectFbo.begin();
 
 	drawFinalEffect();
 
 	FinalEffectFbo.end();
-
+	
 	
 
 	//FinalEffectFbo.SaveBMP("test/FinalEffectFbo.bmp",0);
-
+	/*
 	if (stat_breakdown) 
 	{
 		// glFinish();
 		double secendRacingTimec=g_timeMesure.getCurrentTime();
 		g_timeMesure.setSecondTraceTime(secendRacingTimec);
-	}
+	}*/
 	int pixelNum =0;
-	 pixelNum = mapping();
-	double DrawTime1,DrawTime2;
+    pixelNum = mapping();
 	glFinish();
-	sutilCurrentTime(&DrawTime1);
 	if (stat_breakdown) 
 	{
 		// glFinish();
@@ -1563,28 +1699,27 @@ void tcRendering()
 	g_blendShader.setDiffuseTex(currentGbuffer.getTexture(2));
 	g_blendShader.setReflectTex(FinalEffectFbo.getTexture(0));
 	g_blendShader.setNewReflectTex(reflectionMapTex_Now);
+	
 	screenBuffer.drawToScreen(g_blendShader);
-	glFinish();
-
+	//screenBuffer.clearScreen();
+	
 	double finish_start;
 	if (stat_breakdown) 
 	{
-		glFinish();
 		double finish_start=g_timeMesure.getCurrentTime();
 		//int ananlyseNum = g_fboAnalyse.analyseColorNum(FinalEffectFbo,0);
 		//float ratio = ananlyseNum/(float)g_fboAnalyse.getRes().x/(float)g_fboAnalyse.getRes().y;
 		g_timeMesure.setEndTime(finish_start);
-		g_timeMesure.setRadio(pixelNum/(float)rasterWidth/(float)rasterHeight);
-		 g_timeMesure.print();
+		// g_timeMesure.print();
 
 		
 	}
 	
-	/*
+
 	char sreenstr[30];
 	sprintf(sreenstr,"./test/tc%d.bmp",currentTime2);
 	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
-	*/
+	
 	/*
 	  char sreenstr[20];
 	  sprintf(sreenstr,"./test/tc%d.bmp",rasterWidth);
@@ -1681,7 +1816,7 @@ void compareTypRendering()
 	}
 	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 	
-	int OptixFrame = getIndex(currentTime2);
+	int OptixFrame =g_keyFrame.getOptixFrame(currentTime2);
 
 	g_scene.cameraControl(OptixFrame*JianGe+BEGININDEX,g_scene.m_refCamera);
 	//test();
@@ -1830,7 +1965,7 @@ void compareTypRendering()
 	g_blendShader.setReflectTex(FinalEffectFbo.getTexture(0));
 	g_blendShader.setNewReflectTex(reflectionMapTex_Now);
 	MyGeometry::drawQuad(g_blendShader);
-	
+	tcFrame.SaveBMP("./sequence/tcRendering.bmp",0);
 	tcFrame.end();
 
 	g_compareShader.setTex1(optixFrame.getTexture(0));
@@ -2138,8 +2273,6 @@ void printUsageAndExit( const std::string& argv0, bool doExit = true )
 int main(int argc, char** argv)
 {
 	// Allow glut to consume its args first
-	//freopen("stdout.txt","w",stdout);
-	//freopen("stderr.txt","w",stderr);
 	glutInit(&argc, argv);
 
 	bool dobenchmark = false;

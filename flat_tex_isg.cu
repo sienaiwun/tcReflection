@@ -11,6 +11,8 @@ struct PerRayData_radiance
   int    objectId;
   int depth;
   float t_hit;
+  float reflectValue;
+  float3 shadingNormal;
 };
 
 struct PerRayData_shadow
@@ -33,6 +35,7 @@ rtDeclareVariable(int3, index_color, attribute index_color, );
 rtDeclareVariable(uint, max_depth, , );
 rtDeclareVariable(uint, radiance_ray_type, , );
 rtDeclareVariable(uint, shadow_ray_type, , );
+rtDeclareVariable(float,reflectValue, ,);
 rtDeclareVariable(float, scene_epsilon, , );
 rtDeclareVariable(rtObject, reflectors, , );
 rtDeclareVariable(int, id, ,);
@@ -54,7 +57,7 @@ RT_PROGRAM void closest_hit_radiance()
   refl_prd.depth = prd_radiance.depth + 1;
   float3 result;
   // if(0)
- if(refl_prd.depth <= max_depth && refl_prd.importance > 0.05) 
+ if(refl_prd.depth <= max_depth) 
   {
 	  
     optix::Ray refl_ray = optix::make_Ray(hit_point, reflect(ray.direction, shading_normal), 
@@ -68,7 +71,9 @@ RT_PROGRAM void closest_hit_radiance()
   }
   prd_radiance.t_hit = t_hit;
   prd_radiance.objectId = id;
+  prd_radiance.reflectValue = reflectValue;
  //  color = make_float3(index_color.x,index_color.y,index_color.z);
+  prd_radiance.shadingNormal = world_shade_normal;
   prd_radiance.result= color ;//	prd_radiance.result = make_float3(1,0,0);
 
 }

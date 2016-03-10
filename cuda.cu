@@ -13,6 +13,7 @@
 //#include <cutil_gl_inline.h>
 //#include <helper_cuda_gl.h>
 #define UseTrial   1
+#define DISMAXTHRES 3000.0
 __constant__  float Cuda_MvpMat[16];
 __constant__  float Cuda_MvpMatInv[16];
 __constant__  float Cuda_CameraViewMat[16]; 
@@ -70,7 +71,10 @@ __device__ float2 toNDC(float4 temp)
 	temp.y = temp.y / temp.w * 0.5 + 0.5;
 	return make_float2(temp.x,temp.y)* make_float2(rastWidth,rastHeight);
 }
-
+__device__ int isOutOfRange(float2 tc)
+{
+	return tc.x>rasterWidth-0.5||tc.y>rasterHeight-0.5||tc.x<0||tc.y<0;
+}
 
 __device__ float4 cuda_Mat_Mut3(const float Mat4[16],float3 vec)
 {
@@ -122,6 +126,16 @@ __device__ float2 normalizeVec(float2 moveVec)
 		return moveVec/abs(moveVec.x);
 	}
 }
+__device__ int isConcave(float2 tc)
+{
+	float4 Tmpfloat4;
+	Tmpfloat4 = tex2D(cuda_Diff_Tex,tc.x,tc.y);
+	if(Tmpfloat4.x>=0.5||Tmpfloat4.y>=0.5||Tmpfloat4.z>=0.5)
+		return 1;
+	else
+		return 0;
+
+}
 __device__ float Cuda_Compute_Cos(float2 TmpUV,float3 ReflectPos,int orignId)
 {
 	float3 WorldPos,WorldNormal;
@@ -150,12 +164,71 @@ __device__ float Cuda_Compute_Cos(float2 TmpUV,float3 ReflectPos,int orignId)
 __device__ float3 getIntersectPosition(float3 position, float3 normal, float2 tc)
 {
 	float2 ndc = tc *2.0 - 1.0;
+	//printf("ndc:%f,%f\n",ndc.x,ndc.y);
 	float4 temp = make_float4(ndc.x,ndc.y,0,1);
 	float4 imgPoint =Cude_Mul_Mat4(Cuda_MvpMatInv ,temp);
 	float3 pointOnPlane = make_float3(imgPoint.x,imgPoint.y,imgPoint.z)/imgPoint.w;
 	float3 D = pointOnPlane - d_refCameraPos;
 	float3 hitPoint = d_refCameraPos + dot( position - d_refCameraPos,normal)/dot(D,normal) * D;
 	return hitPoint;
+}
+__device__ float3 to3(float4 vec)
+{
+	return make_float3(vec.x,vec.y,vec.z);
+}
+
+__device__  float getIntersection(float3 pos1, float3 normal1, float3 pos2,float3 normal2)
+{
+	float3 v = normalize(cross(normal1,normal2));
+	float3 palaneNormal = normalize(cross(v,normal2));
+	float3 D = pos2 - pos1;
+	printf("this normal(%f,%f,%f)\n",normal1.x,normal1.y,normal1.z);
+	printf("this pos(%,%f,%f)\n",pos1.x,pos1.y,pos1.z);
+		
+	printf("neighbor normal(%f,%f,%f)\n",normal2.x,normal2.y,normal2.z);
+	printf("neighbor pos(%,%f,%f)\n",pos2.x,pos2.y,pos2.z);
+
+
+	//vec3 hitPoint = pos1 + dot( pos2 - pos1,palaneNormal)/dot(normal1,palaneNormal) * normal1;
+	if(abs(dot(normal1,palaneNormal)) <0.00000001)
+	{
+		printf("right");
+		return 0;
+	}
+	float t = dot(pos2-pos1,palaneNormal)/dot(normal1,palaneNormal);
+	printf("t:%f",t);
+	return t;
+}
+__device__ int sign(float value)
+{
+	if(value>0)
+		return 1;
+	else if(value==0)
+		return 0;
+	else 
+		return -1;
+}
+__device__ float neiboghoodConcave(float2 tex, float2 step,float4 sourcePosition,float4 sourceNormal )
+{	
+	float4 neighborPos = tex2D(cuda_WorldPos_Tex,tex.x+step.x,tex.y+step.y);;
+	float4 neighborNormal;
+	if(neighborPos.w == sourcePosition.w)  // using right value
+	{
+	
+		neighborNormal =  tex2D(cuda_WorlNormal_Tex,tex.x+step.x,tex.y+step.y);;
+		
+		float concave = getIntersection(to3(neighborPos),to3(neighborNormal),to3(sourcePosition),to3(sourceNormal));
+		return sign(concave);
+	}
+	neighborPos =  tex2D(cuda_WorldPos_Tex,tex.x-step.x,tex.y-step.y);;
+	if(neighborPos.w == sourcePosition.w)
+	{
+		neighborNormal = tex2D(cuda_WorlNormal_Tex,tex.x-step.x,tex.y-step.y);;
+		float concave = getIntersection(to3(neighborPos),to3(neighborNormal),to3(sourcePosition),to3(sourceNormal));
+		return sign(concave);
+	}
+	return 0;
+
 }
 __device__ bool isInBox(float2 centerUv,float2 projectUv)
 {
@@ -183,10 +256,7 @@ __device__ float getDepthRep(float3 worldPos)
 	float4 tmp = Cude_Mul_Mat4(Cuda_CameraViewMat,make_float4(worldPos.x,worldPos.y,worldPos.z,1));
 	return 1.0/tmp.z;
 }
-__device__ float3 to3(float4 vec)
-{
-	return make_float3(vec.x,vec.y,vec.z);
-}
+
 __device__ float neiboghoodPixel(float2 tex, float2 step,float4 sourceValue)
 {
     float f0 = getDepthRep(make_float3(sourceValue));
@@ -196,37 +266,63 @@ __device__ float neiboghoodPixel(float2 tex, float2 step,float4 sourceValue)
 	temp =  tex2D(cuda_WorldPos_Tex,tex.x+step.x,tex.y+step.y);
 	if(temp.w == sourceValue.w)
 	{
+		printf("sample  up pos:(%f,%f,%f)\n",temp.x,temp.y,temp.z);
 		plusValue = getDepthRep(make_float3(temp));
+		return plusValue;
 	}
-	else
-	{
-		plusValid = false;
-	}
+	
 	temp =  tex2D(cuda_WorldPos_Tex,tex.x-step.x,tex.y-step.y);
 	if(temp.w == sourceValue.w)
 	{
 		minusValue = getDepthRep(make_float3(temp));
-	}
-	else
-	{
-		plusValid = false;
-	}
-	if(minusValid&&plusValid)
-	{
-		 return f0 + (plusValue - minusValue)/2.0;
-	}
-	else if(plusValid)
-	{
-		return plusValue;
-	}
-	else if(minusValid)
-	{
-		return f0 + f0 - minusValue;
+		return minusValue;
 	}
 	else
 	{
 		return 0;
 	}
+
+}
+
+__device__ void nextThreeStep(float2 moveVec,float2 candicate[3],float2 currentUv)
+{
+	#define PI 3.141592654f
+
+	if(moveVec.x==0)
+	{
+		candicate[0]= make_float2(0,copysignf(1,moveVec.y));
+		candicate[1] = make_float2(-1,copysignf(1,moveVec.y));
+		candicate[2] = make_float2(1,copysignf(1,moveVec.y));
+		candicate[0]+=currentUv;
+		candicate[1]+=currentUv;
+		candicate[2]+=currentUv;
+		return;
+	}
+	float absTangleValue = abs(moveVec.y/moveVec.x);
+	if(absTangleValue<tanf(PI/4/2))
+	{
+		
+		candicate[0]= make_float2(copysignf(1,moveVec.x),0);
+		candicate[1]= make_float2(copysignf(1,moveVec.x),-1);
+		candicate[2] = make_float2(copysignf(1,moveVec.x),1);
+
+	}
+	else if (absTangleValue>tanf(PI*3/4/2))
+	{
+		
+		candicate[0]= make_float2(0,copysignf(1,moveVec.y));
+		candicate[1] = make_float2(-1,copysignf(1,moveVec.y));
+		candicate[2] = make_float2(1,copysignf(1,moveVec.y));
+	}
+	else 
+	{
+		candicate[0]= make_float2(copysignf(1,moveVec.x),copysignf(1,moveVec.y));
+		candicate[1] = make_float2(copysignf(1,moveVec.x),0);
+		candicate[2] = make_float2(0,copysignf(1,moveVec.y));
+	}
+	candicate[0]+=currentUv;
+	candicate[1]+=currentUv;
+	candicate[2]+=currentUv;
 
 }
 enum planeType
@@ -314,7 +410,7 @@ public:
 		float2 targetVec = m_tc+nextStep;
 		float4 value = tex2D(cuda_Diff_Tex,m_tc.x,m_tc.y);
 		float ddx = value.x,ddy = value.y,dxdy = value.z;
-		printf("ddx:%f,ddy:%f,dxdy:%f\n",ddx,ddy,dxdy);
+		//printf("ddx:%f,ddy:%f,dxdy:%f\n",ddx,ddy,dxdy);
 		float3 predictPos = getIntersectPosition(m_worldPos,m_worldNormal,targetVec/make_float2(rastWidth,rastHeight));
 		float f0 = getDepthRep(predictPos);
 		float pridictF = f0 + 1/2.0*ddx*nextStep.x*nextStep.x+ 1/2.0*ddy*nextStep.y*nextStep.y+ dxdy*nextStep.x*nextStep.y;
@@ -529,6 +625,75 @@ public:
 
 
 	}
+	__device__ Plane next3(float2 moveVec,float* minDis)
+	{
+	    *minDis = DISMAXTHRES;
+		float2 candicate[3];
+		Plane minPlane;
+		nextThreeStep(moveVec,candicate,m_tc);
+		for(int i = 0;i<3;i++)
+		{
+
+			float2 uv = candicate[i];
+			if(isOutOfRange(uv))
+			{
+				continue;
+			}
+			Plane testPlan(uv);	
+			testPlan.setReflectedPos(*this);
+			if(testPlan.isInValid())
+			{
+			//	printf("invalid\n");
+				continue;
+			}
+			float dis = testPlan.getDisToPath();
+			//printf("point1(%f,%f,%f)\n",uv.x,uv.y,dis);
+			if(*minDis>dis)
+			{
+				//printf("min\n");
+				*minDis = dis;
+				minPlane = testPlan;
+			}
+		}
+		return minPlane;
+	}
+	__device__ Plane next9(float * minDis)
+	{
+	    *minDis = DISMAXTHRES;
+		Plane minPlane;
+		for(int dx = -1;dx<=1;dx++)
+		{
+			for(int dy = -1;dy<=1;dy++)
+			{
+				float2 uv = m_tc+make_float2(dx,dy);
+				if(dx==0&&dy==0)
+					continue;
+				if(isOutOfRange(uv))
+				{
+					
+					//printf("OutOfRange\n");
+					continue;
+				}
+				Plane testPlan(uv);
+				testPlan.setReflectedPos(*this);
+				
+				if(testPlan.isInValid())
+				{
+				//	printf("invalid\n");
+					continue;
+				}
+				float dis = testPlan.getDisToPath();
+				//printf("point1(%f,%f,%f)\n",uv.x,uv.y,dis);
+				if(*minDis>dis)
+				{
+					//printf("min\n");
+					*minDis = dis;
+					minPlane = testPlan;
+				}
+			}
+		}
+		return minPlane;
+	}
 };
 
 __device__ int isInSamePixel(float2 moveVec)
@@ -611,22 +776,6 @@ __device__ int nextThreeStep(float2 moveVec,float2* candicate1,float2* candicate
 	*candicate3+=currentUv;
 	return 1;
 }
-__device__ int nextThreeStep2(float2 moveVec,float2* candicate1,float2* candicate2,float2* candicate3,float2 currentUv)
-{
-	#define PI 3.141592654f
-/*	if(length(moveVec)<0.717)
-	{
-
-		return 0;
-	}*/
-	*candicate1 = moveVec;
-	*candicate2 = moveVec;
-	*candicate3 = moveVec;
-	*candicate1+=currentUv;
-	*candicate2+=currentUv;
-	*candicate3+=currentUv;
-	return 1;
-}
 #define CONVERGE 5
 #define OUTRANGE 2
 #define OUTOBJECT 3
@@ -635,11 +784,9 @@ __device__ int Floor2Int(float f)
 {
 	return (int)f+0.5;
 }
-__device__ int isOutOfRange(float2 tc)
-{
-	return tc.x>rasterWidth-0.5||tc.y>rasterHeight-0.5||tc.x<0||tc.y<0;
-}
-__device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
+
+
+__device__ int threePointSearch(float2 currentPlace)
 {
 
 #define STEPNUMBER 25
@@ -655,8 +802,9 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,1,OUTRANGE);
 		return;
 	}
-	if(x!=502||y!=583)
-	 return;
+	//if(x!=502||y!=583)
+	// return;
+	
 	
 	
 	//printf("1Class: (%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
@@ -669,10 +817,26 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	float rejectDepth = fittingPlane.getMirrorDepth();
 	
 
-	
+	/*
 	float3 worldPos = fittingPlane.m_worldPos;
 	float3 worldNormal = fittingPlane.m_worldNormal;
+	float2 step = make_float2(1,1);neiboghoodConcave(currentUv,step,tex2D(cuda_WorldPos_Tex,currentUv.x,currentUv.y), tex2D(cuda_WorlNormal_Tex,currentUv.x,currentUv.y));
+	return;
+	float3 upPosPredict = getIntersectPosition(worldPos,worldNormal,(currentUv+make_float2(0,step.y))/make_float2(1024.0,1024.0));
+	float4 posValue;
+	posValue = tex2D(cuda_WorldPos_Tex,currentUv.x,currentUv.y);
+		
+	printf("printdict up pos:(%f,%f,%f)\n",upPosPredict.x,upPosPredict.y,upPosPredict.z);
+	float upPredictValue = getDepthRep(upPosPredict);
+	float upValue = neiboghoodPixel(currentUv,make_float2(0,step.y),posValue);
+	float	ddy = 2*(upValue-upPredictValue);
+	printf("normal:(%f,%f,%f)",worldNormal.x,worldNormal.y,worldNormal.z);
 	
+	float  curvature = neiboghoodConcave(currentUv,step,tex2D(cuda_WorldPos_Tex,currentUv.x,currentUv.y), tex2D(cuda_WorlNormal_Tex,currentUv.x,currentUv.y));
+	
+
+	printf("ddy:%f",ddy);
+	return;
 	
 	printf("three x,y:%d,%d\n",x,y);
 	printf("pos:(%f,%f,%f)\n",worldPos.x,worldPos.y,worldPos.z);
@@ -682,7 +846,7 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	printf("refCamera:(%f,%f,%f)\n",d_refCameraPos.x,d_refCameraPos.y,d_refCameraPos.z);
 	printf("newCameraPos:(%f,%f,%f)\n",d_newCameraPos.x,d_newCameraPos.y,d_newCameraPos.z);
 	printf("project Pos:(%f,%f),depth:%f\n",ProPosUv.x,ProPosUv.y,rejectDepth);
-	
+	*/
 		
 	float2 MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
 	
@@ -698,106 +862,27 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	}
 	int IterTime = 0;
 #ifdef DIFFNORMAL
-	MoveVec = fittingPlane.changeMoveVec(MoveVec,&ProPosUv,&isLocal);
 #endif
+	/*
 	printf("ProUV(%f,%f)\n",ProPosUv.x,ProPosUv.y);
 	printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);
-	
-	
+	printf("dis:%f\n",formerDis);
+	*/
 	while(IterTime<STEPNUMBER/1024.0*rasterWidth)
 	{
-		printf("Item:%d currentUv:(%f,%f)\n",IterTime,currentUv.x,currentUv.y);
-		
-		float2 TmpUv1,TmpUv2,TmpUv3,TmpUv;
-		nextThreeStep(MoveVec,&TmpUv1,&TmpUv2,&TmpUv3,currentUv);
-		if(isOutOfRange(TmpUv1)||isOutOfRange(TmpUv2)||isOutOfRange(TmpUv3))
-		{
-			//printf("(%f,%f),(%f,%f)，(%f,%f)\n",TmpUv1.x,TmpUv1.y,TmpUv2.x,TmpUv2.y,TmpUv3.x,TmpUv3.y);
-			// printf("@out of range\n");
-	
-			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTOBJECT);
-		  
-			return OUTOBJECT;
-		}
-		Plane pixelPlane1(TmpUv1),pixelPlane2(TmpUv2),pixelPlane3(TmpUv3);
-		pixelPlane1.setReflectedPos(fittingPlane);
-		pixelPlane2.setReflectedPos(fittingPlane);
-		pixelPlane3.setReflectedPos(fittingPlane);
-
-		float DisPoint2Line1,DisPoint2Line2,DisPoint2Line3;
-		DisPoint2Line1 = pixelPlane1.getDisToPath();
-		DisPoint2Line2 = pixelPlane2.getDisToPath();
-		DisPoint2Line3 = pixelPlane3.getDisToPath();
-		
-	/*	for(int dx = -1;dx<=1;dx++)
-		{
-			for(int dy = -1;dy<=1;dy++)
-			{
-				float2 uv = currentUv+make_float2(dx,dy);
-				Plane testPlan(uv);
-				testPlan.setReflectedPos(fittingPlane);
-				float dis = testPlan.getDisToPath();
-				//printf("point(%f,%f,%f)\n",uv.x,uv.y,dis);
-
-			}
-		}*/
-		//printf("currentProUV(%f,%f)\n",ProPosUv.x,ProPosUv.y);
-		//printf("currentMove(%f,%f)\n",MoveVec.x,MoveVec.y);
-		//printf("point1(%f,%f,%f),point2(%f,%f,%f),point3(%f,%f,%f)\n",TmpUv1.x,TmpUv1.y,DisPoint2Line1,TmpUv2.x,TmpUv2.y,DisPoint2Line2,TmpUv3.x,TmpUv3.y,DisPoint2Line3);
-		
-		Plane minPlane;
+		//printf("Item:%d currentUv:(%f,%f)\n",IterTime,currentUv.x,currentUv.y);
 		float minDis;
-		//
-		//printf("DisPoint2Line1:%f\n",DisPoint2Line1);
-		if(pixelPlane1.isInValid()&&pixelPlane2.isInValid()&&pixelPlane2.isInValid())
-		{	
-		//	printf("invalid\n");
-			
-			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTOBJECT);
-	    	// printf("@x:%d y:%d: %f,%f,%f,%f\n",x,y,d_cudaPboBuffer[index] .x,d_cudaPboBuffer[index] .y,d_cudaPboBuffer[index] .z,d_cudaPboBuffer[index] .w);
-	
-			return OUTOBJECT;
-		}
-		if(DisPoint2Line2<DisPoint2Line1)
-		{
-			if(DisPoint2Line3< DisPoint2Line2)
-			{
-				minPlane = pixelPlane3;
-				minDis = DisPoint2Line3;
-				// min = 3
-			}	
-			else
-			{
-				minPlane = pixelPlane2;
-				minDis = DisPoint2Line2;
-				//min  = 2
-			}
-		}
-		else
-		{
-			if(DisPoint2Line3< DisPoint2Line1)
-			{
-				minPlane = pixelPlane3;
-				minDis = DisPoint2Line3;
-				// min = 3
-			}	
-			else
-			{
-				minPlane = pixelPlane1;		
-				minDis = DisPoint2Line1;
-				//min  = 1
-			}
-		}
+		Plane minPlane = fittingPlane.next3(MoveVec,&minDis);
+		
 		//printf("result uv(%f,%f) nextuv(%f,%f),dis:%f,formerDis:%f\n",currentUv.x,currentUv.y, minPlane.getTc().x, minPlane.getTc().y,minDis,formerDis);
-		if(isLocal)
+		/*if(isLocal)
 		{
 					//printf("local Converge\n");
 				d_cudaPboBuffer[index] =  make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
 				return CONVERGE;		
-		}
+		}*/
 		if(minDis>formerDis)
 		{
-			*moveToVec = currentUv;
 			if(length(MoveVec)<15/1024.0*rasterWidth&&formerDis<5)
 			{
 				
@@ -822,19 +907,20 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 		ndcPos =  transFormToNdc(FinalPos);
 	    ProPosUv =make_float2(ndcPos.x,ndcPos.y);
 		rejectDepth = fittingPlane.getMirrorDepth();
-		
+		/*
 		printf("ProUV(%f,%f)\n",ProPosUv.x,ProPosUv.y);
 		printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);
-		
+		*/
 		MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
+
+
 #ifdef DIFFNORMAL
-		MoveVec = fittingPlane.changeMoveVec(MoveVec,&ProPosUv,&isLocal);
-#endif
-		
+	#endif
+		/*
 		printf("ProUV(%f,%f)\n",ProPosUv.x,ProPosUv.y);
 		printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);
 		printf("worldPos(%f,%f,%f),normal:(%f,%f,%f)\n",fittingPlane.m_worldPos.x,fittingPlane.m_worldPos.y,fittingPlane.m_worldPos.z,fittingPlane.m_worldNormal.x,fittingPlane.m_worldNormal.y,fittingPlane.m_worldNormal.z);
-		
+		*/
 		IterTime++;
 	}
 	d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTRANGE);
@@ -845,9 +931,191 @@ __device__ int threePointSearch(float2 currentPlace,float2* moveToVec)
 	return OUTRANGE;
 	
 }
+__device__ int hybridPointSearch(float2 currentPlace)
+{
+	#define STEPNUMBER 25
+	int x =Floor2Int(currentPlace.x-0.5);
+	int y =Floor2Int(currentPlace.y-0.5);
+	int index = y * rasterWidth + x;
+	float2 currentUv = make_float2(currentPlace.x,currentPlace.y);
 
+	int isReflectedPixel = 1;
+	Plane fittingPlane(currentUv,&isReflectedPixel);
+	if(0==isReflectedPixel)
+	{
+		d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,1,OUTRANGE);
+		return;
+	}
+	fittingPlane.setReflectedPos();
+	float3 FinalPos  = fittingPlane.intersectPos();
+	float3 ndcPos =  transFormToNdc(FinalPos);
+	float2 ProPosUv =make_float2(ndcPos.x,ndcPos.y);
+	float rejectDepth = fittingPlane.getMirrorDepth();
+	float2 MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
+	float formerDis = fittingPlane.getDisToPath();
 
-__device__ int ninePointSearch(float2 currentPlace,float2* moveToVec)
+	
+	if(fittingPlane.isAbleFastProj(ProPosUv))
+	{
+		if(fabs(ProPosUv.x-currentUv.x)<0.5&&(fabs(ProPosUv.y-currentUv.y)<0.5))
+		{
+			d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
+			return CONVERGE;
+		}
+				
+		d_cudaPboBuffer[index] =   make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,FASTPROJT);
+		return FASTPROJT;
+	}
+	int IterTime = 0;
+	while(IterTime<STEPNUMBER/1024.0*rasterWidth)
+	{
+		float minDis = DISMAXTHRES;
+		float2 minUv;
+		Plane minPlane; 
+		if(isConcave(fittingPlane.getTc()))
+		{
+			minPlane = fittingPlane.next9(&minDis);
+			
+		}
+		else
+			minPlane = fittingPlane.next3(MoveVec,&minDis);
+		if(minDis == DISMAXTHRES)
+		{
+			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,-0.1,OUTOBJECT);
+			return OUTOBJECT;
+		}
+		if(minDis>formerDis)
+		{
+			if(isInBox(currentUv,ProPosUv))
+			{
+					//printf("here\n");
+				d_cudaPboBuffer[index] =  make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
+					return CONVERGE;
+			}
+			else{
+				d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
+				return CONVERGE;
+			}
+			
+		}
+		
+		currentUv = minPlane.getTc();
+		formerDis = minDis;
+		fittingPlane = minPlane;
+
+		FinalPos  = fittingPlane.intersectPos();
+		ndcPos =  transFormToNdc(FinalPos);
+	    ProPosUv =make_float2(ndcPos.x,ndcPos.y);
+		rejectDepth = fittingPlane.getMirrorDepth();
+		MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
+		/*
+		printf("ProUV(%f,%f)\n",ProPosUv.x,ProPosUv.y);
+		printf("Move(%f,%f)\n",MoveVec.x,MoveVec.y);
+		printf("worldPos(%f,%f,%f),normal:(%f,%f,%f)\n",fittingPlane.m_worldPos.x,fittingPlane.m_worldPos.y,fittingPlane.m_worldPos.z,fittingPlane.m_worldNormal.x,fittingPlane.m_worldNormal.y,fittingPlane.m_worldNormal.z);
+		*/
+		IterTime++;
+	}
+	//printf("out range\n");
+			
+	d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTRANGE);		
+	return OUTRANGE;
+}
+__device__ int postIndex(float2 tc)
+{
+	int x =Floor2Int(tc.x-0.5);
+	int y =Floor2Int(tc.y-0.5);
+	return  y * rasterWidth + x;
+}
+__device__ int ninePointPostSerach(float2 currentPlace)
+{
+
+	#define STEPNUMBER 25
+	int x =Floor2Int(currentPlace.x-0.5);
+	int y =Floor2Int(currentPlace.y-0.5);
+	int index = y * rasterWidth + x;
+	
+	float2 currentUv = make_float2(currentPlace.x,currentPlace.y);
+	float2 initUv = currentUv;
+	int isReflectedPixel = 1;
+	Plane fittingPlane(currentUv,&isReflectedPixel);
+	if(0==isReflectedPixel)
+	{
+		d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,1,OUTRANGE);
+		return;
+	}
+	/*
+	if(x!=502||y!=583)
+	 return;
+	*/
+	
+	//printf("1Class: (%f,%f,%f)\n",fittingPlane.m_reflectPos.x,fittingPlane.m_reflectPos.y,fittingPlane.m_reflectPos.z);
+	//�����������ľ���
+	//= d_newCameraPos + DisEye2Plane/abs(dot(VecEye2Ref,WorldNormal))* VecEye2Ref;
+	fittingPlane.setReflectedPos();
+	float3 FinalPos  = fittingPlane.intersectPos();
+	float3 ndcPos =  transFormToNdc(FinalPos);
+	float2 ProPosUv =make_float2(ndcPos.x,ndcPos.y);
+	float rejectDepth = fittingPlane.getMirrorDepth();
+	float2 MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
+	float formerDis = fittingPlane.getDisToPath();
+
+	if(fittingPlane.isAbleFastProj(ProPosUv))
+	{
+	//	printf("fitting\n");
+		if(fabs(ProPosUv.x-currentUv.x)<0.5&&(fabs(ProPosUv.y-currentUv.y)<0.5))
+		{
+			d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
+			return CONVERGE;
+		}
+				
+		d_cudaPboBuffer[index] =   make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,FASTPROJT);
+		return FASTPROJT;
+	}
+	int IterTime = 0;
+	while(IterTime<STEPNUMBER/1024.0*rasterWidth)
+	{
+		float minDis = DISMAXTHRES;
+		float2 minUv;
+		Plane minPlane = fittingPlane.next9(&minDis);
+		if(minDis == DISMAXTHRES)
+		{
+		//	printf("here\n");
+			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,-0.1,OUTOBJECT);
+			return OUTOBJECT;
+		}
+		if(minDis>formerDis)
+		{
+			if(isInBox(currentUv,ProPosUv))
+			{
+					//printf("here\n");
+				d_cudaPboBuffer[index] =  make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
+					return CONVERGE;
+			}
+			else{
+				d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
+				return CONVERGE;
+			}
+			
+		}
+		
+		currentUv = minPlane.getTc();
+		formerDis = minDis;
+		fittingPlane = minPlane;
+
+		FinalPos  = fittingPlane.intersectPos();
+		ndcPos =  transFormToNdc(FinalPos);
+	    ProPosUv =make_float2(ndcPos.x,ndcPos.y);
+		rejectDepth = fittingPlane.getMirrorDepth();
+		MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
+	
+		IterTime++;
+	}		
+	d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,rejectDepth,OUTRANGE);		
+	return OUTRANGE;
+	
+}
+
+__device__ int ninePointSearch(float2 currentPlace)
 {
 #define STEPNUMBER 25
 	int x =Floor2Int(currentPlace.x-0.5);
@@ -878,11 +1146,11 @@ __device__ int ninePointSearch(float2 currentPlace,float2* moveToVec)
 	float2 MoveVec = ProPosUv - make_float2(currentUv.x,currentUv.y);
 	float formerDis = fittingPlane.getDisToPath();
 
-	
+	/*
 	float3 worldPos = fittingPlane.m_worldPos;
 	float3 worldNormal = fittingPlane.m_worldNormal;
 	
-	/*
+	
 	printf("nine search: x,y:%d,%d\n",x,y);
 	printf("pos:(%f,%f,%f)\n",worldPos.x,worldPos.y,worldPos.z);
 	printf("normal:(%f,%f,%f)\n",worldNormal.x,worldNormal.y,worldNormal.z);
@@ -907,45 +1175,10 @@ __device__ int ninePointSearch(float2 currentPlace,float2* moveToVec)
 	int IterTime = 0;
 	while(IterTime<STEPNUMBER/1024.0*rasterWidth)
 	{
-		float minDis = 3000;
+		float minDis = DISMAXTHRES;
 		float2 minUv;
-		Plane minPlane;
-		for(int dx = -1;dx<=1;dx++)
-		{
-			for(int dy = -1;dy<=1;dy++)
-			{
-				float2 uv = currentUv+make_float2(dx,dy);
-				if(dx==0&&dy==0)
-					continue;
-				if(isOutOfRange(uv))
-				{
-					
-					//printf("OutOfRange\n");
-					continue;
-				}
-				Plane testPlan(uv);
-				testPlan.setReflectedPos(fittingPlane);
-				
-				if(testPlan.isInValid())
-				{
-				//	printf("invalid\n");
-					continue;
-				}
-				float dis = testPlan.getDisToPath();
-				//printf("point1(%f,%f,%f)\n",uv.x,uv.y,dis);
-				if(minDis>dis)
-				{
-					//printf("min\n");
-					minDis = dis;
-					minUv = uv;
-					minPlane = testPlan;
-				}
-
-			}
-		}
-			//
-		//printf("current uv(%f,%f) nextuv(%f,%f),dis:%f,formerDis:%f\n",currentUv.x,currentUv.y, minPlane.getTc().x, minPlane.getTc().y,minDis,formerDis);
-		if(minDis == 3000)
+		Plane minPlane = fittingPlane.next9(&minDis);
+		if(minDis == DISMAXTHRES)
 		{
 		//	printf("here\n");
 			d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,-0.1,OUTOBJECT);
@@ -953,28 +1186,17 @@ __device__ int ninePointSearch(float2 currentPlace,float2* moveToVec)
 		}
 		if(minDis>formerDis)
 		{
-			*moveToVec = currentUv;
-			if(1)
-			//if(length(MoveVec)<15/1024.0*rasterWidth&&minDis<5)
+			if(isInBox(currentUv,ProPosUv))
 			{
-				//printf("convenge result uv(%f,%f) nextuv(%f,%f),dis:%f,formerDis:%f\n",currentUv.x,currentUv.y, minPlane.getTc().x, minPlane.getTc().y,minDis,formerDis);
-				if(isInBox(currentUv,ProPosUv))
-				{
 					//printf("here\n");
-					d_cudaPboBuffer[index] =  make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
+				d_cudaPboBuffer[index] =  make_float4(ProPosUv.x/(float)rasterWidth,ProPosUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
 					return CONVERGE;
-				}
-				else{
-					d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
-					return CONVERGE;
-				}
 			}
-			else
-			{
-				//printf("out id\n");
-				d_cudaPboBuffer[index] =   make_float4(-10.0,-10.0,-0.1,OUTOBJECT);
-				return OUTOBJECT;
+			else{
+				d_cudaPboBuffer[index] =  make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,rejectDepth,CONVERGE);
+				return CONVERGE;
 			}
+			
 		}
 		
 		currentUv = minPlane.getTc();
@@ -1016,12 +1238,11 @@ __global__ void MyNewKernel(int width,int height)
 	}*/
 	int index = y * width + x;
 	float2 currentUv = make_float2(x+0.5,y+0.5);
-	
 	//d_cudaPboBuffer[index] =   make_float4(currentUv.x/(float)rasterWidth,currentUv.y/(float)rasterHeight,-0.1,FASTPROJT);
 	//return;		
-	float2 resultValue;
-	//ninePointSearch(currentUv,&resultValue);
-	threePointSearch(currentUv,&resultValue);
+	ninePointSearch(currentUv);
+	//threePointSearch(currentUv);
+	//hybridPointSearch(currentUv);
 
 }
 extern "C" void MappingContantPeremeter(int* w,int* h)
@@ -1108,7 +1329,6 @@ __global__ void MyFirstPassKernel(int width,int height,uint *PixelState,float4 *
 
 	float4 StateValue =tex2D(cuda_RePro_Pixel,x+0.5,y+0.5);
 	float3 reflectColor = make_float3(StateValue.x,StateValue.y,StateValue.z);
-
 	if(colorEqual(reflectColor,make_float3(1,0,0))||colorEqual(reflectColor,make_float3(0,1,0))||reflectColor.x>1.01||reflectColor.y>1.01)  // fetch the color in additional tex
 	{
 		d_state[index] = 1;

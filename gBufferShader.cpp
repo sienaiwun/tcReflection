@@ -3,7 +3,11 @@
 void GbufferShader::init()
 {
 	m_loader.loadShader(m_vertexFileName.c_str(),0,m_fragmentFileName.c_str());
+	//string geometryFile = "Shader/gBuffer.geom";
+	//string flatFragmentFile = "Shader/gBufferFlat.frag";
+	//m_loader.loadShader(m_vertexFileName.c_str(),geometryFile.c_str(),flatFragmentFile.c_str());
 	m_vmpBinding = m_loader.getUniform("MVP");
+	m_modelViewBinding = m_loader.getUniform("modelView");
 
 	m_cameraPosBinding = m_loader.getUniform("cameraPos");
 	m_lightPosBinding = m_loader.getUniform("lightPos");
@@ -65,6 +69,8 @@ void GbufferShader::end()
 void GbufferShader::setCamera(CCamera *pCamera)
 {
 	m_mvp = pCamera->getMvpMat();
+	m_modelView = pCamera->getModelViewMat();
 	glUniformMatrix4fv(m_vmpBinding,1,GL_FALSE,m_mvp);
+	glUniformMatrix4fv(m_modelViewBinding,1,GL_FALSE,m_modelView);
 	glUniform3f(m_cameraPosBinding,pCamera->getCameraPos().x,pCamera->getCameraPos().y,pCamera->getCameraPos().z);
 }

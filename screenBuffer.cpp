@@ -43,62 +43,36 @@ void ScreenBuffer::clear()
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
    glEnable(GL_DEPTH_TEST);
 }
+void ScreenBuffer::clearScreen()
+{
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
+   glDrawBuffer(GL_BACK);
+  float clear_value = 1.f;
+  glClearColor(clear_value, clear_value, clear_value, clear_value);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+}
+void ScreenBuffer::directDrawToScreen(glslShader & shader)
+{
+  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,0);
+  float clear_value = 1.f;
+  glClearColor(clear_value, clear_value, clear_value, clear_value);
+  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_DEPTH_TEST);
+   glViewport(0,0,(int) 512, (int)		512);
+  MyGeometry::drawQuad(shader);
+ 
+}
 void ScreenBuffer::drawToScreen(glslShader & shader)
 {
   glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,m_fboId);
+   glViewport(0,0,(int) m_bufferWidth, (int)		m_bufferHeight);
+
   float clear_value = 1.f;
   glClearColor(clear_value, clear_value, clear_value, clear_value);
   glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
   glEnable(GL_DEPTH_TEST);
   MyGeometry::drawQuad(shader);
-   // tcFrame.debugPixel(0,512,512);
-	
-  /*
-  glReadBuffer(GL_COLOR_ATTACHMENT0 + 0);
-
-	BYTE* pTexture = NULL;
-
-	int width = m_bufferWidth;
-	int height =  m_bufferHeight;
-
-	pTexture = new BYTE[width*height * 3];
-	memset(pTexture, 0, width*height * 3 * sizeof(BYTE));
-
-	float *pData = NULL;
-	pData = new float[width * height * 3];
-	memset(pData, 0, width * height * 3 * sizeof(float));
-
-	glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
-
-	Fbo::SaveBMP("./test/beforeMip.bmp", pTexture, width, height);
-
-	delete pData;
-	delete pTexture;
-	*/
-	/*int width = m_bufferWidth;
-	int height =  m_bufferHeight;
-
-	glEnable(GL_TEXTURE_2D);
-	float *pTexture = NULL;
-	pTexture = new float[width*height* 4];
-	memset(pTexture, 0,width*height * 4 * sizeof(float));
-
-	glBindTexture(GL_TEXTURE_2D, TexId[id]);//TexPosId   PboTex
-
-	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pTexture);
-
-	int w = width;
-	int h = width;
-	int x = 512;
-	int y = 512;
-	int scale = 1;
-	int index = y*w+x;
-	float  r = pTexture[4*index]*scale;
-	float g = pTexture[4*index+1]*scale;
-	float b = pTexture[4*index+2]*scale;
-	float a = pTexture[4*index+3]*scale;
-	*/
-	glBindTexture(GL_TEXTURE_2D, 0);
+  glBindTexture(GL_TEXTURE_2D, 0);
   glBindTexture(GL_TEXTURE_2D, m_sampleTex);
   glGenerateMipmap(GL_TEXTURE_2D);
   glBindTexture(GL_TEXTURE_2D, 0);

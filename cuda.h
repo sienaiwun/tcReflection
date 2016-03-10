@@ -4,7 +4,7 @@
 
 
 
-#include<Windows.h>
+#include <Windows.h>
 #include <driver_types.h>
 #include <cuda_runtime.h>
 //#include <cutil_inline.h>

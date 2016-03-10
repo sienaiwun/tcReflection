@@ -19,20 +19,9 @@ public :
 	virtual void setGeometry(MyGeometry * pGeometry);
 	virtual void setGeomtryIndex(int i);
 private:
-	
 	GLuint m_vmpBinding;
 	float* m_mvp;
-	GLuint m_objectTexBinding;
-	GLuint m_objectDiffuseBinding;
-	GLuint m_cameraPosBinding;
-	GLuint m_lightPosBinding;
-	GLuint m_hasTex;
-	GLuint m_objectId;
-	GLuint m_reflectFactor;
-	
-	nv::vec3f m_lightPos;
-	nv::vec3f m_cameraPos;
-
+	GLuint m_vertexTotal_Slot;
 	
 };
 #endif

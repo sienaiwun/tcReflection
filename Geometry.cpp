@@ -93,7 +93,7 @@ void MyGeometry::initGeometry(char* name)
 	m_totalVertexNumber = vertexTotalNumber;
 	m_geometryNumber = thisModelTriangle;
 	m_totalGeometryNumber = triangTotalNum;
-	printf("Load:%s,<v:%d,t:%d>,total<v:%d,t:%d>\n",name,thisModelVertex,thisModelTriangle,vertexTotalNumber,triangTotalNum);
+	//printf("Load:%s,<v:%d,t:%d>,total<v:%d,t:%d>\n",name,thisModelVertex,thisModelTriangle,vertexTotalNumber,triangTotalNum);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 }
