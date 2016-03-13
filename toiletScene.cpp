@@ -1,6 +1,7 @@
 #include "toiletScene.h"
 #define  geoNumber  33
 #define  CHINAREFLECT 0.185f
+//#define ALLSPECULAR
 static nv::vec3f toiletLightPos =  nv::vec3f(0.0f, 65.0f, 30.0f);
 static MyMeterial toiletMat[] = 
 {
@@ -37,6 +38,54 @@ static MyMeterial toiletMat[] =
 	make_float3(0.91,219.0/255,207.0/255)  //27
 
 };
+#ifdef ALLSPECULAR
+
+
+static GeoPara toiletObj[geoNumber] = 
+{
+	{"model/bathroom/toilet_body_all.3ds",0,0,1,3},
+	{"model/bathroom/toilet_up_all.3ds",15,0,1,3},
+
+	//{"model/bathroom/testSphere.obj",15,0,CHINAREFLECT,0},
+	//{"model/bathroom/testBox.obj",15,0,CHINAREFLECT,0},
+	{"model/aoBathroom/littleBarrier.obj",9,0,1,0},
+	{"model/bathroom/ceil.obj",15,0,1,0},
+	{"model/bathroom/cockoff2.3ds",24,0,1,5},
+	{"model/bathroom/cupOrigin.3ds",21,0,1,8},
+	{"model/bathroom/floor.obj",15,0,1,0},
+	{"model/aoBathroom/littleWall.obj",14,0,1,0},
+	{"model/aoBathroom/walls.obj",11,0,1,0},
+	{"model/aoBathroom/masic.obj",13,0,1,0},//10+1
+	{"model/bathroom/metal12.obj",24,0,1,0},//11
+
+	{"model/bathroom/mirror.obj",15,0,1.0f,6},//12
+	{"model/bathroom/mirrorB.3ds",27,0,1,6},//13
+	{"model/bathroom/mirrorFrame.obj",21,0,1,6},//14
+	{"model/bathroom/paperRoll.obj",22,0,1,0},//15
+	{"model/bathroom/paperSurpot.obj",23,0,1,0},//16
+	{"model/bathroom/newwash.obj",15,0,1,4},//16
+	{"model/bathroom/support.3ds",20,0,1,11},//18
+	{"model/bathroom/brushOnBoard.obj",16,0,1,9},//19
+	{"model/bathroom/brush2OnBoard.obj",17,0,1,10},//20
+	{"model/bathroom/white1.3ds",18,0,1,9},
+	{"model/bathroom/white22.3ds",18,0,1,10},
+
+	{"model/bathroom/wash_basin0n.3ds",15,0,1,5},//20
+	{"model/bathroom/washbasin1.3ds",15,0,1,5},//20
+	{"model/bathroom/washbasin2_n.3ds",15,0,1,5},//20
+	{"model/bathroom/washbasin3_n.3ds",26,0,1,5},//20
+	{"model/bathroom/washbasin41.3ds",15,0,1,5},//20
+	{"model/bathroom/washbasin42n.3ds",15,0,1,5},//20
+
+	{"model/bathroom/scien.obj",1,0,1,0},
+	{"model/bathroom/soapSurport2.obj",24,0,1,0},
+	{"model/bathroom/dish.obj",7,0,1,0},
+	{"model/bathroom/ceilMasac.3DS",6,0,1,0},
+	{"model/bathroom/washbasinCircle.3DS",15,0,1,0},
+
+
+};
+#else
 
 static GeoPara toiletObj[geoNumber] = 
 {
@@ -82,6 +131,7 @@ static GeoPara toiletObj[geoNumber] =
 
 
 };
+#endif
 static 
 posPara toiletScenePosArray[] = 
 {

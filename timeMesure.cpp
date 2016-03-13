@@ -155,6 +155,10 @@ void TimeMesure::print()
 	{
 		printOptix();
 	}
+	else if(m_type == noGeometryTcType)
+	{
+		printTC();
+	}
 }
 void TimeMesure::updateLastTime()
 {

@@ -64,6 +64,7 @@ struct PerRayData_radiance
   float t_hit;
   float reflectValue;
   float3 shadingNormal;
+  int isReflectRay;
 };
 struct PerRayData_shadow
 {
@@ -249,18 +250,15 @@ RT_PROGRAM void addition_request()
 RT_PROGRAM void gBufferAndRequest()
 {
 	   
-	//if(launch_index.y<=512||launch_index.y>=512)
-	//   return;
 	 float3 ray_origin  = eye_pos;
 	 float2 tc = make_float2(launch_index.x+0.5, launch_index.y+0.5)/make_float2(rasterSize.x,rasterSize.y);
 	 float3 imageSpot = getImagePos(tc);
 	  PerRayData_radiance prd;
-	  PerRayData_shadow prd_s;
-	  prd_s.attenuation = make_float3(0);
 	  prd.result = make_float3(0);
 	  prd.importance = 1.f;
 	  prd.depth = 0;
 	  prd.t_hit = -1.f;
+	  prd.isReflectRay = 0;
 	  float3 V = (imageSpot)-ray_origin;
 	  float dist = sqrtf(dot(V,V));
 	  V =  V/dist;
@@ -275,34 +273,75 @@ RT_PROGRAM void gBufferAndRequest()
 	  posBuffer[launch_index] = make_float4(prd.result,objectId);
 	  normalBuffer[launch_index] = make_float4(normal.x,normal.y,normal.z,reflectValue);
 	  colorBuffer[launch_index] = make_float4(prd.result,reflectValue);
-
-	     ray_origin = worldPos;
-	  	 V = normalize(ray_origin-eye_pos);
+	    prd.isReflectRay = 1;
+	 
+	   ray_origin = worldPos;
+	   V = normalize(ray_origin-eye_pos);
 		
-		float3 ray_direction = normalize(reflect(V, normal));
+	   float3 ray_direction = normalize(reflect(V, normal));
 
-		/*float3 L = lightPos-ray_origin;
-		float dist = sqrtf(dot(L,L));
-		float3 ray_direction_s = L/dist;
-		optix::Ray ray_s = optix::make_Ray(ray_origin, 
-		ray_direction_s, 
-		shadow_ray_type, 
-		scene_epsilon, 
-		dist);
-		rtTrace(reflectors, ray_s, prd_s);
-		float shadow = (prd_s.attenuation.x>0)?1:0;*/
-		 ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
-		rtTrace(reflectors, ray, prd);
-	//shadow = 0;
-		 r_dis = prd.t_hit;
-	/*rtPrintf("eye_pos:(%f,%f£¬%f)\n",eye_pos.x,eye_pos.y,eye_pos.z);
-		rtPrintf("wordldPos:(%f,%f£¬%f)\n",ray_origin.x,ray_origin.y,ray_origin.z);
-		rtPrintf("reflectPos:(%f,%f£¬%f)\n",reflectPos.x,reflectPos.y,reflectPos.z);*/
-		
+	  ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+	 // rtTrace(reflectors, ray, prd);
+	r_dis = prd.t_hit;
 		reflection_buffer[launch_index] = make_float4(prd.result,r_dis);
 		addition_buffer[launch_index] = make_float4(prd.objectId,0,0,1);
 		//rtPrintf("object id:%d",prd.objectId);
 	 return;	 
+}
+
+RT_PROGRAM void gBufferAndRequest_addition()
+{
+	int index =launch_index1D;
+	if(index >= PixelNum)
+ 			return;
+ 	uint x,y;
+	uint PixPos = Pixels_Buffer[index];
+    x = PixPos%rasterSize.x;
+	y = PixPos/rasterSize.x;
+	uint2 FinalPixelPos = make_uint2(x,y);
+
+
+	float3 ray_origin  = eye_pos;
+	 float2 tc = make_float2(x+0.5, y+0.5)/make_float2(rasterSize.x,rasterSize.y);
+	 float3 imageSpot = getImagePos(tc);
+	  PerRayData_radiance prd;
+	  prd.result = make_float3(0);
+	  prd.importance = 1.f;
+	  prd.depth = 0;
+	  prd.t_hit = -1.f;
+	  prd.isReflectRay = 0;
+	  float3 V = (imageSpot)-ray_origin;
+	  float dist = sqrtf(dot(V,V));
+	  V =  V/dist;
+	
+	  optix::Ray ray = optix::make_Ray(ray_origin,  V, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+	  rtTrace(reflectors, ray, prd);
+	  float r_dis = prd.t_hit;
+	  float3 worldPos = ray_origin + r_dis* V;
+	  float objectId = prd.objectId;
+	  float reflectValue = prd.reflectValue;
+	  float3 normal = prd.shadingNormal;
+	  float3 diffuseColor = prd.result;
+	    prd.isReflectRay = 1;
+	 
+	   ray_origin = worldPos;
+	   V = normalize(ray_origin-eye_pos);
+		
+	   float3 ray_direction = normalize(reflect(V, normal));
+
+	  ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+	  rtTrace(reflectors, ray, prd);
+	  r_dis = prd.t_hit;
+	  float3 outputColor;
+	  if(reflectValue>0.001)
+		  outputColor = diffuseColor*(1-reflectValue)+prd.result*reflectValue;
+	  else
+	     outputColor = diffuseColor;
+	 
+		//rtPrintf("object id:%d",prd.objectId);
+	  reflection_buffer[FinalPixelPos] = make_float4(outputColor.x,outputColor.y,outputColor.z,r_dis);
+		
+	 return;	
 }
 #endif
 RT_PROGRAM void reflection_request()
@@ -323,7 +362,8 @@ RT_PROGRAM void reflection_request()
   prd.importance = 1.f;
   prd.depth = 0;
   prd.t_hit = -1.f;
- 
+  prd.isReflectRay = 1;
+		
   // PerRayData_radiance prd2 = prd;
  //    PerRayData_radiance prd3 = prd;
  
@@ -334,7 +374,6 @@ RT_PROGRAM void reflection_request()
   {
     if(!hasGlossy)
 	{
-
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, launch_index.x, launch_index.y));
    

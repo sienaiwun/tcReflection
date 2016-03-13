@@ -5,8 +5,8 @@
 #define TIMEGAP 20
 #define JianGe   TIMEGAP
 #define KEYFRAMENUM (TIMERANGE/TIMEGAP+1)
-#define rasterWidth 1024
-#define rasterHeight 1024
+#define rasterWidth 2048
+#define rasterHeight 2048
 #define windowWidth 512
 #define windowHeight 512
 

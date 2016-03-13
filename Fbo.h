@@ -60,7 +60,11 @@ public:
 	{
 		return fboId;
 	}
-	Fbo(){beforeFboId = 0;};
+	inline bool isScreen()
+	{
+		return fboId == 0;
+	}
+	Fbo(){beforeFboId = 0;fboId = 0;};
 	Fbo(int num, int width, int height);
 	void set(int num, int width,int height);
 	~Fbo();

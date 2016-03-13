@@ -7,7 +7,7 @@ using namespace std;
 
 Fbo::Fbo(int Num, int width, int height) :num(Num), texDescript(width, height)
 {
-
+	fboId = 0;
 };
 void Fbo::set(int n,int w, int h)
 {

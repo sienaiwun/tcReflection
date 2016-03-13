@@ -27,6 +27,7 @@ struct PerRayData_radiance
   float t_hit;
   float reflectValue;
    float3 shadingNormal;
+    int isReflectRay;
 };
 
 struct PerRayData_shadow
@@ -42,6 +43,7 @@ rtDeclareVariable(int3, index_color, attribute index_color, );
 rtDeclareVariable(float,reflectValue, ,);
 rtDeclareVariable(float3,diffuse_Color,,);
 rtDeclareVariable(int, id, ,);
+rtDeclareVariable(uint2, launch_index, rtLaunchIndex, );
 RT_PROGRAM void closest_hit_radiance()
 {
   prd_radiance.t_hit = t_hit;
@@ -61,7 +63,11 @@ RT_PROGRAM void closest_hit_radiance()
   refl_prd.depth = prd_radiance.depth + 1;
   refl_prd.objectId = id+1;
   float3 result;
- 
+ /* rtPrintf("hit_point%f,%f,%f\n",hit_point.x,hit_point.y,hit_point.z);
+  rtPrintf("lightPos%f,%f,%f\n",lightPos.x,lightPos.y,lightPos.z);
+  rtPrintf("L%f,%f,%f\n",L.x,L.y,L.z);
+  rtPrintf("%d,%d\n",launch_index.x,launch_index.y);
+ */
  // if(0)
   if((refl_prd.depth <= max_depth ) )
   {
@@ -81,6 +87,7 @@ RT_PROGRAM void closest_hit_radiance()
   prd_radiance.reflectValue = reflectValue;
  // color = make_float3(index_color.x,index_color.y,index_color.z);
   prd_radiance.result = color;
+  //  prd_radiance.result = L;
 }
 
 RT_PROGRAM void any_hit_shadow()

@@ -10,7 +10,9 @@ enum TimeType
 	tcRenderingType  = 1,
 	hybridRenderingType = 2,
 	noGeometryRenderingType = 3,
-	compareType = 4,
+	noGeometryTcType = 4,
+	compareType = 5,
+
 };
 class TimeMesure
 {
@@ -31,6 +33,10 @@ public:
 	static inline double getCurrentTime()
 	{
 		return clock();
+	}
+	bool needPreocompute()
+	{
+		return (m_type==noGeometryTcType)|| (m_type==tcRenderingType);
 	}
 	inline TimeType getType()
 	{

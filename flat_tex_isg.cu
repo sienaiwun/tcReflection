@@ -13,6 +13,7 @@ struct PerRayData_radiance
   float t_hit;
   float reflectValue;
   float3 shadingNormal;
+  int isReflectRay;
 };
 
 struct PerRayData_shadow
@@ -47,7 +48,7 @@ RT_PROGRAM void closest_hit_radiance()
   float3 L =  normalize(lightPos-hit_point);
   float3 world_shade_normal = normalize(rtTransformNormal( RT_OBJECT_TO_WORLD, shading_normal));
   float kd=fmax(dot(world_shade_normal,L),0);
-	 float ka=0.2;
+	float ka=0.2;
   float3 color =make_float3((kd+ka)*tex2D(diffuse_texture, texcoord.x, texcoord.y));
 
   float fresnel = fresnel_schlick(dot(-ray.direction, shading_normal), 5.f, 0.9f);
@@ -57,7 +58,7 @@ RT_PROGRAM void closest_hit_radiance()
   refl_prd.depth = prd_radiance.depth + 1;
   float3 result;
   // if(0)
- if(refl_prd.depth <= max_depth) 
+  if(refl_prd.depth <= max_depth&&prd_radiance.isReflectRay) 
   {
 	  
     optix::Ray refl_ray = optix::make_Ray(hit_point, reflect(ray.direction, shading_normal), 
@@ -75,6 +76,8 @@ RT_PROGRAM void closest_hit_radiance()
  //  color = make_float3(index_color.x,index_color.y,index_color.z);
   prd_radiance.shadingNormal = world_shade_normal;
   prd_radiance.result= color ;//	prd_radiance.result = make_float3(1,0,0);
+
+  // prd_radiance.result = L;
 
 }
 RT_PROGRAM void any_hit_shadow()

@@ -27,7 +27,7 @@ void GbufferShader::bindParemeter()
 }
 void GbufferShader::setScene(scene * pScene)
 {
-	glUniform3f(m_lightPosBinding,pScene->getLightPos().x,pScene->getLightPos().y,pScene->getLightPos().x);
+	glUniform3f(m_lightPosBinding,pScene->getLightPos().x,pScene->getLightPos().y,pScene->getLightPos().z);
 }
 void GbufferShader::setGeomtryIndex(int i)
 {

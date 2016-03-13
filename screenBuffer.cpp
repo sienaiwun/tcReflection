@@ -7,34 +7,8 @@ void ScreenBuffer::init()
 {
 	assert(m_bufferHeight*m_bufferHeight);
 	assert(m_windowWidth*m_windowHeight);
-	glGenFramebuffersEXT(1, &m_fboId);
-    glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, m_fboId);
-    glDrawBuffers(1, mybuffers2);
-
-    glGenTextures (1, &m_sampleTex);
-    glBindTexture(GL_TEXTURE_2D, m_sampleTex);
- // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  /*glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, initialWindowHeight, initialWindowWidth, 0,	GL_RGBA, GL_FLOAT, 0);
-  */
- // gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGBA32F_ARB,initialWindowHeight, initialWindowWidth, GL_RGBA, GL_FLOAT, 0);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, m_bufferWidth, m_bufferHeight, 0,	GL_RGBA, GL_FLOAT, 0);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR); 
-
-  //glGenerateMipmapEXT(GL_TEXTURE_2D);
-
-  glFramebufferTexture2DEXT(GL_FRAMEBUFFER_EXT, GL_COLOR_ATTACHMENT0_EXT, GL_TEXTURE_2D, m_sampleTex, 0);
-  glGenRenderbuffersEXT(1,&m_depthTex);
-  glBindRenderbufferEXT(GL_RENDERBUFFER_EXT,m_depthTex);
-  glRenderbufferStorageEXT(GL_RENDERBUFFER_EXT,GL_DEPTH_COMPONENT,m_bufferWidth, m_bufferHeight);
-  //将深度缓冲与FBO绑定
-  glFramebufferRenderbufferEXT(GL_FRAMEBUFFER_EXT,GL_DEPTH_ATTACHMENT_EXT,GL_RENDERBUFFER_EXT,m_depthTex);
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT, 0);
-  CHECK_ERRORS();
+	m_fbo.init();
+	CHECK_ERRORS();
   m_texShader.init();
 }
 void ScreenBuffer::clear()
@@ -64,19 +38,42 @@ void ScreenBuffer::directDrawToScreen(glslShader & shader)
 }
 void ScreenBuffer::drawToScreen(glslShader & shader)
 {
-  glBindFramebufferEXT(GL_FRAMEBUFFER_EXT,m_fboId);
-   glViewport(0,0,(int) m_bufferWidth, (int)		m_bufferHeight);
-
-  float clear_value = 1.f;
-  glClearColor(clear_value, clear_value, clear_value, clear_value);
-  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-  glEnable(GL_DEPTH_TEST);
+	m_fbo.begin();
   MyGeometry::drawQuad(shader);
+  m_fbo.end();
+/*
+	BYTE* pTexture = NULL;
+
+	int width = m_bufferWidth;
+	int height =m_bufferHeight;
+
+	pTexture = new BYTE[m_bufferWidth* m_bufferHeight * 3];
+	memset(pTexture, 0, m_bufferWidth* m_bufferHeight * 3 * sizeof(BYTE));
+
+	float *pData = NULL;
+	pData = new float[width * height * 3];
+	memset(pData, 0, width * height * 3 * sizeof(float));
+
+	glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
+
+	Fbo::SaveBMP("123.bmp", pTexture, width, height);
+
+	int w = width,scale =1,x= 1,y=1;
+	int index = y*w+x;
+	float r = pTexture[4*index]*scale;
+	float g = pTexture[4*index+1]*scale;
+	float b = pTexture[4*index+2]*scale;
+	float a = pTexture[4*index+3]*scale;
+
+	delete pData;
+	delete pTexture;
+
+	*/
   glBindTexture(GL_TEXTURE_2D, 0);
-  glBindTexture(GL_TEXTURE_2D, m_sampleTex);
+  glBindTexture(GL_TEXTURE_2D, m_fbo.getTexture(0));
   glGenerateMipmap(GL_TEXTURE_2D);
   glBindTexture(GL_TEXTURE_2D, 0);
-  m_texShader.setParemeter(m_sampleTex);
+  m_texShader.setParemeter(m_fbo.getTexture(0));
   Fbo::drawScreenBackBuffer(m_windowWidth,m_windowHeight);
   MyGeometry::drawQuad(m_texShader);
 
