@@ -72,7 +72,7 @@ public:
 		return texDescript;
 	}
 	//初始化 分配内存
-	void init( GLenum FiterModel = GL_NEAREST);
+	void init( GLenum MAGLINER = GL_NEAREST,GLenum MINLINER = GL_NEAREST);
 	//启动fbo
 	void attachId();
 	void begin(nv::vec3f clearColor = nv::vec3f(0,0,0),bool clear = true);

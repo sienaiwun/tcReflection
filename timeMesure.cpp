@@ -36,6 +36,7 @@ static char text4[32];
 static char text5[32];
 static char text6[32];
 static char text7[32];
+
 void TimeMesure::printOptix()
 {
 	float fps;
@@ -96,14 +97,16 @@ void TimeMesure::printTC()
 	fps = 1000/(m_frameEndTime - m_lastFrameEndTime-fakeTime);
 	m_fcount.insertTime(m_frameEndTime - m_lastFrameEndTime-fakeTime);
 	if(!m_fcount.isReady())
+	//if(1)
 	{
 		sprintf( fps_text, "%d fps: %f",m_frame,fps);
 		sprintf( text1, "frame time   : %6.5f", (m_frameEndTime - m_lastFrameEndTime-fakeTime));
 		sprintf( text2, "first pass   : %6.5f", m_cudaBeginTime-m_frameBeginTime);
-		sprintf( text3, "cuda pass   : %6.5f",m_forwardTime -m_cudaBeginTime);
+		sprintf( text3, "pixel maping pass   : %6.5f",m_forwardTime -m_cudaBeginTime);
 
-		sprintf( text4, "projection pass    : %6.5f", m_secondTraceTime-m_forwardTime-fakeTime); 
-		sprintf( text5, "second optix pass: %6.5f ",m_finalRenderingBeginTime- m_secondTraceTime);
+		sprintf( text4, "image mapping pass    : %6.5f", m_imageProjStartTime-m_forwardTime-fakeTime); 
+
+		sprintf( text5, "second optix pass: %6.5f ",m_finalRenderingBeginTime- m_imageProjStartTime);
 		sprintf( text6, "final rendering pass: %6.5f",m_frameEndTime - m_finalRenderingBeginTime);
 		sprintf( text7, "ratio        : %6.5f", m_radio);
 		drawText( fps_text, 10.0f, start+offset*index++, GLUT_BITMAP_8_BY_13 );
@@ -177,10 +180,6 @@ void TimeMesure::previousFrame()
 void TimeMesure::nextFrame(int & currentTime)
 {
 	currentTime++;
-	if(currentTime>ENDINDEX)
-	{
-		exit(0);
-	}
 	m_frame++;
 	
 }

@@ -15,7 +15,7 @@ void Fbo::set(int n,int w, int h)
 	texDescript = TexState(w,h);
 }
 
-void Fbo::init( GLenum FilterModel){
+void Fbo::init( GLenum MAG_FILTER,GLenum MIN_FILTER){
 	//…Í«Îfboƒ⁄¥Ê≤¢∞Û∂®
 
 	cout << "now begin to init fbo" << endl;
@@ -39,8 +39,8 @@ void Fbo::init( GLenum FilterModel){
 	for (int i = 0; i < num; i++)
 	{
 		glBindTexture(GL_TEXTURE_2D, TexId[i]);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, FilterModel);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, FilterModel);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, MAG_FILTER);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, MIN_FILTER);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, texDescript.getClamp());
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, texDescript.getClamp());
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, texDescript.getWidth(), texDescript.getHeight(), 0, GL_RGBA, GL_FLOAT, NULL);
@@ -265,6 +265,8 @@ void Fbo::debugPixel(int id, int x,int y,int scale)
 	float a = pTexture[4*index+3]*scale;
 
 	glBindTexture(GL_TEXTURE_2D, 0);
+	delete pTexture;
+	printf("r,g,b,a (%f,%f,%f,%f)\n",r,g,b,a);
 }
 void Fbo::SaveBMP(const char *filename, int id)
 {

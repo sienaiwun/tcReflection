@@ -64,6 +64,7 @@ void ImgMesh::init()
 		{
 			Vertices[PointId++] = make_float2((float)(x+0.5-EDGEDELTA)/w,(float)(y+0.5-EDGEDELTA)/h);
 			Vertices[PointId++] =  make_float2((float)(x+0.5+EDGEDELTA)/w,(float)(y+1.5+EDGEDELTA)/h);
+			
 		}
 	}
 	glGenBuffers(1,&m_vboId);

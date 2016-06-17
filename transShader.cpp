@@ -9,6 +9,7 @@ void TranShader::init()
 	m_tranRePosTexUniform = m_loader.getUniform("RePosTex");
 	m_resUniform = m_loader.getUniform("resolution");
 	m_clearColor = m_loader.getUniform("ClearColor");
+	m_edgeTexSlot = m_loader.getUniform("edgeTex");
 	//m_additionalTexSlot = m_loader.getUniform("IdMap");
 
 }
@@ -23,13 +24,14 @@ void TranShader::bindParemeter()
 	glBindTexture(GL_TEXTURE_2D,m_bindingTransTex);
 
 	
+	glActiveTexture(GL_TEXTURE2);
+	glBindTexture(GL_TEXTURE_2D,m_bindingTransReposTex);
+
 	glActiveTexture(GL_TEXTURE3);
 	glBindTexture(GL_TEXTURE_2D,m_bindingTransPosTex);
 
 
-	glActiveTexture(GL_TEXTURE2);
-	glBindTexture(GL_TEXTURE_2D,m_bindingTransReposTex);
-
+	
 	/*glActiveTexture(GL_TEXTURE4);
 	glBindTexture(GL_TEXTURE_2D,m_additionalTex);
 	glUniform1i(m_additionalTexSlot,4);
@@ -38,6 +40,12 @@ void TranShader::bindParemeter()
 	glUniform1i(m_transVecTexUniform,1);
 	glUniform1i(m_tranWorPosTexUniform,2);
 	glUniform1i(m_tranRePosTexUniform,3);
+
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D,m_edgeTex);
+	glUniform1i(m_edgeTexSlot,5);
+
+
 	glUniform3f(m_clearColor,m_bindingClearColor.x,m_bindingClearColor.y,m_bindingClearColor.z);
 	glUniform2f(m_resUniform,m_res.x,m_res.y);
 }

@@ -1,3 +1,4 @@
+
 #include <string>
 #include <vector>
 #include "Geometry.h"
@@ -31,7 +32,7 @@ public:
 	{
 		return m_geometrygroup;
 	}
-	inline nv::vec3f getLightPos()
+	inline nv::vec3f& getLightPos()
 	{
 		return m_lightPos;
 	}
@@ -48,11 +49,18 @@ public:
 		assert(index<m_objectNum);
 		return m_geometryArray[index];
 	}
+	inline nv::vec3f getBBMin()
+	{
+		return m_bbMin;
+	}
+	inline nv::vec3f getBBMax()
+	{
+		return m_bbMax;
+	}
 	std::vector<MyGeometry >m_geometryArray;
 	int m_objectNum;
 	int m_texNum;
-	nv::vec3f m_bbMin;
-	nv::vec3f m_bbMax;
+	
 	nv::vec3f m_lightPos;
 	optix::GeometryGroup m_geometrygroup;
 	optix::Context *pContext;
@@ -61,6 +69,8 @@ public:
 	
 
 protected:
+	nv::vec3f m_bbMin;
+	nv::vec3f m_bbMax;
 	GeoPara * m_pObjectDis;
 	MyMeterial * m_pMatDis;
 	posPara * m_posArray;

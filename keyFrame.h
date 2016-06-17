@@ -6,6 +6,7 @@ class KeyFrame
 public:
 	KeyFrame();
 	int getOptixFrame(int);
+	int getBeforeFrame(int);
 	inline bool isKeyFrameChage()
 	{
 		return m_isCameraChange;

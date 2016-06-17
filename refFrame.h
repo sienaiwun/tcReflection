@@ -48,7 +48,7 @@ public:
 			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F_ARB, rasterWidth, rasterHeight, 0, GL_RGBA, GL_FLOAT, NULL);
 			glBindTexture(GL_TEXTURE_2D, 0);
 			m_refGbuffer.set(3,rasterWidth, rasterHeight);
-#ifdef DIFFNORMAL
+#if defined(DIFFNORMAL) || defined(EDGESHADER)
 	        m_refGbuffer.set(4,rasterWidth, rasterHeight);
 #endif
 			m_refGbuffer.init();

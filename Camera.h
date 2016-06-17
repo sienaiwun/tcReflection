@@ -61,7 +61,8 @@ class CCamera {
 public:
 
 	// Our camera constructor
-	CCamera();	
+	CCamera(
+);	
 
 	CCamera(CVector3,CVector3,CVector3);
 

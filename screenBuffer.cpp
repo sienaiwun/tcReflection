@@ -7,7 +7,7 @@ void ScreenBuffer::init()
 {
 	assert(m_bufferHeight*m_bufferHeight);
 	assert(m_windowWidth*m_windowHeight);
-	m_fbo.init();
+	m_fbo.init(GL_LINEAR,GL_LINEAR_MIPMAP_LINEAR);
 	CHECK_ERRORS();
   m_texShader.init();
 }

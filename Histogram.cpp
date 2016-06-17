@@ -12,6 +12,8 @@ void Histogram::init()
 
 	
 	m_reflectTexSlot = m_loader.getUniform("reflectTex");
+	m_equalSlot = m_loader.getUniform("isEqual");
+	m_compareColorSlot = m_loader.getUniform("compareColor");
 	
 }
 void Histogram::bindParemeter()
@@ -20,6 +22,9 @@ void Histogram::bindParemeter()
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D,m_reflectTex);
 	glUniform1i(m_reflectTexSlot,0);
+
+	glUniform1i(m_equalSlot,m_isSetEqual);
+	glUniform3f(m_compareColorSlot,m_compareColor.x,m_compareColor.y,m_compareColor.z);
 }
 void Histogram::begin()
 {

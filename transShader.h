@@ -30,6 +30,10 @@ public :
 	{
 		m_res = nv::vec2f(x,y);
 	}
+	inline void setEdgeTex(int tex)
+	{
+		m_edgeTex =tex ;
+	}
 	/*
 	inline void setAdditionalTex(int tex)
 	{
@@ -42,13 +46,14 @@ private:
 	GLuint m_resUniform;
 	GLuint m_refelctTexUniform;
 	GLuint m_transVecTexUniform;
-
+	GLuint m_edgeTex,m_edgeTexSlot;
 //Trans shader Uniform
 	GLuint m_tranWorPosTexUniform;
 	GLuint m_tranRePosTexUniform;
 	GLuint m_clearColor;
 	GLuint m_bindingReflectTex,m_bindingTransTex,m_bindingTransPosTex,m_bindingTransReposTex;
 	GLuint m_additionalTexSlot;
+	GLuint m_colorTexSlot;
 	nv::vec3f m_bindingClearColor;
 	//GLuint m_additionalTex;
 	/*

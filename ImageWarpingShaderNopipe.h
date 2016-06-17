@@ -43,6 +43,15 @@ public :
 	{
 		m_reflectedColorTex = tex;
 	}
+	inline void setEdgeTex(GLuint tex)
+	{
+		m_edgeTex = tex;
+	}
+	inline void setNaive(bool is)
+	{
+		m_isNaive = is;
+	}
+
 private:
 
 	nv::vec2f m_res;
@@ -52,6 +61,9 @@ private:
 	GLuint m_refColorTex,m_refPosTex,m_refNorTex;
 	GLuint m_reflectedColorTex;
 	GLuint m_reflectedColorTex_slot;
+	GLuint m_isNaiveRendering_slot;
+	GLuint m_edgeTexSlot,m_edgeTex;
+	bool m_isNaive;
 	//GLuint m_additionalTex;
 	/*
 	glUniform1i(m_refelctTexUniform,0);

@@ -1,5 +1,5 @@
-#include "livingRoom.h"
-#define  geoNumber  47
+#include "disocclude_scene.h"
+#define  geoNumber  32
 #define  CHINAREFLECT 0.185f
 static nv::vec3f livingLightPos =  nv::vec3f(0.0f, 200, 0);
 static MyMeterial livingMat[] = 
@@ -64,45 +64,45 @@ static GeoPara livingObj[geoNumber] =
 	{"./t/littleSofa.obj",9,0,0.2f},
 
 	{"./new/sofaFrame.obj",1,0,0.0f},
-	{"./new/teapot.obj",19,0.5,0.51f},
-	{"./new/mirror.obj",25,0,1.0f},
-	{"./new/mirrorFrame.obj",16,0,0.0f},
-	{"./new/cupMiddelOut.obj",5,0,0.0f},
-	{"./new/cupMiddelIn.obj",18,1,0.0f},
+	//{"./new/teapot.obj",19,0.5,0.51f},
+	{"./new/mirrorShift.obj",25,0,1.0f},
+	{"./new/mirrorFrameShift.obj",16,0,0.0f},
+	//{"./new/cupMiddelOut.obj",5,0,0.0f},
+	//{"./new/cupMiddelIn.obj",18,1,0.0f},
 
 	//{"./new/cup2out3.obj",5,0,0.0f},
-	{"./new/magazine1.obj",3,0,0.0f},
-	{"./new/bottomBookOut.obj",2,0,0.0f},
+	//{"./new/magazine1.obj",3,0,0.0f},
+	//{"./new/bottomBookOut.obj",2,0,0.0f},
 
 	//{"./new/clock.obj",17,0,1.0f},
 	//{"./new/cup2in3.obj",18,1,0.0f},
 	//20
-	{"./new/clockPan.obj",22,0,0.2f},
-	{"./new/blackObj.obj",17,0,0.0f},
-	{"./new/clockBigPan.obj",21,0,0.0f},
-	{"./new/floorLamp2.obj",19,0,0.0f},
+	//{"./new/clockPan.obj",22,0,0.2f},
+	//{"./new/blackObj.obj",17,0,0.0f},
+	//{"./new/clockBigPan.obj",21,0,0.0f},
+	//{"./new/floorLamp2.obj",19,0,0.0f},
 	{"./new/closetHandle.obj",19,0,0.0f},
 	{"./new/sofaBookOut.obj",4,0,0.0f},
 	//{"./new/arcGolden.obj",1,0,0.1f},
 	{"./new/tableMirrorFrame.obj",17,0,0.0f},
 	{"./new/tableMirror.obj",8,0,0.0f},
-	{"./new/picture.obj",7,0,0.0f},
-	{"./new/vase.obj",15,0,0.2f},
+	//{"./new/picture.obj",7,0,0.0f},
+	//{"./new/vase.obj",15,0,0.2f},
 	//30
-	{"./new/vaseIn.obj",15,0,0.2f},
+	//{"./new/vaseIn.obj",15,0,0.2f},
 	{"./new/tree.obj",1,0,0.0f},
 	{"./t/gong.obj",19,0,0.2f},
-	{"./t/gongFrame.obj",1,0,0.0f},
+	{"./new/gongTableFrame2.obj",1,0,0.0f},
 	{"./t/gongString.obj",19,0,0.0f},
 	{"./new/arcFrame.obj",19,0,0.0f},
 	{"./new/arc3.obj",20,0,0.1f},
 	{"./t/lightline.obj",19,0,0.0f},
-	{"./new/gray.obj",19,0,0.0f},
-	{"./new/black.obj",18,0,0.0f},
+	//{"./new/gray.obj",19,0,0.0f},
+	//{"./new/black.obj",18,0,0.0f},
 
 	//40
 	//{"./new/sphere.obj",14,0,0.0f},
-	{"./t/bookInner.obj",26,0,0.0f},
+	//{"./t/bookInner.obj",26,0,0.0f},
 	{"./t/ArcBack.obj",18,0,0.0f},
 	{"./t/deskLamp.obj",1,0,0.0f},
 	{"./vase/treeC2.obj",1,0,0.0f},
@@ -147,7 +147,7 @@ static posPara livingPosArray[] =
 
 };
 
-static posPara teapotArray[] =
+static posPara disArray[] =
 {
 	//{make_float3(-201.957062,89.004913,-54.296104  ),make_float3(-193.146011,88.565048,-59.004818 )},
 	//{make_float3(57.599560,73.710175,-69.969009  ),make_float3(63.420052,70.224892,-77.315712 )},  //sofa view
@@ -158,11 +158,11 @@ static posPara teapotArray[] =
 	{make_float3(40,70,-63.6346  ),make_float3(100,17.7966,-150.076 )},
 	//{make_float3(43.398304,83.185516,-73.213638  ),make_float3(48.700409,79.272903,-80.735497 )},
 	*/
-	{make_float3(-21.419134,57.586124,-139.200912 ),make_float3(-21.444695,57.269070,-140.272766)},
-	{make_float3(-30.334629,51.440853,-156.531036 ),make_float3(-30.008688,51.049595,-157.526382)},
-	{make_float3(-30.334629,51.440853,-156.531036 ),make_float3(-30.008688,51.049595,-157.526382)},  // 
+	{make_float3(-59.489567,50.733597,-157.226013 ),make_float3(-58.817196,50.636997,-157.959839)},
+{make_float3(-37.319099,51.270164,-151.656784 ),make_float3(-36.812939,51.223591,-152.517975)},
+{make_float3(-37.319099,51.270164,-151.656784 ),make_float3(-36.812939,51.223591,-152.517975)},
 
-	//{make_float3(-57.028,64.293,-119.08  ),make_float3(-56.63,63.98,-119.94 )},
+//{make_float3(-57.028,64.293,-119.08  ),make_float3(-56.63,63.98,-119.94 )},
 	//{make_float3(-44.861229,52.771347,-152.258347  ),make_float3(-40.733448,49.739819,-160.847336 )},
 	//{make_float3(3.717343,127.523064,-188.046753  ),make_float3(4.662045,125.831253,-197.857208 )},
 	//{make_float3(28.454458,72.989174,-62.790611  ),make_float3(34.133820,68.893318,-69.929871 )},  //sofa
@@ -177,13 +177,13 @@ static float livingSequence[14]={0,3*k,4.5 *k,6*k,8*k,11*k,13*k,15*k,19*k,21*k,2
 static float teapotSequnce[3] = {0,9,21};
 
 //teapot view
-livingRoom::livingRoom()
+disocludeScene::disocludeScene()
 {
 	m_objectNum = geoNumber;	
 	setMainLightPos(livingLightPos);
 	m_pObjectDis = livingObj;
 	m_pMatDis = livingMat;
-	m_posArray = teapotArray;
+	m_posArray = disArray;
 	m_timeSequence = std::vector<int>(teapotSequnce,teapotSequnce+sizeof(teapotSequnce)/sizeof(teapotSequnce[0]));
 
 	//m_posArray = livingPosArray;

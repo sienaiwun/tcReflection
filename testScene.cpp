@@ -1,5 +1,5 @@
-#include "toiletScene.h"
-#define  geoNumber  (33+45)
+#include "testScene.h"
+#define  geoNumber  (34+1)
 #define  CHINAREFLECT 0.185f
 //#define ALLSPECULAR
 static nv::vec3f toiletLightPos =  nv::vec3f(0.0f, 65.0f, 30.0f);
@@ -89,10 +89,11 @@ static GeoPara toiletObj[geoNumber] =
 
 static GeoPara toiletObj[geoNumber] = 
 {
+	{"model/aoBathroom/sphereTest.obj",15,0,CHINAREFLECT,3},
 	{"model/bathroom/toiletSmooth.obj",0,0,CHINAREFLECT,3},
 	{"model/bathroom/toilet_up_all.obj",15,0,CHINAREFLECT,3},
-
-	//{"model/bathroom/testSphere.obj",15,0,CHINAREFLECT,0},
+	
+	{"model/bathroom/testSphere.obj",15,0,CHINAREFLECT,0},
 	//{"model/bathroom/testBox.obj",15,0,CHINAREFLECT,0},
 	{"model/aoBathroom/littleBarrier.obj",9,0,0.0f,0},
 	{"model/bathroom/ceil.obj",15,0,0.0f,0},
@@ -134,78 +135,6 @@ static GeoPara toiletObj[geoNumber] =
 
 
 
-	{"./aoModel/aoEast.obj",11,0,0.0f},
-	{"./aoModel/aoWest.obj",10,0,0.0f},
-	{"./aoModel/aoNorthShift.obj",12,0,0.0f},
-	//{"./aoModel/aofloor.obj",0,0.1,0.15f},
-	{"./t/south.obj",13,0,0.0f},
-	{"./t/ceil.obj",6,0,0.0f},
-	//{"./bunny/ballCenter.obj",18,0,1.0f},
-	//{"./bunny/bunny2.obj",23,0,0.0f},
-	/*{"./6teapot/1teapot.obj",19,0.5,0.5f},
-	{"./6teapot/2teapot.obj",19,0.5,0.5f},
-	{"./6teapot/3teapot.obj",19,0.5,0.5f},
-	{"./6teapot/4teapot.obj",19,0.5,0.5f},
-	{"./6teapot/5teapot.obj",19,0.5,0.5f},
-	{"./6teapot/6teapot.obj",19,0.5,0.5f},*/
-
-
-	{"./new/tableFrame2.obj",1,0,0.0f},
-	{"./M/tableMirror.obj",1,0,0.1f},
-	{"./M/tablePure.obj",1,0,0.0f},
-
-	{"./new/closet.obj",1,0,0.1f},
-	{"./new/bigSofa.obj",9,0,0.21f},
-
-	//10
-	{"./t/flatSofa.obj",9,0,0.2f},
-	//{"./t/littleSofa.obj",9,0,0.2f},
-
-	{"./new/sofaFrame.obj",1,0,0.0f},
-	{"./new/teapot.obj",19,0.5,0.51f},
-	{"./new/mirror.obj",25,0,1.0f},
-	{"./new/mirrorFrame.obj",16,0,0.0f},
-	{"./new/cupMiddelOut.obj",5,0,0.0f},
-	{"./new/cupMiddelIn.obj",18,1,0.0f},
-
-	//{"./new/cup2out3.obj",5,0,0.0f},
-	{"./new/magazine1.obj",3,0,0.0f},
-	{"./new/bottomBookOut.obj",2,0,0.0f},
-
-	//{"./new/clock.obj",17,0,1.0f},
-	//{"./new/cup2in3.obj",18,1,0.0f},
-	//20
-	{"./new/clockPan.obj",22,0,0.2f},
-	{"./new/blackObj.obj",17,0,0.0f},
-	{"./new/clockBigPan.obj",21,0,0.0f},
-	{"./new/floorLamp2.obj",19,0,0.0f},
-	{"./new/closetHandle.obj",19,0,0.0f},
-	{"./new/sofaBookOut.obj",4,0,0.0f},
-	//{"./new/arcGolden.obj",1,0,0.1f},
-	{"./new/tableMirrorFrame.obj",17,0,0.0f},
-	{"./new/tableMirror.obj",8,0,0.0f},
-	{"./new/picture.obj",7,0,0.0f},
-	{"./new/vase.obj",15,0,0.2f},
-	//30
-	{"./new/vaseIn.obj",15,0,0.2f},
-	{"./new/tree.obj",1,0,0.0f},
-	{"./t/gong.obj",19,0,0.2f},
-	{"./t/gongFrame.obj",1,0,0.0f},
-	{"./t/gongString.obj",19,0,0.0f},
-	{"./new/arcFrame.obj",19,0,0.0f},
-	{"./new/arc3.obj",20,0,0.1f},
-	{"./t/lightline.obj",19,0,0.0f},
-	{"./new/gray.obj",19,0,0.0f},
-	{"./new/black.obj",18,0,0.0f},
-
-	//40
-	//{"./new/sphere.obj",14,0,0.0f},
-	{"./t/bookInner.obj",26,0,0.0f},
-	{"./t/ArcBack.obj",18,0,0.0f},
-	{"./t/deskLamp.obj",1,0,0.0f},
-	{"./vase/treeC2.obj",1,0,0.0f},
-	{"./vase/vaseC2.obj",24,0,0.2f},
-	{"./new/table_back.obj",17,0,0.0f},
 
 
 };
@@ -279,14 +208,14 @@ toiletScene::toiletScene()
 
 //basin view
 
-toiletScene::toiletScene()
+testScene::testScene()
 {
 	m_objectNum = geoNumber;	
 	setMainLightPos(toiletLightPos);
 	m_pObjectDis = toiletObj;
 	m_pMatDis = toiletMat;
-    m_posArray = toiletScenePosArray;
-	m_timeSequence = std::vector<int>(toiletSequence,toiletSequence+sizeof(toiletSequence)/sizeof(toiletSequence[0]));
+    m_posArray = teasView;
+	m_timeSequence = std::vector<int>(teaseSequence,teaseSequence+sizeof(teaseSequence)/sizeof(teaseSequence[0]));
 }
 
 //toilet view

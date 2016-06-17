@@ -5,11 +5,12 @@ void FboAnalyse::init()
 	m_fbo.init();
 	glGenQueries( 1,&m_query_id);
 }
+
 int FboAnalyse::analyseColorNum(Fbo& sourceFbo,int slotNum)
 {
 	unsigned int ret;
 
-	sourceFbo.SaveBMP("./test/test.bmp",0);
+	//sourceFbo.SaveBMP("./test/test.bmp",0);
 	glBeginQuery( GL_SAMPLES_PASSED ,m_query_id);
 	m_fbo.begin();
 	m_histogramPass.setReflectTex(sourceFbo.getTexture(slotNum));
@@ -27,6 +28,9 @@ int FboAnalyse::analyseColorNum(Fbo& sourceFbo,int slotNum)
 	
 	m_fbo.end();
 
+	/*
+	m_fbo.SaveBMP("test.bmp",0);
+	
 	int w = m_res.x;
 	int h = m_res.y;
 	glEnable(GL_TEXTURE_2D);
@@ -34,7 +38,7 @@ int FboAnalyse::analyseColorNum(Fbo& sourceFbo,int slotNum)
 	pTexture = new BYTE[w*h * 3];
 	memset(pTexture, 0, w*h * 3 * sizeof(BYTE));
 
-	glBindTexture(GL_TEXTURE_2D, m_fbo.getTexture(0));//TexPosId   PboTex
+	glBindTexture(GL_TEXTURE_2D, sourceFbo.getTexture(0));//TexPosId   PboTex
 
 	glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pTexture);
 
@@ -48,16 +52,18 @@ int FboAnalyse::analyseColorNum(Fbo& sourceFbo,int slotNum)
 			BYTE r = pTexture[3*index];
 			BYTE g = pTexture[3*index+1];
 			BYTE b = pTexture[3*index+2];
-			if((r==255)&&(g==0)&&(b==0))
+			if((r==0)&&(g==0)&&(b==255))
 			{
-				totalnum++;
+				
 			}
+			else
+				totalnum++;
 		}
 	}
 	if (pTexture)
 	   delete[] pTexture;
 	glBindTexture(GL_TEXTURE_2D, 0);
-
+	*/
 //	m_fbo.SaveBMP("./test/histogram.bmp",0);
 	return ret;
 }

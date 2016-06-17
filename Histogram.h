@@ -17,12 +17,21 @@ public :
 	{
 		m_reflectTex = tex;
 	}
-	
+	inline void setEqual(int isEqual)
+	{
+		m_isSetEqual = isEqual;
+	}
+	inline void setCompareColor(nv::vec3f color)
+	{
+		m_compareColor = color;
+	}
 private:
 
 	GLuint m_reflectTex;
 	GLuint m_reflectTexSlot;
-	
-
+	bool m_isSetEqual;
+	nv::vec3f m_compareColor;
+	GLuint m_equalSlot;
+	GLuint m_compareColorSlot;
 };
 #endif

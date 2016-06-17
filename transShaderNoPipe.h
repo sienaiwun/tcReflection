@@ -6,8 +6,8 @@ class TranShaderNoPipe:public glslShader
 public :
 	TranShaderNoPipe()
 	{
-		m_vertexFileName = "Shader/TransNoPipe.vert";
-		m_geometryFileName  = "Shader/TransNoPipe.geom";
+		m_vertexFileName = "Shader/Trans.vert";
+		m_geometryFileName  = "Shader/Trans.geom";
 		m_fragmentFileName = "Shader/TransNoPipe.frag";
 	}
 	virtual void init();
@@ -35,14 +35,17 @@ public :
 	{
 		m_diffuseTex = tex;
 	}
-	
+	inline void setEdgeTex(int tex)
+	{
+		m_edgeTex =tex ;;
+	}
 private:
 
 	nv::vec2f m_res;
 	GLuint m_resUniform;
 	GLuint m_refelctTexUniform;
 	GLuint m_transVecTexUniform;
-
+	GLuint m_edgeTex,m_edgeTexSlot;
 //Trans shader Uniform
 	GLuint m_tranWorPosTexUniform;
 	GLuint m_tranRePosTexUniform;

@@ -9,6 +9,8 @@ void ImgWarpingShaderNoPipe::init()
 	m_clearColorSlot = m_loader.getUniform("ClearColor");
 	m_matrixSlot = m_loader.getUniform("MVP");
 	m_reflectedColorTex_slot  = m_loader.getUniform("blendReflectTex");
+	m_isNaiveRendering_slot = m_loader.getUniform("isNaive");
+	m_edgeTexSlot = m_loader.getUniform("edgeTex");
 }
 
 void ImgWarpingShaderNoPipe::bindParemeter()
@@ -27,9 +29,15 @@ void ImgWarpingShaderNoPipe::bindParemeter()
 	glBindTexture(GL_TEXTURE_2D,m_reflectedColorTex);
 	glUniform1i(m_reflectedColorTex_slot,3);
 	
+	glActiveTexture(GL_TEXTURE4);
+	glBindTexture(GL_TEXTURE_2D,m_edgeTex);
+	glUniform1i(m_edgeTexSlot,4);
+	
 	glUniform3f(m_clearColorSlot,m_bindingClearColor.x,m_bindingClearColor.y,m_bindingClearColor.z);
 	glUniform2f(m_resSlot,m_res.x,m_res.y);
 	glUniformMatrix4fv(m_matrixSlot,1,GL_FALSE,m_currentMvpMatrix);
+	glUniform1i(m_isNaiveRendering_slot,m_isNaive);
+
 }
 void ImgWarpingShaderNoPipe::begin()
 {

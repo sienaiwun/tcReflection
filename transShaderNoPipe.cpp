@@ -10,6 +10,8 @@ void TranShaderNoPipe::init()
 	m_resUniform = m_loader.getUniform("resolution");
 	m_clearColor = m_loader.getUniform("ClearColor");
 	m_diffuseColorSlot = m_loader.getUniform("DiffuseTex");
+	m_edgeTexSlot = m_loader.getUniform("edgeTex");
+	
 	//m_additionalTexSlot = m_loader.getUniform("IdMap");
 
 }
@@ -38,7 +40,13 @@ void TranShaderNoPipe::bindParemeter()
 	glUniform1i(m_transVecTexUniform,1);
 	glUniform1i(m_tranWorPosTexUniform,2);
 	glUniform1i(m_tranRePosTexUniform,3);
+	
 	glUniform1i(m_diffuseColorSlot,4);
+
+	glActiveTexture(GL_TEXTURE5);
+	glBindTexture(GL_TEXTURE_2D,m_edgeTex);
+	glUniform1i(m_edgeTexSlot,5);
+
 	glUniform3f(m_clearColor,m_bindingClearColor.x,m_bindingClearColor.y,m_bindingClearColor.z);
 	glUniform2f(m_resUniform,m_res.x,m_res.y);
 	

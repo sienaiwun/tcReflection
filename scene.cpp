@@ -35,6 +35,7 @@ void scene::draw_model(glslShader& shader,CCamera *pCamera)
 
 void scene::cameraControl(int currentTime,CCamera& NowCamera)
 {
+	static bool once = true;
 	assert(m_timeSequence.size()>0);
 	assert(m_posArray);
 	
@@ -43,7 +44,11 @@ void scene::cameraControl(int currentTime,CCamera& NowCamera)
 	up = std::upper_bound  (m_timeSequence.begin(), m_timeSequence.end(), currentTime); //   m_timeSequence.
 	int lowId = std::distance(m_timeSequence.begin(),up)-1;
 	int highId = lowId+1;
-	NowCamera.navigate(m_posArray[lowId],m_posArray[highId],currentTime,m_timeSequence[lowId],m_timeSequence[highId]);
+	//if(once)
+	{
+		NowCamera.navigate(m_posArray[lowId],m_posArray[highId],currentTime,m_timeSequence[lowId],m_timeSequence[highId]);
+		once = false;
+	}
 	NowCamera.Look();
 }
 void scene::update()

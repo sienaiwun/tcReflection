@@ -356,6 +356,7 @@ void CCamera::Update()
 
 void CCamera::Look()
 {
+	m_vUpVector = CVector3(0,1,0);
 	// Give OpenGL our camera position, then camera view, then camera up vector
 	m_modelView = nv::matrix4f::lookAt(nv::vec3f(m_vPosition.x, m_vPosition.y, m_vPosition.z),	
 			 nv::vec3f( m_vView.x,	 m_vView.y,     m_vView.z),	

@@ -59,6 +59,13 @@
 #include "TransShaderNoPipe.h"
 #include "ImageWarpingShaderNopipe.h"
 #include "blendShaderNopipe.h"
+#include "Edge.h"
+#include "optixToiletRecorder.h"
+#include "tcToiletRecorder.h"
+#include "tcToiletRatio.h"
+#include "optixLivingRoom.h"
+#include "tcLivingRoom.h"
+#include "tcLivingRatio.h"
 //#include "toiletScene.h"
 
 unsigned int *Host_PixelSum;
@@ -74,10 +81,7 @@ bool isSavePic = false;
 
 const int ReflectNum = 4;
 
-nv::Model* model,*sofaModel;
 
-nv::vec3f modelBBMin, modelBBMax, modelBBCenter;
-nv::vec3f lightPos;
 float glossiness = 0.0f;
 
 GLuint reflectionMaps[ReflectNum];
@@ -120,15 +124,39 @@ IDShader g_idShader;
 TranShaderNoPipe g_transShaderNoPipe;
 ImgWarpingShaderNoPipe g_imageWarpNopipeShader;
 BlendShaderNoPipe g_blendShaderNoPipe;
+EdgeShader g_edgeShader;
 
 KeyFrame g_keyFrame;
 
-TimeMesure g_timeMesure(noGeometryRenderingType
+TimeMesure g_timeMesure(tcRenderingType 
 						,CountTime);
-#include "toiletScene.h"
-toiletScene g_scene;
+
+
+//#include "toiletScene.h"
+//toiletScene g_scene;
+FileRecorder g_recorder = optixToiletRecorder(900) ;
+//FileRecorder g_recorder = tcToiletRecorder(900) ;
+//FileRecorder g_recorder = tcToiletRatioRecorder(900) ;
+
+#include "livingRoom.h"
+livingRoom g_scene;
+
+//#include "livingRoom.h"
+//livingRoom g_scene;
+//FileRecorder g_recorder = optixLivingRoomRecorder(900) ;
+//FileRecorder g_recorder = tcLivingRecorder(900) ;
+//FileRecorder g_recorder = tcLivingRatioRecorder(900) ;
+const int rayTraceDepth = 1;
+
+int BEGININDEX = 0 ;   //must be 10 time
+int ENDINDEX = 20;
+int TIMERANGE= (ENDINDEX-BEGININDEX);
+
+
 int currentTime  = 0;
-int currentTime2 = 9;
+int currentTime2 = 0;
+
+
 
 FPS fcount(CountTime);
 
@@ -163,43 +191,21 @@ bool stat_breakdown = true;
 
 // CG
 CGcontext cgContext;
-CGeffect  cgEffect;
-
-//glsl]
-//uniform
-GLuint TransVecTexUniform;
-GLuint RefelctTexUniform;
-
-//Trans shader Uniform
-GLuint TranWorPosTexUniform;
-GLuint TranRePosTexUniform;
-
-GLuint LastMVP;
-GLuint NewWorldPosTex;
-GLuint LastWorldPosTex;
-GLuint RefelctTex;
-
-GLuint MergeComputTex,MergeOptixTex;
-
 
 // OptiX
 unsigned int traceWidth, traceHeight;
 
 optix::Context        rtContext;
+optix::Buffer         PixelBuffer;
 optix::Buffer         rtReflectionBuffer;
-optix::Buffer         rtLights;
+
 optix::Buffer         rtAdditionalBuffer;
 //Buffer
-optix::Buffer PixelBuffer;
 
 optix::TextureSampler rtNormalTexture;
 optix::TextureSampler rtLastReflectTexture;
 optix::TextureSampler rtWorldSpaceTexture;
 
-std::string CGFX_PATH;
-std::string GROUNDTEX_PATH;
-std::string WALLTEX_PATH;
-//My Fbo For Render
 
 Fbo currentGbuffer(3,rasterWidth,rasterHeight);
 Fbo TransMapFbo(1,rasterWidth,rasterWidth);
@@ -207,7 +213,7 @@ Fbo FinalEffectFbo(1,rasterWidth,rasterWidth);
 Fbo FinalEffectFbo2(1,rasterWidth,rasterWidth);
 Fbo MergeEffectFbo(1,rasterWidth,rasterWidth);
 
-#ifdef DIFFNORMAL
+#if defined(DIFFNORMAL )
 	Fbo refGbuffer(4,rasterWidth,rasterWidth);
 #else 
 	Fbo refGbuffer(3,rasterWidth,rasterWidth);
@@ -215,17 +221,15 @@ Fbo MergeEffectFbo(1,rasterWidth,rasterWidth);
 
 ImgMesh g_imgMesh(rasterWidth,rasterWidth);
 ScreenBuffer screenBuffer(windowWidth,windowHeight);
-//FboAnalyse g_fboAnalyse(rasterWidth,rasterWidth);
+#ifdef ANALYSIS
+FboAnalyse g_fboAnalyse(rasterWidth,rasterWidth);
+#endif
 //New TEXTURE
 Fbo optixFrame(1,rasterWidth,rasterWidth);
 Fbo tcFrame(1,rasterWidth,rasterWidth);
 
 
 bool animate = true;
-bool doISG  = true;
-bool zUp = false;
-bool doReflections = true;
-bool stripNormals = false;
 bool g_Recordpic = false;
 float scene_epsilon = 1e-2f;
 
@@ -281,6 +285,7 @@ void init_cuda(int argc,char**argv)
 
 void init_gl()
 {
+	
 #ifndef __APPLE__
 	glewInit();
 
@@ -395,6 +400,7 @@ void init_gl()
 
 	//载入glslshader
 	g_transShader.init();
+	g_transShader.setClearColor(viewDependentMissColor);
 	g_reprojectShader.init();
 	g_mergeShader.init();
 	g_reprojectShader.setClearColor(viewIndepentdentMissColor);
@@ -409,9 +415,13 @@ void init_gl()
 
 	g_compareShader.init();
 	g_diffNormalShader.init();
+	g_diffNormalShader.setRes(nv::vec2f(rasterWidth,rasterWidth));
+	g_edgeShader.init();
+	g_edgeShader.setRes(nv::vec2f(rasterWidth,rasterWidth));
 	g_idShader.init();
 	g_showShader.init();
 	g_transShaderNoPipe.init();
+	g_transShaderNoPipe.setClearColor(viewDependentMissColor);
 	g_imageWarpNopipeShader.init();
 	g_imageWarpNopipeShader.setRes(rasterWidth,rasterHeight);
 	g_imageWarpNopipeShader.setClearColor(viewIndepentdentMissColor);
@@ -428,6 +438,10 @@ void init_gl()
 		optixFrame.init();
          tcFrame.init();
 	}
+#ifdef ANALYSIS
+	g_fboAnalyse.init();
+#endif
+	g_recorder.init();
 	//g_fboAnalyse.init();
 	//CHECK_ERRORS();
 	//glEnable(GL_CULL_FACE);
@@ -445,31 +459,6 @@ std::string ptxpath( const std::string& base )
 {
 	return std::string(sutilSamplesPtxDir()) + "/isgReflections_generated_" + base + ".ptx";
 }
-
-optix::Geometry createParallelogram( optix::Context context,
-									const nv::vec3f& anchor,
-									const nv::vec3f& offset1,
-									const nv::vec3f& offset2)
-{
-	optix::Geometry parallelogram = context->createGeometry();
-	parallelogram->setPrimitiveCount( 1u );
-	parallelogram->setIntersectionProgram( context->createProgramFromPTXFile( ptxpath("parallelogram.cu"), "intersect" ));
-	parallelogram->setBoundingBoxProgram( context->createProgramFromPTXFile(  ptxpath("parallelogram.cu"), "bounds" ));
-
-	nv::vec3f normal = normalize( cross( offset1, offset2 ) );
-	float d = dot( normal, anchor );
-	nv::vec4f plane = nv::vec4f( normal, d );
-
-	nv::vec3f v1 = offset1 / dot( offset1, offset1 );
-	nv::vec3f v2 = offset2 / dot( offset2, offset2 );
-
-	parallelogram["plane"]->setFloat( plane.x, plane.y, plane.z, plane.w );
-	parallelogram["anchor"]->setFloat( anchor.x, anchor.y, anchor.z );
-	parallelogram["v1"]->setFloat( v1.x, v1.y, v1.z );
-	parallelogram["v2"]->setFloat( v2.x, v2.y, v2.z );
-
-	return parallelogram;
-}
 extern unsigned int  *g_PixelPos;
 void init_optix()
 {
@@ -477,8 +466,14 @@ void init_optix()
 	{
 		//  printf("111");
 		rtContext = optix::Context::create();
+		
+#ifdef NOGEOMETRY
 		rtContext->setRayTypeCount(4);
 		rtContext->setEntryPointCount(4);
+#else
+		rtContext->setRayTypeCount(2);
+		rtContext->setEntryPointCount(2);
+#endif
 
 		rtContext->setPrintEnabled( true );
 		rtContext->setPrintBufferSize( 4096 *8);
@@ -566,21 +561,14 @@ void init_optix()
 		rtContext["colorBuffer"]->setBuffer(rtColorBuffer);
 
 #endif
-
-		rtLights = rtContext->createBuffer(RT_BUFFER_INPUT);
-		rtLights->setSize(1);
-		rtLights->setFormat(RT_FORMAT_USER);
-		rtLights->setElementSize(sizeof(BasicLight));
-		rtContext["lights"]->setBuffer(rtLights);
-
-		rtContext->setRayGenerationProgram( 0, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_request" ) );
+    	rtContext->setRayGenerationProgram( 0, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_request" ) );
 		rtContext->setExceptionProgram( 0, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_exception" ) );
 		rtContext->setMissProgram( 0, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_miss" ) );
 
 		rtContext->setRayGenerationProgram(1, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "addition_request" ) );
 		rtContext->setExceptionProgram( 1, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_exception" ) );
 		rtContext->setMissProgram( 1, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_miss" ) );
-
+#ifdef NOGEOMETRY
 		rtContext->setRayGenerationProgram(2, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "gBufferAndRequest" ) );
 		rtContext->setExceptionProgram( 2, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_exception" ) );
 		rtContext->setMissProgram( 2, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_miss" ) );
@@ -589,14 +577,14 @@ void init_optix()
 		rtContext->setRayGenerationProgram(3, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "gBufferAndRequest_addition") );
 		rtContext->setExceptionProgram( 3, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_exception" ) );
 		rtContext->setMissProgram( 3, rtContext->createProgramFromPTXFile( ptxpath("reflection_request_isg.cu"), "reflection_miss" ) );
-
+#endif
 		// printf("222");
 		MyGeometry::ms_rtContext = rtContext;
 		MyMeterial::ms_rtContext = rtContext;
 		//optix::Geometry sofaGemetry = sofa.getOptixGeometry(rtContext);
 		g_scene.setOptix(&rtContext);
 		g_scene.optixInit();
-		rtContext["max_depth"]->setUint(2u);
+		rtContext["max_depth"]->setUint(rayTraceDepth);
 		rtContext->setStackSize(1850);
 		rtContext["rasterSize"]->setInt(rasterWidth, rasterHeight);
 		rtContext->validate();
@@ -780,13 +768,7 @@ void additionalTracingNopipe(int pixelNum)
 	rtContext["optixModelView_Inv"]->setMatrix4x4fv(false,curCamera.getInvMvp());
 	nv::matrix4f matInv = inverse(nv::matrix4f(curCamera.getModelViewMat()));
 	rtContext["optixModelView_Inv"]->setMatrix4x4fv(false,matInv.get_value());
-	BasicLight* lightData = static_cast<BasicLight*>(rtLights->map());
-	lightData[0].pos = make_float3(lightPos.x, lightPos.y, lightPos.z);
-	lightData[0].color.x = 1;
-	lightData[0].color.y = 1;
-	lightData[0].color.z = 1;
-	lightData[0].casts_shadow = 0;
-	rtLights->unmap();
+	
 	try
 	{
 		rtContext->launch(3, pixelNum);
@@ -844,15 +826,7 @@ void addtionalTracing(int pixelNum)
 	rtContext["PixelNum"]->setInt(pixelNum);
 	rtContext["PixelWidth"]->setInt(length);
 	rtContext["eye_pos"]->setFloat(g_scene.m_curCamera.Position().x, g_scene.m_curCamera.Position().y, g_scene.m_curCamera.Position().z);
-	BasicLight* lightData = static_cast<BasicLight*>(rtLights->map());
-	lightData[0].pos = make_float3(lightPos.x, lightPos.y, lightPos.z);
-	lightData[0].color.x = 1;
-	lightData[0].color.y = 1;
-	lightData[0].color.z = 1;
-	lightData[0].casts_shadow = 0;
-	rtLights->unmap();
-
-	rtContext["lightPos"]->setFloat(lightPos.x, lightPos.y, lightPos.z);
+	rtContext["lightPos"]->setFloat(g_scene.getLightPos().x, g_scene.getLightPos().y, g_scene.getLightPos().z);
 
 	/*
 	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
@@ -1038,6 +1012,8 @@ void drawTransMap(int  optixId)
 	g_transShader.setParemeter(frame.getOptixTex(),VecorTexture,frame.getGbuffer().getTexture(0),0);
 	//g_transShader.setAdditionalTex(frame.getAdditionalTex());
 	g_transShader.setRes(rasterWidth,rasterHeight);
+	g_transShader.setEdgeTex(frame.getGbuffer().getTexture(2));
+	
 	g_imgMesh.drawImgMesh(g_transShader);
 
 }
@@ -1051,6 +1027,7 @@ void drawTransMapNoPipe(int optixId)
 	//g_transShader.setAdditionalTex(frame.getAdditionalTex());
 	g_transShaderNoPipe.setDiffuseTex(frame.getGbuffer().getTexture(2));
 	g_transShaderNoPipe.setRes(rasterWidth,rasterHeight);
+	g_transShaderNoPipe.setEdgeTex(frame.getGbuffer().getTexture(3));
 	g_imgMesh.drawImgMesh(g_transShaderNoPipe);
 }
 
@@ -1085,6 +1062,7 @@ void drawText( const std::string& text, float x, float y, void* font )
 void setTitle();
 void optixRendering(Fbo renderFbo = Fbo())
 {
+	//glDisable(GL_CULL_FACE);
 	setTitle();
 	if (stat_breakdown) 
 	{
@@ -1097,14 +1075,17 @@ void optixRendering(Fbo renderFbo = Fbo())
 	g_scene.cameraControl(currentTime2,g_scene.m_curCamera);
 
 	g_scene.m_refCamera = g_scene.m_curCamera;
-	/*int optixTime;
+	/*
+	int optixTime;
 	{
-		 optixTime = getIndex(currentTime2);
+		 optixTime  = g_keyFrame.getOptixFrame(currentTime2);
+
 
 		g_scene.cameraControl(optixTime*JianGe+BEGININDEX,g_scene.m_refCamera);
 	}*/
 	
 	currentGbuffer.begin();
+	
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_refCamera);
 	//currentGbuffer.SaveBMP("diffuse2.bmp",2);
 	//currentGbuffer.debugPixel(0,593,669);
@@ -1150,7 +1131,7 @@ void optixRendering(Fbo renderFbo = Fbo())
 	int w = rasterWidth;
 	int h = rasterHeight;
 	char sreenstr [32];
-	sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,optixTime*JianGe+BEGININDEX);
+	sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,currentTime2);
 	Fbo::SaveBMP(sreenstr, pTexture, w, h);
 	if(pTexture)
 		delete pTexture;
@@ -1162,16 +1143,16 @@ void optixRendering(Fbo renderFbo = Fbo())
 		// sutilCurrentTime(&finalRendingTime);
 		g_timeMesure.setFinalRenderingTime(finalRendingTime);
 	}
-    g_reflectionShader.setReflectMap(reflectionMapTex_Now);
     g_blendShader.setDiffuseTex(currentGbuffer.getTexture(2));
     g_blendShader.setReflectTex(reflectionMapTex_Now);
 	if(renderFbo.isScreen())
 	{
 		screenBuffer.drawToScreen(g_blendShader);
-		//screenBuffer.SaveBMP("optix.bmp",0);
+	//	screenBuffer.SaveBMP("livRoom.bmp",0);
+		//screenBuffer.SaveBMP("livRoom.bmp",0);
 		/*
 		char sreenstr[20];
-		sprintf(sreenstr,"optixScreen.bmp",rasterWidth);
+		sprintf(sreenstr,"ref.bmp",rasterWidth);
 		Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
 		*/
 	}
@@ -1191,10 +1172,13 @@ void optixRendering(Fbo renderFbo = Fbo())
 		//sutilCurrentTime(&finish_start);
 		g_timeMesure.setEndTime(finish_start);
 		g_timeMesure.print();
+		g_recorder.addValue(g_timeMesure.getFps(),currentTime2);
+		
+
 	}
 	/*
-	char sreenstr[30];
-	sprintf(sreenstr,"./test/disoclu%d.bmp",currentTime2);
+	char sreenstr[80];
+	sprintf(sreenstr,"./groundTruth.bmp");
 	//sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,optixTime*JianGe+BEGININDEX);
 	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
 	*/
@@ -1203,18 +1187,13 @@ void optixRendering(Fbo renderFbo = Fbo())
 void init_RefcletTex()
 {
 	
-	BasicLight* lightData = static_cast<BasicLight*>(rtLights->map());
-	lightData[0].pos = make_float3(lightPos.x, lightPos.y, lightPos.z);
-	lightData[0].color.x = 1;
-	lightData[0].color.y = 1;
-	lightData[0].color.z = 1;
-	lightData[0].casts_shadow = 0;
-	rtLights->unmap();
 	CHECK_ERRORS();
 	for(int i =0;i<KEYFRAMENUM;i++)
 	{
 		RefFrame::getFrameByIndex(i).init();
 	}
+	rtContext["max_depth"]->setUint(1u);
+		
 	for(int i = 0;i<KEYFRAMENUM;i++)
 	{
 		printf("render index:%d\n",i);
@@ -1232,8 +1211,7 @@ void init_RefcletTex()
 		
 		g_diffNormalShader.setGbuffer(&frame.getGbuffer());
 		g_diffNormalShader.setCamera(&camera);
-		g_diffNormalShader.setRes(nv::vec2f(rasterWidth,rasterWidth));
-	 
+	
 		frame.getGbuffer().begin(nv::vec3f(0,0,0),false);
 		MyGeometry::drawQuad(g_diffNormalShader);
 		frame.getGbuffer().end();
@@ -1287,6 +1265,32 @@ void init_RefcletTex()
 		glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 		glPopAttrib();
 
+
+#ifdef EDGESHADER
+		
+		g_edgeShader.setGbuffer(&frame.getGbuffer());
+		g_edgeShader.setCamera(&camera);
+		g_edgeShader.setRes(nv::vec2f(rasterWidth,rasterWidth));
+		g_edgeShader.setOptixTex(frame.getOptixTex());
+	 
+		frame.getGbuffer().begin(nv::vec3f(0,0,0),false);
+		MyGeometry::drawQuad(g_edgeShader);
+	//	frame.getGbuffer().SaveBMP("edge.bmp",2);
+		frame.getGbuffer().end();
+
+		//frame.getGbuffer().SaveBMP("difuse.bmp",3);
+		/*idmap 
+		frame.getGbuffer().begin();d
+		g_scene.draw_model(g_idShader,&camera);
+		frame.getGbuffer().end();
+		*/
+		/*char str [32];
+		sprintf(str,"./test/ref_i%d.bmp",i);
+		frame.getGbuffer().SaveBMP(str,3);
+		*/
+		//frame.getGbuffer().debugPixel(3,358,389);
+		//frame.getGbuffer().debugPixel(0,359,390);
+#endif
 		/*
 		glPushAttrib(GL_PIXEL_MODE_BIT);
 		glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -1312,7 +1316,7 @@ void init_RefcletTex()
 		int w = rasterWidth;
 		int h = rasterHeight;
 		char str [32];
-		sprintf(str,"./test/ref%d.bmp",i);
+		sprintf(str,"./ref%d.bmp",1024);
 		Fbo::SaveBMP(str, pTexture, w, h);
 		*/
 		/*
@@ -1336,6 +1340,8 @@ void init_RefcletTex()
 		  delete[] pTexture;
 		*/
 	}
+	rtContext["max_depth"]->setUint(rayTraceDepth);
+		
 	
 
 
@@ -1511,7 +1517,7 @@ void noGeometryRendering(Fbo renderFbo = Fbo())
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 	glPopAttrib();
-
+#ifdef NOGEOMETRY
 	glPushAttrib(GL_PIXEL_MODE_BIT);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, posPBO);
@@ -1541,12 +1547,14 @@ void noGeometryRendering(Fbo renderFbo = Fbo())
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 	glPopAttrib();
+
+#endif
 	g_blendShader.setDiffuseTex(currentGbuffer.getTexture(2));
     g_blendShader.setReflectTex(reflectionMapTex_Now);
 	if(renderFbo.isScreen())
 	{
 		  screenBuffer.drawToScreen(g_blendShader);
-		  //screenBuffer.SaveBMP("diffuse1.bmp",0);
+		 // screenBuffer.SaveBMP("optix.bmp",0);
     }
 	else
 	{
@@ -1663,8 +1671,10 @@ void noGeometryRendering2()
 }
 void noGeometryTc(Fbo renderFbo = Fbo())
 {
-	
+	printf("time:%d\n",currentTime2);
+	//currentTime2++;
 	setTitle();
+
 	sutilFrameBenchmark("isgReflections", warmup_frames, timed_frames);
 	double FrameStart,FrameEnd;
 
@@ -1708,26 +1718,44 @@ void noGeometryTc(Fbo renderFbo = Fbo())
 		double forwardBeginTime=g_timeMesure.getCurrentTime();
 		g_timeMesure.setForwardingTime(forwardBeginTime);
 	}
-	
 	TransMapFbo.begin(); 
 	drawTransMapNoPipe(OptixFrame);
-	TransMapFbo.SaveBMP("GeometryNoPipe.bmp",0);
+
+	
+	char ttt[30];
+	//sprintf(ttt,"test.bmp");
+	//sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,optixTime*JianGe+BEGININDEX);
+	
+	//TransMapFbo.SaveBMP(ttt,0);
+	
+	//TransMapFbo.debugPixel(0,608,551);
 	TransMapFbo.end();
 	char str[100];
 	
 
 	g_imageWarpNopipeShader.setRefColorTex(frame.getGbuffer().getTexture(2));
 	g_imageWarpNopipeShader.setRefNormalTex(frame.getGbuffer().getTexture(1));
-	g_imageWarpNopipeShader.setRefPosTex(frame.getGbuffer().getTexture(0));
+ 	g_imageWarpNopipeShader.setRefPosTex(frame.getGbuffer().getTexture(0));
+	g_imageWarpNopipeShader.setEdgeTex(frame.getGbuffer().getTexture(3));
 	g_imageWarpNopipeShader.setMvpMatrix(g_scene.m_curCamera.getMvpMat());
 	g_imageWarpNopipeShader.setReflectedTex(TransMapFbo.getTexture(0));
+#ifdef NAIVE
+	g_imageWarpNopipeShader.setNaive(true);
+#else
+	g_imageWarpNopipeShader.setNaive(false);
+#endif
 	//g_imgWarpShader.setMvpMatrix(frame.getCamera().getMvpMat());
 	//currentGbuffer.copyFromBuffer(frame.getGbuffer());
+
 	FinalEffectFbo.begin(viewIndepentdentMissColor);
 	g_imgMesh.drawImgMesh(g_imageWarpNopipeShader);
 	FinalEffectFbo.end();
-
-	//FinalEffectFbo.SaveBMP("FinalEffectFbo.bmp",0);
+	
+	//sprintf(ttt,"FinalEffectFbo%d.bmp",currentTime2);
+	//sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,optixTime*JianGe+BEGININDEX);
+	
+//	FinalEffectFbo.SaveBMP(ttt,0);
+	
 	/*
 	if (stat_breakdown) 
 	{
@@ -1735,7 +1763,7 @@ void noGeometryTc(Fbo renderFbo = Fbo())
 		double secendRacingTimec=g_timeMesure.getCurrentTime();
 		g_timeMesure.setSecondTraceTime(secendRacingTimec);
 	}*/
-	int pixelNum =0;
+		int pixelNum =0;
     pixelNum = mappingNoPipe();
 	glFinish();
 	if (stat_breakdown) 
@@ -1752,10 +1780,8 @@ void noGeometryTc(Fbo renderFbo = Fbo())
 		  //screenBuffer.drawToScreen(g_blendShader);
 			  //screenBuffer.SaveBMP("diffuse1.bmp",0);
 		screenBuffer.drawToScreen(g_blendShaderNoPipe);
-		/*screenBuffer.SaveBMP("optix2.bmp",0);
-		char sreenstr[20];
-		sprintf(sreenstr,"ngtc%d.bmp",rasterWidth);
-		Fbo::saveScreen(sreenstr,windowWidth,windowHeight);*/
+	//	Fbo::saveScreen("optix2.bmp",windowWidth,windowHeight);
+		
 	}
 	else
 	{
@@ -1779,6 +1805,7 @@ void noGeometryTc(Fbo renderFbo = Fbo())
 
 		
 	}
+	
 }
 void tcRendering(Fbo renderFbo = Fbo())
 {
@@ -1803,6 +1830,7 @@ void tcRendering(Fbo renderFbo = Fbo())
 	g_scene.cameraControl(OptixFrame*JianGe+BEGININDEX,g_scene.m_refCamera);
 	RefFrame & frame = RefFrame::getFrameByIndex(OptixFrame);
 	refGbuffer = frame.getGbuffer();
+	//refGbuffer.SaveBMP("diffuse.bmp",2);
 	if (stat_breakdown) 
 	{
 		double cudaBeginTime=g_timeMesure.getCurrentTime();;
@@ -1900,29 +1928,40 @@ void tcRendering(Fbo renderFbo = Fbo())
 	
 	TransMapFbo.begin(); 
 	drawTransMap(OptixFrame);
-	
+	//TransMapFbo.SaveBMP("transMap.bmp",0);
+	//TransMapFbo.debugPixel(0,917,574);
 	TransMapFbo.end();
 	char str[100];
 	
 
-
+	if (stat_breakdown) 
+	{
+		double imgProjStartTime =g_timeMesure.getCurrentTime();
+		g_timeMesure.setImageProjectStartTime(imgProjStartTime);
+	}
 	
 	glViewport(0,0, traceWidth, traceHeight);
 	currentGbuffer.begin();
 	g_scene.draw_model(g_gBufferShader,&g_scene.m_curCamera);
+	//currentGbuffer.SaveBMP("mark.bmp",2);
 	currentGbuffer.end();
 	
 	
-	
+	if (stat_breakdown) 
+	{
+		double forwardBeginTime=g_timeMesure.getCurrentTime();
+		g_timeMesure.setForwardingTime(forwardBeginTime);
+	}
 	FinalEffectFbo.begin();
-
+	
+	
 	drawFinalEffect();
-
+	//FinalEffectFbo.SaveBMP("FinalEffectFbo.bmp",0);
+	
 	FinalEffectFbo.end();
 	
-	
 
-	//FinalEffectFbo.SaveBMP("test/FinalEffectFbo.bmp",0);
+
 	/*
 	if (stat_breakdown) 
 	{
@@ -1935,6 +1974,13 @@ void tcRendering(Fbo renderFbo = Fbo())
 	glFinish();
 	if (stat_breakdown) 
 	{
+#ifdef ANALYSIS
+		g_fboAnalyse.setCompareColor(nv::vec3f(0,0,1));
+		g_fboAnalyse.setEuqal(false);
+		int reflectPixl = g_fboAnalyse.analyseColorNum(FinalEffectFbo,0);
+		float additionRaito = (float)pixelNum/reflectPixl;
+		g_recorder.addValue(additionRaito,currentTime2);
+#endif
 		// glFinish();
 		double finalRenderingTime=g_timeMesure.getCurrentTime();
 		g_timeMesure.setFinalRenderingTime(finalRenderingTime);
@@ -1946,6 +1992,7 @@ void tcRendering(Fbo renderFbo = Fbo())
 	if(renderFbo.isScreen())
 	{
 		screenBuffer.drawToScreen(g_blendShader);
+		//screenBuffer.SaveBMP("test.bmp",0);
 	}
 	else
 	{
@@ -1959,35 +2006,46 @@ void tcRendering(Fbo renderFbo = Fbo())
 	if (stat_breakdown) 
 	{
 		double finish_start=g_timeMesure.getCurrentTime();
-		//int ananlyseNum = g_fboAnalyse.analyseColorNum(FinalEffectFbo,0);
-		//float ratio = ananlyseNum/(float)g_fboAnalyse.getRes().x/(float)g_fboAnalyse.getRes().y;
-		g_timeMesure.setEndTime(finish_start);
-		 g_timeMesure.print();
+			g_timeMesure.setEndTime(finish_start);
+		// g_timeMesure.print();
+		//g_recorder.addValue(g_timeMesure.getFps(),currentTime2);
 
 		
 	}
-
-	
 	/*
-	char sreenstr[30];
-	sprintf(sreenstr,"./test/tc%d.bmp",currentTime2);
+	char sreenstr[80];
+	sprintf(sreenstr,"./movie/livingRoomTcAddition/livingRoomTcAddition%d.bmp",currentTime2);
+	//sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,optixTime*JianGe+BEGININDEX);
 	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
 	*/
 	/*
-	  char sreenstr[20];
-	  sprintf(sreenstr,"./test/tc%d.bmp",rasterWidth);
-	  Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
+	char sreenstr[60];
+	sprintf(sreenstr,"./test%d.bmp",currentTime2);
+	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
 	*/
+	
+	char sreenstr[20];
+	sprintf(sreenstr,"./re-compu1.bmp");
+	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
+	
 }
 
 void compareTypRendering()
 {
-	optixRendering(optixFrame);
+	//optixRendering(optixFrame);
+	tcRendering(tcFrame);
+	tcFrame.SaveBMP("pg.bmp",0);
+	return;
 	tcRendering(tcFrame);
 	g_compareShader.setTex1(optixFrame.getTexture(0));
 	g_compareShader.setTex2(tcFrame.getTexture(0));
 	screenBuffer.drawToScreen(g_compareShader);
+	//screenBuffer.SaveBMP("test.bmp",0);
 	glFinish();
+	char sreenstr[80];
+	sprintf(sreenstr,"./compare%d.bmp",rasterWidth);
+	//sprintf(sreenstr,"./test/disoclu%d_%d.bmp",currentTime2,optixTime*JianGe+BEGININDEX);
+	Fbo::saveScreen(sreenstr,windowWidth,windowHeight);
 
 }
 void display()
@@ -2016,6 +2074,22 @@ void display()
 	{
 		noGeometryTc();
 	}
+	static int sampleNum =0;
+	sampleNum++;
+	/*
+	if(sampleNum == 10)
+	{
+		sampleNum = 0;
+		currentTime2 ++;
+	}
+	*/
+	if(currentTime2 == ENDINDEX)
+	{
+		g_recorder.save();
+		exit(0);
+	}
+	
+	
 	//g_timeMesure.nextFrame(currentTime2);
 	g_timeMesure.updateLastTime();
 	CHECK_ERRORS();
@@ -2035,7 +2109,7 @@ void resize(int w, int h)
 	traceHeight = rasterHeight >> logReflectionSamplingRate;
 
 	//manipulator.reshape(w,h);
-
+	/*
 	float aspect = (float)w/(float)h;
 	float diag = nv::length(modelBBMax - modelBBMin);
 
@@ -2045,7 +2119,7 @@ void resize(int w, int h)
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-
+	*/
 	// resize 
 	try {
 		rtReflectionBuffer->unregisterGLBuffer();
@@ -2114,30 +2188,18 @@ void special_key(int k, int x, int y)
 void keyboard(unsigned char k, int x, int y)
 {
 	bool reshape = false;
-
+	nv::vec3f & sceneLight = g_scene.getLightPos();
 	switch(k) {
 
 	case 27: // esc
-	case 'q':
 		exit(0);
 		break;
 
-	case 'b':
-		doISG = !doISG;
-		break;
-
-	case 'c': {
-		/*  nv::matrix4f xform = manipulator.getTransform();
-		for(int i = 0; i < 16; ++i) 
-		{
-		std::cerr << xform(i%4, i/4) << ' ';
-		if(i%4==3)
-		std::cerr << std::endl;
-		}
-		std::cerr << std::endl;*/
-			  } break;
-
-	case 'e':
+	/*case 'w':
+		printf("write file");
+		g_recorder.save();
+		break;*/
+/*	case 'e':
 		scene_epsilon /= 10;
 		rtContext["scene_epsilon"]->setFloat(scene_epsilon);
 		break;
@@ -2146,6 +2208,7 @@ void keyboard(unsigned char k, int x, int y)
 		scene_epsilon *= 10;
 		rtContext["scene_epsilon"]->setFloat(scene_epsilon);
 		break;
+		*/
 	case ' ':
 
 		// Optix_Camare.navigate(posArray[0],posArray[1],currentTime2,0,100);
@@ -2198,7 +2261,8 @@ void keyboard(unsigned char k, int x, int y)
 		}
 		break;
 	case 'p':
-		printf("{make_float3(%f,%f,%f  ),make_float3(%f,%f,%f )},\n",g_scene.m_curCamera.Position().x,g_scene.m_curCamera.Position().y,g_scene.m_curCamera.Position().z,g_scene.m_curCamera.View().x,g_scene.m_curCamera.View().y,g_scene.m_curCamera.View().z);
+		printf("{make_float3(%f,%f,%f ),make_float3(%f,%f,%f)},\n",g_scene.m_curCamera.Position().x,g_scene.m_curCamera.Position().y,g_scene.m_curCamera.Position().z,g_scene.m_curCamera.View().x,g_scene.m_curCamera.View().y,g_scene.m_curCamera.View().z);
+		fflush(stdout);
 		break;
 		/*case 's':
 		logReflectionSamplingRate += 1;
@@ -2216,13 +2280,27 @@ void keyboard(unsigned char k, int x, int y)
 		reshape = true;
 		break;
 		*/
-	
+	/*case 'a':sceneLight.x-=2;
+		break;
+	case 'd':sceneLight.x +=2;
+		break;
+	case 'w':sceneLight.y +=2;
+		break;
+	case 's':sceneLight.y -=2;
+		break;
+	case 'q':sceneLight.z -=2;
+		break;
+	case 'e':sceneLight.z +=2;
+		break;*/
 	case '=':
 		currentTime2++;
+		currentTime2 = std::min<float>(currentTime2,900);
 		//currentTime++;
 		break;
 	case '-':
 		currentTime2--;
+		currentTime2 = std::max<float>(currentTime2,0);
+		//currentTime++;
 		//currentTime--;
 		break;
 
@@ -2288,6 +2366,32 @@ void printUsageAndExit( const std::string& argv0, bool doExit = true )
 int main(int argc, char** argv)
 {
 	// Allow glut to consume its args first
+	if(argc==2)
+	{
+		BEGININDEX = atoi(argv[1]);
+		ENDINDEX = BEGININDEX+TIMEGAP;
+		currentTime2 = BEGININDEX;
+	}
+	if(argc==3)
+	{
+		BEGININDEX = atoi(argv[1]);
+		ENDINDEX = atoi(argv[2]);
+		currentTime2 = BEGININDEX;
+	}
+	
+	/*FileRecorder g_optixRecorder = optixToiletRecorder(900) ;
+    FileRecorder g_tcRecorder = tcToiletRecorder(900) ;
+	g_optixRecorder.init();
+	g_tcRecorder.init();
+	std::vector<frameStruct> & tcVector = g_tcRecorder.getVec();
+	std::vector<frameStruct> & optixVector = g_optixRecorder.getVec();
+	for(int i=0;i<900;i+=30)
+	{
+		float avgValue = optixVector[i].getAvgNumber();
+		tcVector[i].maxValue = avgValue;
+	}
+	g_tcRecorder.save();*/
+	freopen("stderr.txt","w",stderr);
 	glutInit(&argc, argv);
 
 	bool dobenchmark = false;

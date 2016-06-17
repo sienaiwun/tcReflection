@@ -12,6 +12,7 @@ enum TimeType
 	noGeometryRenderingType = 3,
 	noGeometryTcType = 4,
 	compareType = 5,
+	superImageType = 6,
 
 };
 class TimeMesure
@@ -20,7 +21,7 @@ private:
 	TimeType m_type;
 	float m_lastFrameEndTime;
 	float m_frameBeginTime,m_traceBeginTime,m_finalRenderingBeginTime,m_frameEndTime;
-	float m_cudaBeginTime,m_forwardTime,m_secondTraceTime;
+	float m_cudaBeginTime,m_forwardTime,m_secondTraceTime,m_imageProjStartTime;
 	float m_radio;
 	int m_frame;
 	int m_totalTime;
@@ -29,6 +30,7 @@ private:
 	static float currentFps;
 	static int frame_count ;
 	FPS m_fcount;
+	float m_ratio;
 public:
 	static inline double getCurrentTime()
 	{
@@ -36,6 +38,7 @@ public:
 	}
 	bool needPreocompute()
 	{
+		return (m_type!=optixRenderingType);
 		return (m_type==noGeometryTcType)|| (m_type==tcRenderingType);
 	}
 	inline TimeType getType()
@@ -46,17 +49,29 @@ public:
 	{
 		return m_frame;
 	}
+	float getFps()
+	{
+		return  1000/(m_frameEndTime - m_lastFrameEndTime);
+	}
 	inline void setOptixBeginTime(float m)
 	{
 		m_traceBeginTime = m;
 	}
 	inline void setFinalRenderingTime(float m)
 	{
-		m_finalRenderingBeginTime = m;
+		m_finalRenderingBeginTime= m;
+	}
+	inline void setRatio(float v)
+	{
+		m_radio = v;
 	}
 	inline void setCudaBeginTime(float m)
 	{
 		m_cudaBeginTime = m;
+	}
+	inline void setImageProjectStartTime(float m)
+	{
+		m_imageProjStartTime = m;
 	}
 	inline void setForwardingTime(float m)
 	{

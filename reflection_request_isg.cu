@@ -9,7 +9,7 @@ using namespace optix;
 rtBuffer<float4, 2>         posBuffer;
 rtBuffer<float4, 2>         normalBuffer;;
 rtBuffer<float4, 2>         colorBuffer;
-rtDeclareVariable(float3, eye_pos, , );
+
 rtDeclareVariable(float2,   bbmin,,);
 rtDeclareVariable(float2,   bbmax,,);
 rtDeclareVariable(optix::Matrix4x4, optixModelView_Inv, , );
@@ -25,10 +25,12 @@ __device__ float3 getImagePos(float2 tc)
 
 #endif
 
+rtDeclareVariable(float3, eye_pos, , );
 rtBuffer<float4, 2>         reflection_buffer;
 rtBuffer<float4, 2>         addition_buffer;;
 rtBuffer<uint,1>          Pixels_Buffer;
 //rtBuffer<float4,2>          LastReflection_buffer;
+
 
 rtTextureSampler<float4, 2> normal_texture;
 rtTextureSampler<float4, 2> request_texture;
@@ -46,6 +48,7 @@ rtDeclareVariable(int,   FrameCount, , );
 rtDeclareVariable(int,   PixelNum, , );
 rtDeclareVariable(int,   PixelWidth, , );
 rtDeclareVariable(int,   hasGlossy, , );
+
 
 
 rtDeclareVariable(int2,   rasterSize, , );
@@ -164,7 +167,8 @@ __device__ __inline__ void createONB( const optix::float3& n,
   U = normalize( U );
   V = cross( n, U );
 }
-#define N 1024
+#define N 128
+
 RT_PROGRAM void addition_request()
 {
 	int index =launch_index1D;
@@ -190,18 +194,45 @@ RT_PROGRAM void addition_request()
  
  // PerRayData_radiance prd4 = prd;
  //	   PerRayData_radiance prd5 = prd;
- 
+  const int stepNum = 7;
   if( !isnan(ray_origin.x) ) 
   {
+	  /*
+	  float3 pivotArray[] =
+	{
+		make_float3(28.4509,10.7690, -36.0526),
+		make_float3(28.4509, 10.7690 ,-14.2598),
+		make_float3(28.4509 ,10.7690 ,26.6379),
+		make_float3(12.0442 ,10.7690 ,26.6379),
+		make_float3(13.9080, 32.9664 ,27.9780),
+		make_float3(-26.8018, 32.9664, 7.1906 ),
+		make_float3(-45.4884, 25.8473 ,7.1906),
+	};
+	*/
     if(!hasGlossy)
 	{
-		
+		/*float3 minPos = pivotArray[0];
+		float minD = length(ray_origin-minPos);
+		for(int i = 1;i<stepNum;i++)
+		{
+			
+			float3 pos = pivotArray[i];
+			float currentD = length(ray_origin-pos);
+			if(currentD<minD)
+			{
+				minD = currentD;
+				minPos = pos;
+			}
+					
+		}
+		*/
 		float3 V = normalize(ray_origin-eye_pos);
 		float3 normal = make_float3(tex2D(normal_texture, x, y));
 		float3 ray_direction = reflect(V, normal);
 		optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
 		rtTrace(reflectors, ray, prd);
-		reflection_buffer[FinalPixelPos] = make_float4(prd.result,1);
+		prd.result = make_float3(1,0,0);
+		reflection_buffer[FinalPixelPos] = make_float4( prd.result,1);
 		return;	 
 	}
 	float3 V = normalize(ray_origin-eye_pos);
@@ -229,6 +260,9 @@ RT_PROGRAM void addition_request()
 			randomArray.y =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
 			glossy_direcion = sample_phong_lobe( randomArray, exponent, xo, yo, ray_direction, bsdf_pdf, bsdf_val );
 			costheta = dot(glossy_direcion, normal);
+			costheta = 1;
+			bsdf_val = 1;
+			bsdf_pdf = 1;
 			if(bsdf_pdf > 0.0f&&costheta>0)
 			{
 				ray = optix::make_Ray(ray_origin, glossy_direcion, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
@@ -273,6 +307,9 @@ RT_PROGRAM void gBufferAndRequest()
 	  posBuffer[launch_index] = make_float4(prd.result,objectId);
 	  normalBuffer[launch_index] = make_float4(normal.x,normal.y,normal.z,reflectValue);
 	  colorBuffer[launch_index] = make_float4(prd.result,reflectValue);
+
+	  if(reflectValue>0.01)
+	  {
 	    prd.isReflectRay = 1;
 	 
 	   ray_origin = worldPos;
@@ -280,12 +317,12 @@ RT_PROGRAM void gBufferAndRequest()
 		
 	   float3 ray_direction = normalize(reflect(V, normal));
 
-	  ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
-	 // rtTrace(reflectors, ray, prd);
-	r_dis = prd.t_hit;
+	    ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+	    rtTrace(reflectors, ray, prd);
+	   r_dis = prd.t_hit;
 		reflection_buffer[launch_index] = make_float4(prd.result,r_dis);
 		addition_buffer[launch_index] = make_float4(prd.objectId,0,0,1);
-		//rtPrintf("object id:%d",prd.objectId);
+	  }	//rtPrintf("object id:%d",prd.objectId);
 	 return;	 
 }
 
@@ -334,7 +371,10 @@ RT_PROGRAM void gBufferAndRequest_addition()
 	  r_dis = prd.t_hit;
 	  float3 outputColor;
 	  if(reflectValue>0.001)
+	  {
 		  outputColor = diffuseColor*(1-reflectValue)+prd.result*reflectValue;
+		 // outputColor.x += (1-outputColor.x)*3/4;
+	  }
 	  else
 	     outputColor = diffuseColor;
 	 
@@ -421,6 +461,31 @@ RT_PROGRAM void reflection_request()
 	 float depthSum = 0;
 	 float3 color ;
 	 int usefulSample = 0;
+	 float reflectDis;
+	{
+		float3 V = normalize(ray_origin-eye_pos);
+		float3 normal = make_float3(tex2D(normal_texture, launch_index.x, launch_index.y));
+   
+		float3 ray_direction = normalize(reflect(V, normal));
+
+		/*float3 L = lightPos-ray_origin;
+		float dist = sqrtf(dot(L,L));
+		float3 ray_direction_s = L/dist;
+		optix::Ray ray_s = optix::make_Ray(ray_origin, 
+		ray_direction_s, 
+		shadow_ray_type, 
+		scene_epsilon, 
+		dist);
+		rtTrace(reflectors, ray_s, prd_s);
+		float shadow = (prd_s.attenuation.x>0)?1:0;*/
+		optix::Ray ray = optix::make_Ray(ray_origin, ray_direction, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
+		rtTrace(reflectors, ray, prd);
+	//shadow = 0;
+		reflectDis= prd.t_hit;
+	
+		//rtPrintf("object id:%d",prd.objectId);
+	 }
+
 	for(int i =0;i<N;i++)
 	{
 			prdArray = prd;
@@ -428,6 +493,9 @@ RT_PROGRAM void reflection_request()
 			randomArray.y =  random(make_float2((i+0.5)/N*seedy,i*1.0/N*seedx));
 			glossy_direcion = sample_phong_lobe( randomArray, exponent, xo, yo, ray_direction, bsdf_pdf, bsdf_val );
 			costheta = dot(glossy_direcion, normal);
+			costheta = 1;
+			bsdf_val = 1;
+			bsdf_pdf = 1;
 			if(bsdf_pdf > 0.0f&&costheta>0)
 			{
 				ray = optix::make_Ray(ray_origin, glossy_direcion, radiance_ray_type, scene_epsilon, RT_DEFAULT_MAX);
@@ -444,12 +512,12 @@ RT_PROGRAM void reflection_request()
 	avgDepth = depthSum/usefulSample;
 	
 
-	reflection_buffer[launch_index] = make_float4(color, avgDepth);
+	reflection_buffer[launch_index] = make_float4(color, reflectDis);
   }
 }
 RT_PROGRAM void reflection_exception()
 {
-  reflection_buffer[launch_index] = make_float4(1.f,0.f,0.f,-1.f);
+  reflection_buffer[launch_index] = make_float4(0.f,0.f,1.f,1.f);
 }
 
 RT_PROGRAM void reflection_miss()

@@ -7,6 +7,7 @@
 class FboAnalyse
 {
 public:
+
 	FboAnalyse(int w, int h)
 	{
 		m_fbo.set(1,w,h);
@@ -14,20 +15,20 @@ public:
 	}
 	void init();
 	int analyseColorNum(Fbo& sourceFbo,int slotNum);
-	inline void setCheckColro1(nv::vec3f color1)
-	{
-		m_checkColor1 = color1;
-	}
-	inline void setCheckColro2(nv::vec3f color2)
-	{
-		m_checkColor2 = color2;
-	}
+	
 	inline nv::vec2i getRes()
 	{
 		return m_res;
 	}
+	inline void setEuqal(int equal)
+	{
+		m_histogramPass.setEqual(equal);
+	}
+	inline void setCompareColor(nv::vec3f color)
+	{
+		m_histogramPass.setCompareColor(color);
+	}
 private:
-	nv::vec3f m_checkColor1, m_checkColor2;
 	nv::vec2i m_res;
 	Histogram m_histogramPass;
 	Fbo m_fbo;
